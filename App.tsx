@@ -7,10 +7,10 @@ import Inspiration from './components/Inspiration';
 import Directory from './components/Directory';
 import Training from './components/Training';
 import EventsCalendar from './components/EventsCalendar';
+import AdminPanel from './components/AdminPanel';
 import AIAssistant from './components/AIAssistant';
 import { User, NavigationItem } from './types';
 
-// Placeholder components for other pages - Layout System Applied
 const PlaceholderPage: React.FC<{ title: string; icon: string }> = ({ title, icon }) => (
   <div className="max-w-site mx-auto px-mobile-x py-section-y text-center animate-fade-in">
     <div className="w-24 h-24 bg-white border border-gray-200 rounded-full flex items-center justify-center mx-auto mb-6 text-secondary shadow-sm">
@@ -26,7 +26,6 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [currentNav, setCurrentNav] = useState<NavigationItem>(NavigationItem.DASHBOARD);
 
-  // Check for stored session on mount (simulated)
   useEffect(() => {
     const storedUser = localStorage.getItem('traveliz_user');
     if (storedUser) {
@@ -49,8 +48,6 @@ const App: React.FC = () => {
   };
 
   const handleSearch = (term: string) => {
-    console.log("Searching for:", term);
-    // Implement search logic here or navigate to search results
     alert(`Buscando: ${term}\n(Funcionalidad de búsqueda en desarrollo)`);
   };
 
@@ -70,6 +67,8 @@ const App: React.FC = () => {
         return <Training />;
       case NavigationItem.CALENDARIO:
         return <EventsCalendar />;
+      case NavigationItem.ADMIN:
+        return <AdminPanel />;
       default:
         return <Dashboard user={user!} onNavigate={setCurrentNav} />;
     }
@@ -93,12 +92,9 @@ const App: React.FC = () => {
         {renderContent()}
       </main>
 
-      {/* Footer - Multi-column Layout */}
       <footer className="bg-primary border-t border-white/5 pt-16 pb-8 mt-16">
         <div className="max-w-site mx-auto px-mobile-x">
             <div className="flex flex-col lg:flex-row gap-12 lg:gap-8 mb-16 justify-between">
-                
-                {/* Column 1: Brand Info (Approx 44%) */}
                 <div className="lg:w-[44%] space-y-6">
                     <div className="mb-4">
                         <img 
@@ -112,50 +108,18 @@ const App: React.FC = () => {
                     </p>
                 </div>
 
-                {/* Column 2: Sitemap (Approx 28%) */}
                 <div className="lg:w-[28%] space-y-6">
                     <h5 className="font-serif text-white text-lg font-medium">Mapa de Sitio</h5>
                     <ul className="space-y-3">
-                        <li>
-                            <button onClick={() => setCurrentNav(NavigationItem.AVISOS)} className="text-secondary hover:text-accent transition-colors text-sm tracking-wide flex items-center gap-2 group">
-                                <i className="fa-solid fa-angle-right text-xs opacity-0 group-hover:opacity-100 transition-all -ml-4 group-hover:ml-0"></i> 
-                                Avisos
-                            </button>
-                        </li>
-                        <li>
-                            <button onClick={() => setCurrentNav(NavigationItem.DOCUMENTACION)} className="text-secondary hover:text-accent transition-colors text-sm tracking-wide flex items-center gap-2 group">
-                                <i className="fa-solid fa-angle-right text-xs opacity-0 group-hover:opacity-100 transition-all -ml-4 group-hover:ml-0"></i>
-                                Documentación
-                            </button>
-                        </li>
-                        <li>
-                            <button onClick={() => setCurrentNav(NavigationItem.BLOG)} className="text-secondary hover:text-accent transition-colors text-sm tracking-wide flex items-center gap-2 group">
-                                <i className="fa-solid fa-angle-right text-xs opacity-0 group-hover:opacity-100 transition-all -ml-4 group-hover:ml-0"></i>
-                                Inspiración
-                            </button>
-                        </li>
-                        <li>
-                            <button onClick={() => setCurrentNav(NavigationItem.DIRECTORIO)} className="text-secondary hover:text-accent transition-colors text-sm tracking-wide flex items-center gap-2 group">
-                                <i className="fa-solid fa-angle-right text-xs opacity-0 group-hover:opacity-100 transition-all -ml-4 group-hover:ml-0"></i>
-                                Directorio
-                            </button>
-                        </li>
-                        <li>
-                            <button onClick={() => setCurrentNav(NavigationItem.CAPACITACION)} className="text-secondary hover:text-accent transition-colors text-sm tracking-wide flex items-center gap-2 group">
-                                <i className="fa-solid fa-angle-right text-xs opacity-0 group-hover:opacity-100 transition-all -ml-4 group-hover:ml-0"></i>
-                                Capacitación
-                            </button>
-                        </li>
-                        <li>
-                            <button onClick={() => setCurrentNav(NavigationItem.CALENDARIO)} className="text-secondary hover:text-accent transition-colors text-sm tracking-wide flex items-center gap-2 group">
-                                <i className="fa-solid fa-angle-right text-xs opacity-0 group-hover:opacity-100 transition-all -ml-4 group-hover:ml-0"></i>
-                                Calendario
-                            </button>
-                        </li>
+                        <li><button onClick={() => setCurrentNav(NavigationItem.AVISOS)} className="text-secondary hover:text-accent transition-colors text-sm tracking-wide flex items-center gap-2 group">Avisos</button></li>
+                        <li><button onClick={() => setCurrentNav(NavigationItem.DOCUMENTACION)} className="text-secondary hover:text-accent transition-colors text-sm tracking-wide flex items-center gap-2 group">Documentación</button></li>
+                        <li><button onClick={() => setCurrentNav(NavigationItem.BLOG)} className="text-secondary hover:text-accent transition-colors text-sm tracking-wide flex items-center gap-2 group">Inspiración</button></li>
+                        <li><button onClick={() => setCurrentNav(NavigationItem.DIRECTORIO)} className="text-secondary hover:text-accent transition-colors text-sm tracking-wide flex items-center gap-2 group">Directorio</button></li>
+                        <li><button onClick={() => setCurrentNav(NavigationItem.CAPACITACION)} className="text-secondary hover:text-accent transition-colors text-sm tracking-wide flex items-center gap-2 group">Capacitación</button></li>
+                        <li><button onClick={() => setCurrentNav(NavigationItem.CALENDARIO)} className="text-secondary hover:text-accent transition-colors text-sm tracking-wide flex items-center gap-2 group">Calendario</button></li>
                     </ul>
                 </div>
 
-                {/* Column 3: Contact (Approx 28%) */}
                 <div className="lg:w-[28%] space-y-6">
                     <h5 className="font-serif text-white text-lg font-medium">Contacto</h5>
                     <ul className="space-y-5">
@@ -172,7 +136,6 @@ const App: React.FC = () => {
                 </div>
             </div>
 
-            {/* Bottom Row - Full Width */}
             <div className="border-t border-white/5 pt-8 text-center">
                 <p className="text-sm text-secondary font-light tracking-wide">© 2026 Traveliz. Todos los derechos reservados.</p>
                 <p className="text-xs text-gray-500 mt-2 uppercase tracking-widest">Exclusivo uso interno.</p>

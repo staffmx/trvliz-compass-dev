@@ -31,6 +31,7 @@ export enum NavigationItem {
   CAPACITACION = 'capacitacion',
   BLOG = 'blog',
   CALENDARIO = 'calendario',
+  ADMIN = 'admin',
 }
 
 export interface ChatMessage {

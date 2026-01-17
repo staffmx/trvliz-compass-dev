@@ -18,16 +18,16 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     // Mock authentication delay
     setTimeout(() => {
       setIsLoading(false);
+      // Hardcoded Andrea as Admin for demonstration purposes
       if (email === 'empleado@traveliz.com' && password === 'admin') {
         onLogin({
           id: '1',
           name: 'Andrea Martínez',
           email: email,
-          role: 'employee',
+          role: 'admin', // CHANGED TO ADMIN TO TEST THE PANEL
           avatar: 'https://picsum.photos/id/64/200/200'
         });
       } else {
-        // Allow any login for demo purposes if not specific credentials
         if (email && password) {
              onLogin({
                 id: '2',
@@ -45,13 +45,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1436491865332-7a61a109cc05?q=80&w=2074&auto=format&fit=crop')" }}>
-      {/* Brand Authority Overlay - Traveliz Blue with opacity */}
       <div className="absolute inset-0 bg-brand/80 backdrop-blur-sm"></div>
       
-      {/* Login Box - Brand Authority Theme */}
       <div className="relative z-10 w-full max-w-md p-10 bg-brand/95 backdrop-blur-md rounded-none shadow-2xl animate-fade-in-up m-4 border border-white/10">
         <div className="text-center mb-12">
-          {/* Logo Container */}
           <div className="flex justify-center mb-8">
               <img 
                   src="https://traveliz.com/new-2025/wp-content/uploads/2025/07/Traveliz_Logo_white.png" 
@@ -74,7 +71,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                // Input bg is dark but distinct
                 className="w-full pl-10 pr-4 py-3.5 bg-black/20 border border-white/10 rounded-none text-white placeholder-secondary focus:ring-1 focus:ring-accent focus:border-accent outline-none transition-all"
                 placeholder="nombre@traveliz.com"
               />
@@ -105,7 +101,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
           )}
 
-          {/* Button: Traveliz Blue (Authority) with White text. Gold interaction on hover. Square corners. */}
           <button
             type="submit"
             disabled={isLoading}
