@@ -5,9 +5,10 @@ import { api, Event, BlogPost, Seller } from '../services/api';
 interface DashboardProps {
   user: User;
   onNavigate: (nav: NavigationItem) => void;
+  onEventClick?: (eventId: number) => void; // Added prop for event navigation
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick }) => {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
@@ -59,13 +60,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
              ))
           ) : (
             events.map((event) => (
-                <div key={event.id} className="p-5 flex flex-col gap-4 hover:bg-background transition-colors group">
-                    <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 w-14 h-14 bg-brand text-white flex flex-col items-center justify-center rounded-none shadow-md transition-colors duration-300">
+                <button 
+                    key={event.id} 
+                    onClick={() => event.id && onEventClick && onEventClick(event.id)}
+                    className="w-full text-left p-5 flex flex-col gap-4 hover:bg-background transition-colors group cursor-pointer"
+                >
+                    <div className="flex items-start gap-4 w-full">
+                        <div className="flex-shrink-0 w-14 h-14 bg-brand text-white flex flex-col items-center justify-center rounded-none shadow-md transition-colors duration-300 group-hover:bg-accent">
                             <span className="text-[9px] font-bold uppercase tracking-wider opacity-80">{event.month}</span>
                             <span className="text-xl font-serif font-medium">{event.day}</span>
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                                 <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-none border ${
                                     event.type === 'Webinar' ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
@@ -74,12 +79,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
                                 </span>
                                 <span className="text-[10px] text-secondary font-medium">{event.time}</span>
                             </div>
-                            <h4 className="font-serif text-base text-primary font-medium group-hover:text-accent transition-colors leading-tight">
+                            <h4 className="font-serif text-base text-primary font-medium group-hover:text-accent transition-colors leading-tight truncate">
                                 {event.title}
                             </h4>
                         </div>
                     </div>
-                </div>
+                </button>
             ))
           )}
       </div>
@@ -187,13 +192,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
                         ))
                     ) : (
                         sellers.map((seller, index) => (
-                            <div key={index} className="flex items-center gap-4 border-b border-white/5 pb-2 last:border-0 last:pb-0">
-                                <span className={`text-lg font-serif italic w-6 text-center ${index === 0 ? 'text-accent' : 'text-gray-400'}`}>{index + 1}</span>
-                                <div className="flex items-center gap-3">
-                                    <img src={seller.avatar} alt={seller.name} className={`w-10 h-10 rounded-full object-cover ring-2 ${index === 0 ? 'ring-accent' : 'ring-white/10'}`} />
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-200 tracking-wide">{seller.name}</p>
-                                        <p className="text-[10px] text-gray-400 font-mono tracking-wider">{seller.sales}</p>
+                            <div key={index} className="flex items-center gap-4 border-b border-white/5 pb-3 last:border-0 last:pb-0 min-h-[60px]">
+                                <span className={`text-lg font-serif italic w-6 text-center ${index === 0 ? 'text-accent' : 'text-gray-400'}`}>{seller.ranking}</span>
+                                <div className="flex items-center gap-4">
+                                    <img src={seller.avatar} alt={seller.name} className={`w-12 h-12 rounded-full object-cover ring-2 ${index === 0 ? 'ring-accent' : 'ring-white/10'}`} />
+                                    <div className="flex flex-col justify-center">
+                                        <p className="text-sm font-medium text-gray-200 tracking-wide leading-tight">{seller.name}</p>
                                     </div>
                                 </div>
                             </div>

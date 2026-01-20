@@ -10,6 +10,7 @@ import EventsCalendar from './components/EventsCalendar';
 import EventDetail from './components/EventDetail';
 import AdminPanel from './components/AdminPanel';
 import AIAssistant from './components/AIAssistant';
+import Documentation from './components/Documentation';
 import { User, NavigationItem } from './types';
 
 const PlaceholderPage: React.FC<{ title: string; icon: string }> = ({ title, icon }) => (
@@ -67,11 +68,11 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (currentNav) {
       case NavigationItem.DASHBOARD:
-        return <Dashboard user={user!} onNavigate={setCurrentNav} />;
+        return <Dashboard user={user!} onNavigate={setCurrentNav} onEventClick={handleNavigateToEvent} />;
       case NavigationItem.AVISOS:
         return <PlaceholderPage title="Avisos Generales" icon="fa-bullhorn" />;
       case NavigationItem.DOCUMENTACION:
-        return <PlaceholderPage title="Documentación Corporativa" icon="fa-folder-open" />;
+        return <Documentation />;
       case NavigationItem.BLOG:
         return <Inspiration onNavigate={setCurrentNav} />;
       case NavigationItem.DIRECTORIO:
@@ -97,7 +98,7 @@ const App: React.FC = () => {
       case NavigationItem.ADMIN:
         return <AdminPanel />;
       default:
-        return <Dashboard user={user!} onNavigate={setCurrentNav} />;
+        return <Dashboard user={user!} onNavigate={setCurrentNav} onEventClick={handleNavigateToEvent} />;
     }
   };
 

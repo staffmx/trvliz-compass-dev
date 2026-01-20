@@ -1,263 +1,143 @@
 import { Notice } from '../types';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
-
-// --- SUPABASE CONFIGURATION ---
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://klknrbnipvgwywjbzafh.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtsa25yYm5pcHZnd3l3amJ6YWZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2MDM3OTUsImV4cCI6MjA4NDE3OTc5NX0.JcCuNhrRGJFE6kXfMH0rLPc1ZuSxzEihjeWHEx4ny-U';
-
-const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY) 
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-  : null;
-
-// --- INTERFACES ---
-
-export interface Associate {
-  id?: number;
-  name: string;
-  last_name?: string;
-  email: string;
-  image: string;
-  whatsapp?: string;
-  position?: string;
-  associate_type?: string;
-  content?: string;
-  instagram?: string;
-  facebook?: string;
-  tiktok?: string;
-  created_at?: string;
-}
 
 export interface Event {
-  id?: number;
-  type: 'Webinar' | 'Presencial' | 'Viaje' | 'Social' | 'Corporativo';
-  title: string;
-  description?: string;
-  event_date: string; 
-  month?: string;     
-  day?: string;       
-  time: string;
-  link?: string;
-}
-
-export interface EventRegistration {
   id: number;
-  event_id: number;
-  user_email: string;
-  created_at: string;
-  associate_name?: string; // Virtual field for UI
+  title: string;
+  date: string; // "2023-10-15"
+  event_date: string; // "2023-10-15" for calendar matching
+  month: string; // "OCT"
+  day: string; // "15"
+  time: string; // "10:00 AM"
+  type: 'Webinar' | 'Viaje' | 'Evento';
+  description?: string;
+  link?: string;
 }
 
 export interface BlogPost {
   id: number;
   title: string;
-  category: string;
-  image: string;
   excerpt: string;
+  image: string;
+  category: string;
+  date: string;
   readTime: string;
   author: string;
-  date: string;
 }
 
 export interface Seller {
+  id: number;
   name: string;
-  sales: string;
   avatar: string;
+  ranking: number;
 }
 
-// --- SERVICE LAYER ---
+export interface Associate {
+  id: number;
+  name: string;
+  last_name: string;
+  email: string;
+  position: string;
+  image: string;
+  whatsapp?: string;
+  instagram?: string;
+  facebook?: string;
+  tiktok?: string;
+  associate_type?: string;
+  content?: string;
+}
+
+// Mock Data
+const MOCK_NOTICES: Notice[] = [
+  { id: '1', title: 'Nueva Política de Viajes', date: 'Oct 12', content: 'Actualización en los montos de viáticos internacionales.', priority: 'high', category: 'Urgente' },
+  { id: '2', title: 'Mantenimiento de Plataforma', date: 'Oct 15', content: 'El sistema estará inactivo de 2am a 4am.', priority: 'medium', category: 'General' },
+  { id: '3', title: 'Webinar de Destinos', date: 'Oct 20', content: 'Aprende sobre las nuevas rutas a Asia.', priority: 'low', category: 'Capacitación' },
+];
+
+const MOCK_EVENTS: Event[] = [
+  { id: 1, title: 'Lanzamiento Verano 2026', date: '2023-10-15', event_date: '2023-10-15', month: 'OCT', day: '15', time: '10:00 AM', type: 'Webinar', description: 'Presentación de la temporada.' },
+  { id: 2, title: 'Fam Trip: Riviera Maya', date: '2023-10-22', event_date: '2023-10-22', month: 'OCT', day: '22', time: 'All Day', type: 'Viaje', description: 'Visita a hoteles 5 diamantes.' },
+];
+
+let MOCK_SELLERS: Seller[] = [
+  { id: 1, name: 'Ana García', avatar: 'https://randomuser.me/api/portraits/women/44.jpg', ranking: 1 },
+  { id: 2, name: 'Carlos Ruiz', avatar: 'https://randomuser.me/api/portraits/men/32.jpg', ranking: 2 },
+  { id: 3, name: 'Elena Torres', avatar: 'https://randomuser.me/api/portraits/women/68.jpg', ranking: 3 },
+  { id: 4, name: 'David M.', avatar: 'https://randomuser.me/api/portraits/men/11.jpg', ranking: 4 },
+  { id: 5, name: 'Sofia L.', avatar: 'https://randomuser.me/api/portraits/women/90.jpg', ranking: 5 },
+];
+
+const MOCK_BLOG_POSTS: BlogPost[] = [
+  { id: 1, title: 'El Renacer del Lujo Sostenible', excerpt: 'Cómo los eco-lodges están redefiniendo la experiencia high-end.', image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=2070', category: 'Tendencias', date: '10 Oct 2023', readTime: '5 min', author: 'Maria S.' },
+  { id: 2, title: 'Japón: Más allá de Tokio', excerpt: 'Rutas inexploradas para viajeros exigentes.', image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=2070', category: 'Destinos', date: '05 Oct 2023', readTime: '7 min', author: 'Juan P.' },
+  { id: 3, title: 'Tecnología en Viajes Corporativos', excerpt: 'Herramientas que optimizan el tiempo de tus clientes.', image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=2070', category: 'Tech', date: '01 Oct 2023', readTime: '4 min', author: 'Ana G.' },
+];
+
+const MOCK_ASSOCIATES: Associate[] = [
+  { id: 1, name: 'Lucia', last_name: 'Mendez', email: 'lucia@traveliz.com', position: 'Senior Travel Designer', image: 'https://randomuser.me/api/portraits/women/65.jpg', whatsapp: '1234567890' },
+  { id: 2, name: 'Roberto', last_name: 'Diaz', email: 'roberto@traveliz.com', position: 'Agente Corporativo', image: 'https://randomuser.me/api/portraits/men/45.jpg', whatsapp: '0987654321' },
+];
+
+// Helper for delay
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const api = {
-  isSupabaseConnected: () => !!supabase,
-
-  getAssociates: async (): Promise<Associate[]> => {
-    if (!supabase) return [];
-    try {
-      const { data, error } = await supabase.from('associates').select('*').order('name', { ascending: true });
-      if (error) throw error;
-      return data || [];
-    } catch (err) {
-      console.error("API Error getAssociates:", err);
-      throw err;
-    }
-  },
-
-  getAssociateById: async (id: number): Promise<Associate | null> => {
-    if (!supabase) return null;
-    try {
-      const { data, error } = await supabase.from('associates').select('*').eq('id', id).single();
-      if (error) throw error;
-      return data;
-    } catch (err) {
-      console.error("API Error getAssociateById:", err);
-      return null;
-    }
-  },
-
-  upsertAssociate: async (associate: Associate): Promise<Associate | null> => {
-    if (!supabase) return null;
-    const { data, error } = await supabase.from('associates').upsert(associate).select().single();
-    if (error) throw error;
-    return data;
-  },
-
-  deleteAssociate: async (id: number): Promise<boolean> => {
-    if (!supabase) return false;
-    const { error } = await supabase.from('associates').delete().eq('id', id);
-    return !error;
-  },
-
   getNotices: async (): Promise<Notice[]> => {
-    if (supabase) {
-      const { data, error } = await supabase.from('notices').select('*').order('created_at', { ascending: false });
-      if (!error && data) return data.map((d: any) => ({ ...d, id: d.id.toString() }));
-    }
-    return [];
+    await delay(500);
+    return MOCK_NOTICES;
   },
-
-  upsertNotice: async (notice: Partial<Notice>): Promise<Notice | null> => {
-    if (!supabase) return null;
-    const payload = { ...notice };
-    if (payload.id) {
-      (payload as any).id = parseInt(payload.id);
-    }
-    const { data, error } = await supabase.from('notices').upsert(payload).select().single();
-    if (error) throw error;
-    return { ...data, id: data.id.toString() };
-  },
-
-  deleteNotice: async (id: string): Promise<boolean> => {
-    if (!supabase) return false;
-    const { error } = await supabase.from('notices').delete().eq('id', parseInt(id));
-    return !error;
-  },
-
   getEvents: async (): Promise<Event[]> => {
-    if (supabase) {
-      const { data, error } = await supabase.from('events').select('*').order('event_date');
-      if (!error && data) {
-        return data.map((e: any) => {
-          const dateObj = new Date(e.event_date + 'T00:00:00');
-          return {
-            ...e,
-            day: dateObj.getDate().toString().padStart(2, '0'),
-            month: dateObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '')
-          };
-        });
-      }
-    }
-    return [];
+    await delay(500);
+    return MOCK_EVENTS;
   },
-
   getEventById: async (id: number): Promise<Event | null> => {
-    if (supabase) {
-      const { data, error } = await supabase.from('events').select('*').eq('id', id).single();
-      if (!error && data) {
-        const dateObj = new Date(data.event_date + 'T00:00:00');
-        return {
-          ...data,
-          day: dateObj.getDate().toString().padStart(2, '0'),
-          month: dateObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '')
-        };
-      }
-    }
-    return null;
+    await delay(500);
+    return MOCK_EVENTS.find(e => e.id === id) || null;
   },
-
-  upsertEvent: async (event: Partial<Event>): Promise<Event | null> => {
-    if (!supabase) return null;
-    const { data, error } = await supabase.from('events').upsert(event).select().single();
-    if (error) throw error;
-    const dateObj = new Date(data.event_date + 'T00:00:00');
-    return {
-      ...data,
-      day: dateObj.getDate().toString().padStart(2, '0'),
-      month: dateObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '')
-    };
+  checkEventRegistration: async (eventId: number, email: string): Promise<boolean> => {
+    await delay(500);
+    // Mock random check
+    return false; 
   },
-
-  deleteEvent: async (id: number): Promise<boolean> => {
-    if (!supabase) return false;
-    const { error } = await supabase.from('events').delete().eq('id', id);
-    return !error;
+  registerForEvent: async (eventId: number, email: string): Promise<boolean> => {
+    await delay(800);
+    return true;
   },
-
-  // --- EVENT REGISTRATIONS ---
-  registerForEvent: async (eventId: number, userEmail: string): Promise<boolean> => {
-    if (!supabase) return false;
-    try {
-      const { error } = await supabase.from('event_registrations').insert({
-        event_id: eventId,
-        user_email: userEmail
-      });
-      if (error) throw error;
-      return true;
-    } catch (err) {
-      console.error("Error registering for event:", err);
-      return false;
-    }
-  },
-
-  checkEventRegistration: async (eventId: number, userEmail: string): Promise<boolean> => {
-    if (!supabase) return false;
-    try {
-      const { data, error } = await supabase
-        .from('event_registrations')
-        .select('*')
-        .eq('event_id', eventId)
-        .eq('user_email', userEmail);
-      if (error) throw error;
-      return data && data.length > 0;
-    } catch (err) {
-      console.error("Error checking registration:", err);
-      return false;
-    }
-  },
-
-  getEventRegistrations: async (eventId: number): Promise<EventRegistration[]> => {
-    if (!supabase) return [];
-    try {
-      // Obtenemos los registros y cruzamos con asociados para tener nombres
-      const { data: regs, error: regError } = await supabase
-        .from('event_registrations')
-        .select('*')
-        .eq('event_id', eventId);
-      
-      if (regError) throw regError;
-      
-      const { data: associates, error: assocError } = await supabase
-        .from('associates')
-        .select('name, last_name, email');
-      
-      if (assocError) throw assocError;
-
-      return (regs || []).map(r => {
-        const assoc = associates.find(a => a.email === r.user_email);
-        return {
-          ...r,
-          associate_name: assoc ? `${assoc.name} ${assoc.last_name || ''}` : 'Usuario Externo'
-        };
-      });
-    } catch (err) {
-      console.error("Error fetching event registrations:", err);
-      return [];
-    }
-  },
-
-  getBlogPosts: async (limit?: number): Promise<BlogPost[]> => {
-    if (supabase) {
-      let query = supabase.from('blog_posts').select('*').order('created_at', { ascending: false });
-      if (limit) query = query.limit(limit);
-      const { data, error } = await query;
-      if (!error && data) return data;
-    }
-    return [];
-  },
-
   getTopSellers: async (): Promise<Seller[]> => {
-    if (supabase) {
-      const { data, error } = await supabase.from('sellers').select('*').order('sales', { ascending: false });
-      if (!error && data) return data;
+    await delay(500);
+    return MOCK_SELLERS.sort((a, b) => a.ranking - b.ranking);
+  },
+  getBlogPosts: async (limit?: number): Promise<BlogPost[]> => {
+    await delay(500);
+    return limit ? MOCK_BLOG_POSTS.slice(0, limit) : MOCK_BLOG_POSTS;
+  },
+  getAssociates: async (): Promise<Associate[]> => {
+    await delay(600);
+    return MOCK_ASSOCIATES;
+  },
+  getAssociateById: async (id: number): Promise<Associate | null> => {
+    await delay(500);
+    return MOCK_ASSOCIATES.find(a => a.id === id) || null;
+  },
+  upsertSeller: async (seller: Partial<Seller>): Promise<Seller | null> => {
+    await delay(800);
+    if (seller.id) {
+        // Update
+        const index = MOCK_SELLERS.findIndex(s => s.id === seller.id);
+        if (index !== -1) {
+            MOCK_SELLERS[index] = { ...MOCK_SELLERS[index], ...seller } as Seller;
+            return MOCK_SELLERS[index];
+        }
+        return null;
+    } else {
+        // Create
+        const newSeller = { ...seller, id: Math.floor(Math.random() * 10000) } as Seller;
+        MOCK_SELLERS.push(newSeller);
+        return newSeller;
     }
-    return [];
+  },
+  deleteSeller: async (id: number): Promise<boolean> => {
+    await delay(600);
+    MOCK_SELLERS = MOCK_SELLERS.filter(s => s.id !== id);
+    return true;
   }
 };
