@@ -36,7 +36,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate,
     { id: NavigationItem.BLOG, label: 'Inspiración', icon: 'fa-blog' },
     { id: NavigationItem.DIRECTORIO, label: 'Directorio', icon: 'fa-address-book' },
     { id: NavigationItem.CAPACITACION, label: 'Capacitación', icon: 'fa-graduation-cap' },
-    { id: NavigationItem.CALENDARIO, label: 'Calendario de Eventos', icon: 'fa-calendar-days' },
+    { id: NavigationItem.CALENDARIO, label: 'Calendario', icon: 'fa-calendar-days' },
   ];
 
   return (
@@ -134,7 +134,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate,
 
       <nav className="hidden md:block bg-primary border-t border-white/5">
         <div className="max-w-site mx-auto px-mobile-x">
-          <div className="flex gap-10">
+          <div className="flex gap-10 items-center">
             {navItems.map((item) => (
               <button
                 key={item.id}
@@ -149,6 +149,20 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate,
                 {item.label}
               </button>
             ))}
+            
+            {user.role === 'admin' && (
+              <button
+                onClick={() => onNavigate(NavigationItem.ADMIN)}
+                className={`ml-auto flex items-center gap-2 py-2 px-4 text-[10px] font-bold uppercase tracking-[2px] border transition-all duration-300 ${
+                  currentNav === NavigationItem.ADMIN
+                    ? 'bg-accent border-accent text-white' 
+                    : 'border-accent/30 text-accent hover:bg-accent hover:text-white'
+                }`}
+              >
+                <i className="fa-solid fa-toolbox"></i>
+                ADMIN
+              </button>
+            )}
           </div>
         </div>
       </nav>

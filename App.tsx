@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { createRoot } from 'react-dom/client';
 import Login from './components/Login';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import Inspiration from './components/Inspiration';
 import Directory from './components/Directory';
+import AssociateProfile from './components/AssociateProfile';
 import Training from './components/Training';
 import EventsCalendar from './components/EventsCalendar';
+import EventDetail from './components/EventDetail';
 import AdminPanel from './components/AdminPanel';
 import AIAssistant from './components/AIAssistant';
 import { User, NavigationItem } from './types';
@@ -25,6 +26,8 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [currentNav, setCurrentNav] = useState<NavigationItem>(NavigationItem.DASHBOARD);
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [selectedAssociateId, setSelectedAssociateId] = useState<number | null>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('traveliz_user');
@@ -51,6 +54,16 @@ const App: React.FC = () => {
     alert(`Buscando: ${term}\n(Funcionalidad de búsqueda en desarrollo)`);
   };
 
+  const handleNavigateToEvent = (eventId: number) => {
+    setSelectedEventId(eventId);
+    setCurrentNav(NavigationItem.EVENT_DETAIL);
+  };
+
+  const handleViewAssociate = (id: number) => {
+    setSelectedAssociateId(id);
+    setCurrentNav(NavigationItem.ASSOCIATE_DETAIL);
+  };
+
   const renderContent = () => {
     switch (currentNav) {
       case NavigationItem.DASHBOARD:
@@ -62,11 +75,25 @@ const App: React.FC = () => {
       case NavigationItem.BLOG:
         return <Inspiration onNavigate={setCurrentNav} />;
       case NavigationItem.DIRECTORIO:
-        return <Directory />;
+        return <Directory onViewProfile={handleViewAssociate} />;
+      case NavigationItem.ASSOCIATE_DETAIL:
+        return selectedAssociateId ? (
+            <AssociateProfile associateId={selectedAssociateId} onBack={() => setCurrentNav(NavigationItem.DIRECTORIO)} />
+        ) : <Directory onViewProfile={handleViewAssociate} />;
       case NavigationItem.CAPACITACION:
         return <Training />;
       case NavigationItem.CALENDARIO:
-        return <EventsCalendar />;
+        return <EventsCalendar onEventClick={handleNavigateToEvent} />;
+      case NavigationItem.EVENT_DETAIL:
+        return selectedEventId ? (
+          <EventDetail 
+            eventId={selectedEventId} 
+            user={user!} 
+            onBack={() => setCurrentNav(NavigationItem.CALENDARIO)} 
+          />
+        ) : (
+          <EventsCalendar onEventClick={handleNavigateToEvent} />
+        );
       case NavigationItem.ADMIN:
         return <AdminPanel />;
       default:

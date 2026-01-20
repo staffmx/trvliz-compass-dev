@@ -1,35 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { api, Event } from '../services/api';
 
-interface CalendarEvent {
-  title: string;
-  time: string;
-  link: string;
-  type?: 'Social' | 'Corporativo' | 'Viaje';
+interface EventsCalendarProps {
+  onEventClick?: (eventId: number) => void;
 }
 
 interface EventsMap {
-  [date: string]: CalendarEvent[];
+  [date: string]: Event[];
 }
 
-// Mock data for General Events (cloned structure, different content example)
-const eventsData: EventsMap = {
-    "2026-01-05": [{ title: "Brindis de Año Nuevo", time: "06:00 PM", link: "#", type: 'Social' }],
-    "2026-01-10": [{ title: "Junta Anual de Resultados", time: "09:00 AM", link: "#", type: 'Corporativo' }],
-    "2026-01-14": [{ title: "Visita de Inspección: Hotel Four Seasons", time: "11:00 AM", link: "#", type: 'Viaje' }],
-    "2026-01-20": [{ title: "Networking con Proveedores Locales", time: "07:30 PM", link: "#", type: 'Social' }],
-    "2026-01-24": [{ title: "Lanzamiento Campaña Verano 2026", time: "10:00 AM", link: "#", type: 'Corporativo' }],
-    "2026-01-28": [{ title: "Cocktail de Bienvenida: Nuevos Socios", time: "08:00 PM", link: "#", type: 'Social' }]
-};
-
-const EventsCalendar: React.FC = () => {
-  // Start in January 2026
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 0, 1));
+const EventsCalendar: React.FC<EventsCalendarProps> = ({ onEventClick }) => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
   const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
   const daysOfWeek = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+  useEffect(() => {
+    const loadEvents = async () => {
+      setLoading(true);
+      try {
+        const data = await api.getEvents();
+        setEvents(data);
+      } catch (error) {
+        console.error("Error loading calendar events:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadEvents();
+  }, []);
+
+  const eventsByDate = useMemo(() => {
+    const map: EventsMap = {};
+    events.forEach(event => {
+      const dateKey = event.event_date;
+      if (!map[dateKey]) map[dateKey] = [];
+      map[dateKey].push(event);
+    });
+    return map;
+  }, [events]);
 
   const getDaysInMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
   const getFirstDayOfMonth = (y: number, m: number) => new Date(y, m, 1).getDay();
@@ -45,40 +59,49 @@ const EventsCalendar: React.FC = () => {
     
     const cells = [];
 
-    // Padding days from previous month
     for (let i = firstDay; i > 0; i--) {
       cells.push(
-        <div key={`prev-${i}`} className="min-h-[100px] md:min-h-[140px] p-2 md:p-[15px] border-r border-b border-black/5 relative bg-white opacity-30">
-          <span className="font-bold text-sm block mb-2.5">{prevMonthDays - i + 1}</span>
+        <div key={`prev-${i}`} className="min-h-[100px] md:min-h-[140px] p-2 md:p-[15px] border-r border-b border-black/5 relative bg-white opacity-20">
+          <span className="font-bold text-xs block mb-2.5">{prevMonthDays - i + 1}</span>
         </div>
       );
     }
 
-    // Current month days
     for (let i = 1; i <= totalDays; i++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-      const hasEvents = eventsData[dateStr];
-      const isToday = false; 
+      const dayEvents = eventsByDate[dateStr];
+      const today = new Date();
+      const isToday = today.getDate() === i && today.getMonth() === month && today.getFullYear() === year;
 
       cells.push(
         <div 
             key={i} 
-            className={`min-h-[100px] md:min-h-[140px] p-2 md:p-[15px] border-r border-b border-black/5 relative bg-white hover:bg-background transition-colors ${isToday ? 'bg-[#F5F1E8]/50' : ''}`}
+            className={`min-h-[100px] md:min-h-[140px] p-2 md:p-[15px] border-r border-b border-black/5 relative bg-white hover:bg-background transition-colors ${isToday ? 'ring-2 ring-inset ring-accent/30 bg-accent/5' : ''}`}
         >
-          <span className="font-bold text-sm block mb-2.5 text-primary">{i}</span>
+          <span className={`font-bold text-sm block mb-2.5 ${isToday ? 'text-accent' : 'text-primary'}`}>{i}</span>
           
-          {hasEvents && hasEvents.map((ev, idx) => (
-            <a 
-                key={idx} 
-                href={ev.link}
-                className="block bg-brand text-white p-2 text-[9px] md:text-[11px] leading-tight mb-1.5 border-l-[3px] border-accent font-sans hover:translate-x-1 hover:bg-primary transition-all duration-200"
+          {dayEvents && dayEvents.map((ev, idx) => (
+            <button 
+                key={ev.id || idx} 
+                onClick={() => ev.id && onEventClick && onEventClick(ev.id)}
+                className="w-full text-left block bg-brand text-white p-2 text-[9px] md:text-[10px] leading-tight mb-1.5 border-l-[3px] border-accent font-sans hover:translate-x-1 hover:bg-primary transition-all duration-200 overflow-hidden"
+                title={ev.title}
             >
-                <span className="hidden md:block font-bold text-[9px] text-accent uppercase mb-0.5">{ev.time}</span>
-                {ev.title}
-            </a>
+                <span className="hidden md:block font-bold text-[8px] text-accent uppercase mb-0.5">{ev.time}</span>
+                <p className="truncate">{ev.title}</p>
+            </button>
           ))}
         </div>
       );
+    }
+
+    const remainingCells = 42 - cells.length;
+    for (let i = 1; i <= remainingCells; i++) {
+        cells.push(
+            <div key={`next-${i}`} className="min-h-[100px] md:min-h-[140px] p-2 md:p-[15px] border-r border-b border-black/5 relative bg-white opacity-20">
+              <span className="font-bold text-xs block mb-2.5">{i}</span>
+            </div>
+        );
     }
 
     return cells;
@@ -86,8 +109,6 @@ const EventsCalendar: React.FC = () => {
 
   return (
     <div className="max-w-site mx-auto px-mobile-x py-section-y animate-fade-in">
-        
-        {/* Page Header */}
         <div className="text-center mb-12">
             <span className="text-brand text-xs font-bold uppercase tracking-[4px] mb-4 block">
                 Agenda Corporativa
@@ -97,63 +118,72 @@ const EventsCalendar: React.FC = () => {
             </h1>
         </div>
 
-        {/* Calendar Module - Traveliz Core Style */}
-        <div className="max-w-[1100px] mx-auto bg-white border border-black/10 shadow-sm">
+        <div className="max-w-[1100px] mx-auto bg-white border border-black/10 shadow-sm relative">
+            {loading && (
+                <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-[1px] flex items-center justify-center">
+                    <i className="fa-solid fa-circle-notch fa-spin text-brand text-3xl"></i>
+                </div>
+            )}
             
-            {/* Calendar Header */}
             <div className="flex flex-col md:flex-row justify-between items-center p-6 md:p-10 bg-primary text-white gap-6">
                 <h2 className="font-serif text-3xl md:text-5xl font-light">
-                    {monthNames[month]} {year}
+                    {monthNames[month]} <span className="text-accent italic">{year}</span>
                 </h2>
-                <div className="flex gap-5">
+                <div className="flex gap-4">
                     <button 
                         onClick={() => changeMonth(-1)}
-                        className="bg-transparent border border-accent text-accent px-5 py-2.5 font-bold text-[10px] tracking-[2px] uppercase cursor-pointer hover:bg-accent hover:text-white transition-all duration-300"
+                        className="w-12 h-12 flex items-center justify-center border border-white/20 text-white hover:border-accent hover:text-accent transition-all duration-300"
                     >
-                        Anterior
+                        <i className="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <button 
+                        onClick={() => setCurrentDate(new Date())}
+                        className="px-6 py-2.5 font-bold text-[10px] tracking-[2px] uppercase border border-white/20 hover:border-accent hover:text-accent transition-all"
+                    >
+                        Hoy
                     </button>
                     <button 
                         onClick={() => changeMonth(1)}
-                        className="bg-transparent border border-accent text-accent px-5 py-2.5 font-bold text-[10px] tracking-[2px] uppercase cursor-pointer hover:bg-accent hover:text-white transition-all duration-300"
+                        className="w-12 h-12 flex items-center justify-center border border-white/20 text-white hover:border-accent hover:text-accent transition-all duration-300"
                     >
-                        Siguiente
+                        <i className="fa-solid fa-chevron-right"></i>
                     </button>
                 </div>
             </div>
 
-            {/* Calendar Grid */}
             <div className="grid grid-cols-7 bg-white">
-                {/* Day Names */}
                 {daysOfWeek.map(day => (
-                    <div key={day} className="p-4 bg-[#F5F1E8] border-b border-black/10 font-bold text-[11px] uppercase tracking-widest text-center text-brand">
+                    <div key={day} className="p-4 bg-[#F5F1E8] border-b border-black/10 font-bold text-[10px] uppercase tracking-widest text-center text-brand">
                         {day}
                     </div>
                 ))}
-                
-                {/* Days Cells */}
                 {renderCalendarCells()}
             </div>
         </div>
 
-        {/* Additional Info Section */}
-        <div className="max-w-[1100px] mx-auto mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-surface p-8 border border-neutral">
-                <i className="fa-solid fa-champagne-glasses text-3xl text-brand mb-4"></i>
-                <h3 className="font-serif text-xl mb-2">Eventos Sociales</h3>
-                <p className="text-sm text-secondary leading-relaxed">Conecta con tus colegas en un ambiente relajado y exclusivo.</p>
+        <div className="max-w-[1100px] mx-auto mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-surface p-10 border border-neutral shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 bg-brand/5 flex items-center justify-center text-brand mb-6">
+                    <i className="fa-solid fa-champagne-glasses text-xl"></i>
+                </div>
+                <h3 className="font-serif text-xl mb-3 text-primary">Eventos Sociales</h3>
+                <p className="text-xs text-secondary leading-luxury font-light">Conecta con tus colegas en un ambiente relajado y exclusivo diseñado para fortalecer lazos.</p>
             </div>
-            <div className="bg-surface p-8 border border-neutral">
-                <i className="fa-solid fa-briefcase text-3xl text-brand mb-4"></i>
-                <h3 className="font-serif text-xl mb-2">Reuniones Corporativas</h3>
-                <p className="text-sm text-secondary leading-relaxed">Juntas de resultados, planeación estratégica y town halls.</p>
+            <div className="bg-surface p-10 border border-neutral shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 bg-brand/5 flex items-center justify-center text-brand mb-6">
+                    <i className="fa-solid fa-briefcase text-xl"></i>
+                </div>
+                <h3 className="font-serif text-xl mb-3 text-primary">Corporativo</h3>
+                <p className="text-xs text-secondary leading-luxury font-light">Juntas de resultados, planeación estratégica y sesiones informativas clave para el negocio.</p>
             </div>
-            <div className="bg-surface p-8 border border-neutral">
-                <i className="fa-solid fa-plane-departure text-3xl text-brand mb-4"></i>
-                <h3 className="font-serif text-xl mb-2">Viajes de Inspección</h3>
-                <p className="text-sm text-secondary leading-relaxed">Fam trips y visitas a propiedades destacadas para agentes.</p>
+            <div className="bg-surface p-10 border border-neutral shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 bg-brand/5 flex items-center justify-center text-brand mb-6">
+                    <i className="fa-solid fa-plane-departure text-xl"></i>
+                </div>
+                <h3 className="font-serif text-xl mb-3 text-primary">Inspecciones</h3>
+                <p className="text-xs text-secondary leading-luxury font-light">Fam trips y visitas a propiedades destacadas para que conozcas de primera mano el producto.</p>
             </div>
         </div>
-
     </div>
   );
 };

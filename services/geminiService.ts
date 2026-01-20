@@ -1,23 +1,13 @@
+
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 
-// Initialize the Gemini AI client
-// Note: process.env.API_KEY is injected by the environment.
-const apiKey = process.env.API_KEY;
-
-// Helper to get the AI instance. Checks if key exists.
-const getAI = () => {
-  if (!apiKey) {
-    console.warn("API Key not found. AI features will be disabled or mock.");
-    return null;
-  }
-  return new GoogleGenAI({ apiKey });
-};
-
+/**
+ * Service to interact with Gemini AI for the Traveliz Assistant.
+ * Uses gemini-3-flash-preview for general Q&A and assistant tasks.
+ */
 export const askTravelizAssistant = async (query: string): Promise<string> => {
-  const ai = getAI();
-  if (!ai) {
-    return "Lo siento, no puedo conectar con el servidor de inteligencia artificial en este momento. (Falta API Key)";
-  }
+  // Always initialize with process.env.API_KEY as per coding guidelines.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
     const systemInstruction = `
@@ -34,6 +24,7 @@ export const askTravelizAssistant = async (query: string): Promise<string> => {
       Idioma: Español.
     `;
 
+    // Using gemini-3-flash-preview for basic text tasks/Q&A.
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: query,
@@ -43,6 +34,7 @@ export const askTravelizAssistant = async (query: string): Promise<string> => {
       }
     });
 
+    // response.text is a property, not a method.
     return response.text || "No pude generar una respuesta.";
   } catch (error) {
     console.error("Gemini API Error:", error);

@@ -14,21 +14,37 @@ const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
 export interface Associate {
   id?: number;
   name: string;
+  last_name?: string;
   email: string;
   image: string;
   whatsapp?: string;
   position?: string;
+  associate_type?: string;
+  content?: string;
+  instagram?: string;
+  facebook?: string;
+  tiktok?: string;
+  created_at?: string;
 }
 
 export interface Event {
-  id: number;
+  id?: number;
   type: 'Webinar' | 'Presencial' | 'Viaje' | 'Social' | 'Corporativo';
   title: string;
-  date: string; 
-  month: string;
-  day: string;
+  description?: string;
+  event_date: string; 
+  month?: string;     
+  day?: string;       
   time: string;
   link?: string;
+}
+
+export interface EventRegistration {
+  id: number;
+  event_id: number;
+  user_email: string;
+  created_at: string;
+  associate_name?: string; // Virtual field for UI
 }
 
 export interface BlogPost {
@@ -48,71 +64,183 @@ export interface Seller {
   avatar: string;
 }
 
-// --- MOCK DATABASE (Fallback) ---
-
-const MOCK_ASSOCIATES: Associate[] = [
-  { id: 1, name: "Alessandra Vianna", position: "Senior Travel Consultant", email: "alessandra.v@traveliz.com", image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=800&auto=format&fit=crop", whatsapp: "123456789" },
-  { id: 2, name: "Julianne Moore", position: "Luxury Travel Specialist", email: "j.moore@traveliz.com", image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=800&auto=format&fit=crop", whatsapp: "987654321" }
-];
-
 // --- SERVICE LAYER ---
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 export const api = {
+  isSupabaseConnected: () => !!supabase,
+
   getAssociates: async (): Promise<Associate[]> => {
-    if (supabase) {
-      const { data, error } = await supabase.from('associates').select('*').order('name');
-      if (!error && data) return data;
-      console.error("Supabase Error:", error);
+    if (!supabase) return [];
+    try {
+      const { data, error } = await supabase.from('associates').select('*').order('name', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      console.error("API Error getAssociates:", err);
+      throw err;
     }
-    await delay(1000);
-    return MOCK_ASSOCIATES;
+  },
+
+  getAssociateById: async (id: number): Promise<Associate | null> => {
+    if (!supabase) return null;
+    try {
+      const { data, error } = await supabase.from('associates').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error("API Error getAssociateById:", err);
+      return null;
+    }
   },
 
   upsertAssociate: async (associate: Associate): Promise<Associate | null> => {
     if (!supabase) return null;
-    const { data, error } = await supabase
-      .from('associates')
-      .upsert(associate)
-      .select()
-      .single();
-    if (error) {
-      console.error("Error saving associate:", error);
-      throw error;
-    }
+    const { data, error } = await supabase.from('associates').upsert(associate).select().single();
+    if (error) throw error;
     return data;
   },
 
   deleteAssociate: async (id: number): Promise<boolean> => {
     if (!supabase) return false;
-    const { error } = await supabase
-      .from('associates')
-      .delete()
-      .eq('id', id);
-    if (error) {
-      console.error("Error deleting associate:", error);
-      return false;
-    }
-    return true;
+    const { error } = await supabase.from('associates').delete().eq('id', id);
+    return !error;
   },
 
   getNotices: async (): Promise<Notice[]> => {
     if (supabase) {
       const { data, error } = await supabase.from('notices').select('*').order('created_at', { ascending: false });
-      if (!error && data) return data;
+      if (!error && data) return data.map((d: any) => ({ ...d, id: d.id.toString() }));
     }
-    await delay(800);
     return [];
+  },
+
+  upsertNotice: async (notice: Partial<Notice>): Promise<Notice | null> => {
+    if (!supabase) return null;
+    const payload = { ...notice };
+    if (payload.id) {
+      (payload as any).id = parseInt(payload.id);
+    }
+    const { data, error } = await supabase.from('notices').upsert(payload).select().single();
+    if (error) throw error;
+    return { ...data, id: data.id.toString() };
+  },
+
+  deleteNotice: async (id: string): Promise<boolean> => {
+    if (!supabase) return false;
+    const { error } = await supabase.from('notices').delete().eq('id', parseInt(id));
+    return !error;
   },
 
   getEvents: async (): Promise<Event[]> => {
     if (supabase) {
       const { data, error } = await supabase.from('events').select('*').order('event_date');
-      if (!error && data) return data;
+      if (!error && data) {
+        return data.map((e: any) => {
+          const dateObj = new Date(e.event_date + 'T00:00:00');
+          return {
+            ...e,
+            day: dateObj.getDate().toString().padStart(2, '0'),
+            month: dateObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '')
+          };
+        });
+      }
     }
-    await delay(1000);
     return [];
+  },
+
+  getEventById: async (id: number): Promise<Event | null> => {
+    if (supabase) {
+      const { data, error } = await supabase.from('events').select('*').eq('id', id).single();
+      if (!error && data) {
+        const dateObj = new Date(data.event_date + 'T00:00:00');
+        return {
+          ...data,
+          day: dateObj.getDate().toString().padStart(2, '0'),
+          month: dateObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '')
+        };
+      }
+    }
+    return null;
+  },
+
+  upsertEvent: async (event: Partial<Event>): Promise<Event | null> => {
+    if (!supabase) return null;
+    const { data, error } = await supabase.from('events').upsert(event).select().single();
+    if (error) throw error;
+    const dateObj = new Date(data.event_date + 'T00:00:00');
+    return {
+      ...data,
+      day: dateObj.getDate().toString().padStart(2, '0'),
+      month: dateObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '')
+    };
+  },
+
+  deleteEvent: async (id: number): Promise<boolean> => {
+    if (!supabase) return false;
+    const { error } = await supabase.from('events').delete().eq('id', id);
+    return !error;
+  },
+
+  // --- EVENT REGISTRATIONS ---
+  registerForEvent: async (eventId: number, userEmail: string): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase.from('event_registrations').insert({
+        event_id: eventId,
+        user_email: userEmail
+      });
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error("Error registering for event:", err);
+      return false;
+    }
+  },
+
+  checkEventRegistration: async (eventId: number, userEmail: string): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      const { data, error } = await supabase
+        .from('event_registrations')
+        .select('*')
+        .eq('event_id', eventId)
+        .eq('user_email', userEmail);
+      if (error) throw error;
+      return data && data.length > 0;
+    } catch (err) {
+      console.error("Error checking registration:", err);
+      return false;
+    }
+  },
+
+  getEventRegistrations: async (eventId: number): Promise<EventRegistration[]> => {
+    if (!supabase) return [];
+    try {
+      // Obtenemos los registros y cruzamos con asociados para tener nombres
+      const { data: regs, error: regError } = await supabase
+        .from('event_registrations')
+        .select('*')
+        .eq('event_id', eventId);
+      
+      if (regError) throw regError;
+      
+      const { data: associates, error: assocError } = await supabase
+        .from('associates')
+        .select('name, last_name, email');
+      
+      if (assocError) throw assocError;
+
+      return (regs || []).map(r => {
+        const assoc = associates.find(a => a.email === r.user_email);
+        return {
+          ...r,
+          associate_name: assoc ? `${assoc.name} ${assoc.last_name || ''}` : 'Usuario Externo'
+        };
+      });
+    } catch (err) {
+      console.error("Error fetching event registrations:", err);
+      return [];
+    }
   },
 
   getBlogPosts: async (limit?: number): Promise<BlogPost[]> => {
@@ -122,7 +250,6 @@ export const api = {
       const { data, error } = await query;
       if (!error && data) return data;
     }
-    await delay(1200);
     return [];
   },
 
@@ -131,7 +258,6 @@ export const api = {
       const { data, error } = await supabase.from('sellers').select('*').order('sales', { ascending: false });
       if (!error && data) return data;
     }
-    await delay(700);
     return [];
   }
 };

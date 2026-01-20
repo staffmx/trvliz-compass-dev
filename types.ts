@@ -13,6 +13,7 @@ export interface Notice {
   content: string;
   priority: 'high' | 'medium' | 'low';
   category: 'General' | 'Urgente' | 'Capacitación';
+  target_associate_id?: number | null;
 }
 
 export interface QuickLink {
@@ -28,10 +29,12 @@ export enum NavigationItem {
   AVISOS = 'avisos',
   DOCUMENTACION = 'documentacion',
   DIRECTORIO = 'directorio',
+  ASSOCIATE_DETAIL = 'associate_detail',
   CAPACITACION = 'capacitacion',
   BLOG = 'blog',
   CALENDARIO = 'calendario',
   ADMIN = 'admin',
+  EVENT_DETAIL = 'event_detail',
 }
 
 export interface ChatMessage {
