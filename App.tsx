@@ -11,6 +11,9 @@ import EventDetail from './components/EventDetail';
 import AdminPanel from './components/AdminPanel';
 import AIAssistant from './components/AIAssistant';
 import Documentation from './components/Documentation';
+import Suppliers from './components/Suppliers';
+import NoticeDetail from './components/NoticeDetail';
+import NotificationsHistory from './components/NotificationsHistory';
 import { User, NavigationItem } from './types';
 
 const PlaceholderPage: React.FC<{ title: string; icon: string }> = ({ title, icon }) => (
@@ -29,6 +32,7 @@ const App: React.FC = () => {
   const [currentNav, setCurrentNav] = useState<NavigationItem>(NavigationItem.DASHBOARD);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [selectedAssociateId, setSelectedAssociateId] = useState<number | null>(null);
+  const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('traveliz_user');
@@ -59,6 +63,11 @@ const App: React.FC = () => {
     setSelectedEventId(eventId);
     setCurrentNav(NavigationItem.EVENT_DETAIL);
   };
+  
+  const handleNavigateToNotice = (noticeId: string) => {
+    setSelectedNoticeId(noticeId);
+    setCurrentNav(NavigationItem.NOTICE_DETAIL);
+  };
 
   const handleViewAssociate = (id: number) => {
     setSelectedAssociateId(id);
@@ -68,11 +77,25 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (currentNav) {
       case NavigationItem.DASHBOARD:
-        return <Dashboard user={user!} onNavigate={setCurrentNav} onEventClick={handleNavigateToEvent} />;
+        return <Dashboard 
+            user={user!} 
+            onNavigate={setCurrentNav} 
+            onEventClick={handleNavigateToEvent}
+            onNoticeClick={handleNavigateToNotice}
+        />;
       case NavigationItem.AVISOS:
         return <PlaceholderPage title="Avisos Generales" icon="fa-bullhorn" />;
+      case NavigationItem.NOTICE_DETAIL:
+        return selectedNoticeId ? (
+            <NoticeDetail 
+                noticeId={selectedNoticeId} 
+                onBack={() => setCurrentNav(NavigationItem.DASHBOARD)} 
+            />
+        ) : <PlaceholderPage title="Aviso no encontrado" icon="fa-triangle-exclamation" />;
       case NavigationItem.DOCUMENTACION:
-        return <Documentation />;
+        return <Documentation user={user!} />;
+      case NavigationItem.PROVEEDORES:
+        return <Suppliers />;
       case NavigationItem.BLOG:
         return <Inspiration onNavigate={setCurrentNav} />;
       case NavigationItem.DIRECTORIO:
@@ -95,10 +118,17 @@ const App: React.FC = () => {
         ) : (
           <EventsCalendar onEventClick={handleNavigateToEvent} />
         );
+      case NavigationItem.NOTIFICATIONS_HISTORY:
+        return <NotificationsHistory user={user!} />;
       case NavigationItem.ADMIN:
         return <AdminPanel />;
       default:
-        return <Dashboard user={user!} onNavigate={setCurrentNav} onEventClick={handleNavigateToEvent} />;
+        return <Dashboard 
+            user={user!} 
+            onNavigate={setCurrentNav} 
+            onEventClick={handleNavigateToEvent}
+            onNoticeClick={handleNavigateToNotice}
+        />;
     }
   };
 
@@ -132,7 +162,7 @@ const App: React.FC = () => {
                         />
                     </div>
                     <p className="text-secondary text-sm leading-luxury font-light max-w-md">
-                        Redefiniendo el viaje de lujo a través de una lente de elegancia, sutileza y conexión emocional. Tu mundo, a tu medida.
+                        Redefiniendo el viaje de lujo a través de una lens de elegancia, sutileza y conexión emocional. Tu mundo, a tu medida.
                     </p>
                 </div>
 

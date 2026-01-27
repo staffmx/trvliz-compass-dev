@@ -18,27 +18,24 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     // Mock authentication delay
     setTimeout(() => {
       setIsLoading(false);
-      // Hardcoded Andrea as Admin for demonstration purposes
-      if (email === 'empleado@traveliz.com' && password === 'admin') {
+      // Hardcoded Admin for demonstration
+      if (email === 'andrea@traveliz.com' || email === 'empleado@traveliz.com') {
+        const isAdmin = email === 'andrea@traveliz.com';
         onLogin({
-          id: '1',
-          name: 'Andrea Martínez',
+          id: isAdmin ? '1' : '2',
+          first_name: isAdmin ? 'Andrea' : 'Usuario',
+          last_name: isAdmin ? 'Martínez' : 'Demo',
+          name: isAdmin ? 'Andrea Martínez' : 'Usuario Demo',
           email: email,
-          role: 'admin', // CHANGED TO ADMIN TO TEST THE PANEL
-          avatar: 'https://picsum.photos/id/64/200/200'
+          role: isAdmin ? 'admin' : 'employee',
+          roles: isAdmin ? ['Admin', 'Manager'] : ['Employee'],
+          groups: isAdmin ? ['ROBLE', 'IN-HOUSE'] : ['IN-HOUSE'],
+          status: 1,
+          fecha_alta: new Date().toISOString(),
+          avatar: isAdmin ? 'https://picsum.photos/id/64/200/200' : 'https://picsum.photos/id/177/200/200'
         });
       } else {
-        if (email && password) {
-             onLogin({
-                id: '2',
-                name: 'Usuario Demo',
-                email: email,
-                role: 'employee',
-                avatar: 'https://picsum.photos/id/177/200/200'
-              });
-        } else {
-            setError('Por favor ingresa usuario y contraseña.');
-        }
+        setError('Credenciales no válidas. Usa andrea@traveliz.com para admin.');
       }
     }, 1500);
   };
@@ -107,15 +104,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             className="w-full py-4 bg-surface text-brand hover:text-accent font-bold uppercase tracking-[2px] rounded-none shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-2 mt-6 text-sm group"
           >
             {isLoading ? (
-              <>
-                <i className="fa-solid fa-circle-notch fa-spin"></i>
-                Iniciando sesión...
-              </>
+              <><i className="fa-solid fa-circle-notch fa-spin"></i> Iniciando sesión...</>
             ) : (
-              <>
-                Entrar a Compass
-                <i className="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
-              </>
+              <>Entrar a Compass <i className="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i></>
             )}
           </button>
         </form>

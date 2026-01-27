@@ -1,8 +1,14 @@
 export interface User {
   id: string;
-  name: string;
+  first_name: string;
+  last_name: string;
+  name?: string; // Mantener para compatibilidad
   email: string;
-  role: 'admin' | 'employee';
+  role?: 'admin' | 'employee'; // Mantener para lógica simple
+  roles: string[];
+  groups: string[];
+  status: 0 | 1;
+  fecha_alta: string;
   avatar?: string;
 }
 
@@ -35,6 +41,9 @@ export enum NavigationItem {
   CALENDARIO = 'calendario',
   ADMIN = 'admin',
   EVENT_DETAIL = 'event_detail',
+  PROVEEDORES = 'proveedores',
+  NOTICE_DETAIL = 'notice_detail',
+  NOTIFICATIONS_HISTORY = 'notifications_history',
 }
 
 export interface ChatMessage {

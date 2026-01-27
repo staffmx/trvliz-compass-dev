@@ -6,9 +6,10 @@ interface DashboardProps {
   user: User;
   onNavigate: (nav: NavigationItem) => void;
   onEventClick?: (eventId: number) => void; // Added prop for event navigation
+  onNoticeClick?: (noticeId: string) => void; // Added prop for notice navigation
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, onNoticeClick }) => {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
@@ -131,7 +132,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick })
                     ))
                 ) : (
                     notices.map((notice) => (
-                    <div key={notice.id} className="bg-surface p-8 rounded-none shadow-sm border border-neutral hover:shadow-lg transition-all duration-300 group">
+                    <button 
+                        key={notice.id} 
+                        onClick={() => onNoticeClick && onNoticeClick(notice.id)}
+                        className="w-full text-left bg-surface p-8 rounded-none shadow-sm border border-neutral hover:shadow-lg hover:border-accent/30 transition-all duration-300 group cursor-pointer"
+                    >
                         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
                             <div className="flex-1">
                                 <div className="flex items-center gap-4 mb-3">
@@ -141,11 +146,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick })
                                     <span className="text-xs text-secondary font-medium uppercase tracking-wide">{notice.date}</span>
                                 </div>
                                 <h3 className="text-xl font-serif font-medium text-primary group-hover:text-accent transition-colors mb-3">{notice.title}</h3>
-                                <p className="text-base text-primary leading-luxury font-light">{notice.content}</p>
+                                <p className="text-base text-primary leading-luxury font-light line-clamp-2">{notice.content}</p>
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-brand mt-4 inline-block group-hover:underline">Leer Más</span>
                             </div>
                             {notice.priority === 'high' && <div className="sm:self-center"><span className="w-2 h-2 rounded-full bg-red-500 block animate-pulse"></span></div>}
                         </div>
-                    </div>
+                    </button>
                     ))
                 )}
             </div>
@@ -160,7 +166,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick })
                   { id: NavigationItem.DOCUMENTACION, icon: 'fa-file-contract', label: 'Documentación', color: 'text-blue-600', bg: 'bg-blue-50' },
                   { id: NavigationItem.CAPACITACION, icon: 'fa-chalkboard-user', label: 'Capacitación', color: 'text-purple-600', bg: 'bg-purple-50' },
                   { id: NavigationItem.DIRECTORIO, icon: 'fa-users', label: 'Directorio', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                  { id: 'PROVEEDORES', icon: 'fa-handshake', label: 'Proveedores', color: 'text-orange-600', bg: 'bg-orange-50', action: () => alert("Función en desarrollo") }
+                  { id: NavigationItem.PROVEEDORES, icon: 'fa-handshake', label: 'Proveedores', color: 'text-orange-600', bg: 'bg-orange-50' }
                 ].map((item: any) => (
                     <button key={item.label} onClick={item.action ? item.action : () => onNavigate(item.id)} className="p-6 bg-surface rounded-none shadow-sm border border-neutral hover:border-accent hover:shadow-md transition-all text-center group h-full flex flex-col items-center justify-center gap-3">
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl transition-all duration-300 ${item.bg} ${item.color} group-hover:bg-accent group-hover:text-white`}>
@@ -227,7 +233,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick })
                             <h3 className="font-serif text-xl font-medium text-primary mb-4 group-hover:text-accent transition-colors leading-tight">{post.title}</h3>
                             <p className="text-sm text-secondary mb-6 line-clamp-3 leading-relaxed flex-1">{post.excerpt}</p>
                             <div className="flex items-center justify-between text-xs text-secondary border-t border-neutral pt-4 mt-auto">
-                                <span className="italic font-serif">{post.readTime} de lectura</span>
+                                <span className="italic font-serif">{post.read_time} de lectura</span>
                                 <span className="text-brand group-hover:text-accent font-bold uppercase tracking-widest flex items-center gap-2 text-[10px]">Leer más <i className="fa-solid fa-arrow-right"></i></span>
                             </div>
                         </div>

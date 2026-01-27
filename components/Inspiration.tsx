@@ -33,20 +33,25 @@ const Inspiration: React.FC<InspirationProps> = ({ onNavigate }) => {
 
   const selectedPost = posts.find(p => p.id === selectedPostId);
 
-  const getDummyContent = () => (
-    <div className="space-y-6 text-lg leading-relaxed text-primary font-light">
-      <p><span className="first-letter:text-5xl first-letter:font-serif first-letter:text-brand first-letter:float-left first-letter:mr-3 first-letter:mt-[-10px]">L</span>orem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum. Cras venenatis euismod malesuada.</p>
-      <p>Praesent finibus, est et congue auctor, libero enim egestas elit, id dapibus eros ante id ligula. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae.</p>
-      <h3 className="text-2xl font-serif text-brand mt-8 mb-4">Una perspectiva única</h3>
-      <p>In hac habitasse platea dictumst. Vivamus adipiscing fermentum quam, vel hendrerit purus. Ut quis est vel nibh pulvinar convallis quis sed tortor.</p>
-      <blockquote className="border-l-4 border-accent pl-6 italic text-secondary my-8 font-serif text-xl">"El verdadero viaje de descubrimiento no consiste en buscar nuevos paisajes, sino en tener nuevos ojos."</blockquote>
-      <ul className="list-disc pl-6 space-y-2 mt-4 marker:text-accent">
-        <li>Estrategias de adaptación cultural para ejecutivos.</li>
-        <li>Logística eficiente en aeropuertos internacionales.</li>
-        <li>Selección de alojamientos con certificación sostenible.</li>
-      </ul>
-    </div>
-  );
+  const renderPostContent = (content?: string) => {
+    if (!content) {
+        // Fallback dummy content if DB doesn't have content field
+        return (
+            <div className="space-y-6 text-lg leading-relaxed text-primary font-light">
+                <p><span className="first-letter:text-5xl first-letter:font-serif first-letter:text-brand first-letter:float-left first-letter:mr-3 first-letter:mt-[-10px]">L</span>orem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+                <p>Contenido no disponible.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6 text-lg leading-relaxed text-primary font-light">
+            {content.split('\n').map((paragraph, index) => (
+                paragraph.trim() && <p key={index} className={index === 0 ? "first-letter:text-5xl first-letter:font-serif first-letter:text-brand first-letter:float-left first-letter:mr-3 first-letter:mt-[-10px]" : ""}>{paragraph}</p>
+            ))}
+        </div>
+    );
+  };
 
   if (selectedPostId && selectedPost) {
     const recentPosts = posts.filter(p => p.id !== selectedPostId).slice(0, 3);
@@ -61,7 +66,7 @@ const Inspiration: React.FC<InspirationProps> = ({ onNavigate }) => {
                         <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest text-secondary mb-4">
                             <span className="text-accent">{selectedPost.category}</span>
                             <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-                            <span>{selectedPost.date}</span>
+                            <span>{selectedPost.publish_date}</span>
                         </div>
                         <h1 className="text-4xl md:text-5xl font-serif font-medium text-primary leading-tight mb-6">{selectedPost.title}</h1>
                         <div className="flex items-center justify-between border-t border-b border-neutral py-4">
@@ -75,7 +80,7 @@ const Inspiration: React.FC<InspirationProps> = ({ onNavigate }) => {
                         </div>
                     </div>
                     <div className="mb-10 w-full aspect-video overflow-hidden shadow-md"><img src={selectedPost.image} alt={selectedPost.title} className="w-full h-full object-cover" /></div>
-                    <div className="mb-16">{getDummyContent()}</div>
+                    <div className="mb-16">{renderPostContent(selectedPost.content)}</div>
                     <div className="border-t border-neutral pt-12">
                         <h3 className="font-serif text-2xl text-primary mb-8">Lo más reciente</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -135,9 +140,9 @@ const Inspiration: React.FC<InspirationProps> = ({ onNavigate }) => {
               </div>
               <div className="p-8 flex flex-col flex-1">
                 <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-secondary mb-4">
-                    <span className="text-brand">{post.date}</span>
+                    <span className="text-brand">{post.publish_date}</span>
                     <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-                    <span>{post.readTime} lectura</span>
+                    <span>{post.read_time} lectura</span>
                 </div>
                 <h3 className="font-serif text-2xl text-primary mb-4 leading-tight group-hover:text-accent transition-colors">{post.title}</h3>
                 <p className="text-sm text-secondary font-light leading-luxury mb-6 line-clamp-3 flex-1">{post.excerpt}</p>
