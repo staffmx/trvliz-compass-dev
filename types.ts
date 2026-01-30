@@ -1,15 +1,27 @@
 export interface User {
   id: string;
-  first_name: string;
-  last_name: string;
-  name?: string; // Mantener para compatibilidad
+  name: string;
   email: string;
-  role?: 'admin' | 'employee'; // Mantener para lógica simple
-  roles: string[];
-  groups: string[];
-  status: 0 | 1;
-  fecha_alta: string;
+  role: 'admin' | 'employee';
   avatar?: string;
+}
+
+export interface Role {
+  id: number;
+  name: string;
+  description?: string;
+  color?: string;
+}
+
+export interface UserProfile {
+  id: string; // matches auth.users.id
+  name: string;
+  last_name?: string;
+  email: string;
+  avatar_url?: string;
+  position?: string;
+  roles?: Role[];
+  created_at?: string;
 }
 
 export interface Notice {
@@ -18,7 +30,7 @@ export interface Notice {
   date: string;
   content: string;
   priority: 'high' | 'medium' | 'low';
-  category: 'General' | 'Urgente' | 'Capacitación';
+  category: 'General' | 'Corporativo' | 'Capacitación';
   target_associate_id?: number | null;
 }
 
@@ -43,7 +55,6 @@ export enum NavigationItem {
   EVENT_DETAIL = 'event_detail',
   PROVEEDORES = 'proveedores',
   NOTICE_DETAIL = 'notice_detail',
-  NOTIFICATIONS_HISTORY = 'notifications_history',
 }
 
 export interface ChatMessage {

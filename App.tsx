@@ -13,7 +13,7 @@ import AIAssistant from './components/AIAssistant';
 import Documentation from './components/Documentation';
 import Suppliers from './components/Suppliers';
 import NoticeDetail from './components/NoticeDetail';
-import NotificationsHistory from './components/NotificationsHistory';
+import NoticesList from './components/NoticesList';
 import { User, NavigationItem } from './types';
 
 const PlaceholderPage: React.FC<{ title: string; icon: string }> = ({ title, icon }) => (
@@ -84,7 +84,7 @@ const App: React.FC = () => {
             onNoticeClick={handleNavigateToNotice}
         />;
       case NavigationItem.AVISOS:
-        return <PlaceholderPage title="Avisos Generales" icon="fa-bullhorn" />;
+        return <NoticesList />;
       case NavigationItem.NOTICE_DETAIL:
         return selectedNoticeId ? (
             <NoticeDetail 
@@ -118,8 +118,6 @@ const App: React.FC = () => {
         ) : (
           <EventsCalendar onEventClick={handleNavigateToEvent} />
         );
-      case NavigationItem.NOTIFICATIONS_HISTORY:
-        return <NotificationsHistory user={user!} />;
       case NavigationItem.ADMIN:
         return <AdminPanel />;
       default:
@@ -162,7 +160,7 @@ const App: React.FC = () => {
                         />
                     </div>
                     <p className="text-secondary text-sm leading-luxury font-light max-w-md">
-                        Redefiniendo el viaje de lujo a través de una lens de elegancia, sutileza y conexión emocional. Tu mundo, a tu medida.
+                        Redefiniendo el viaje de lujo a través de una lente de elegancia, sutileza y conexión emocional. Tu mundo, a tu medida.
                     </p>
                 </div>
 

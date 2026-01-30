@@ -1,4 +1,4 @@
-import { Notice, User } from '../types';
+import { Notice, UserProfile, Role } from '../types';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 
 // --- SUPABASE CONFIGURATION ---
@@ -44,7 +44,7 @@ export interface EventRegistration {
   event_id: number;
   user_email: string;
   created_at: string;
-  associate_name?: string; 
+  associate_name?: string; // Virtual field for UI
 }
 
 export interface BlogPost {
@@ -54,9 +54,9 @@ export interface BlogPost {
   image: string;
   excerpt: string;
   content?: string;
-  read_time: string;
+  read_time: string;   
   author: string;
-  publish_date: string;
+  publish_date: string; 
 }
 
 export interface Seller {
@@ -79,68 +79,84 @@ export interface DocItem {
   storage_path?: string;
 }
 
-export interface AppNotification {
-  id: string;
-  user_email: string;
-  title: string;
-  description: string;
-  type: 'urgent' | 'event' | 'info';
-  is_read: boolean;
-  created_at: string;
-}
-
 // --- SERVICE LAYER ---
 
 export const api = {
   isSupabaseConnected: () => !!supabase,
 
-  // --- USERS ---
-  getUsers: async (): Promise<User[]> => {
+  // --- USERS & ROLES ---
+  getRoles: async (): Promise<Role[]> => {
     if (!supabase) return [];
-    const { data, error } = await supabase.from('users').select('*').order('fecha_alta', { ascending: false });
+    const { data, error } = await supabase.from('roles').select('*').order('name');
     if (error) return [];
-    return data || [];
-  },
-
-  upsertUser: async (userData: Partial<User>): Promise<User | null> => {
-    if (!supabase) return null;
-    const { data, error } = await supabase.from('users').upsert(userData).select().single();
-    if (error) throw error;
     return data;
   },
 
-  deleteUser: async (id: string): Promise<boolean> => {
-    if (!supabase) return false;
-    const { error } = await supabase.from('users').delete().eq('id', id);
-    return !error;
-  },
-
-  // --- NOTIFICATIONS (Private Messages) ---
-  getNotificationsForUser: async (email: string): Promise<AppNotification[]> => {
+  getUsers: async (): Promise<UserProfile[]> => {
     if (!supabase) return [];
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_email', email)
-      .order('created_at', { ascending: false });
-    if (error) return [];
-    return data || [];
+    try {
+      // Fetch profiles with their associated roles through the user_roles junction table
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          user_roles (
+            role_id,
+            roles (
+              id,
+              name,
+              color
+            )
+          )
+        `);
+      
+      if (error) throw error;
+      
+      return (data || []).map(profile => ({
+        ...profile,
+        roles: profile.user_roles?.map((ur: any) => ur.roles) || []
+      }));
+    } catch (err) {
+      console.error("Error fetching users:", err);
+      return [];
+    }
   },
 
-  createNotification: async (notification: Partial<AppNotification>): Promise<boolean> => {
+  createUserProfile: async (userData: Partial<UserProfile>, roleIds: number[]): Promise<boolean> => {
     if (!supabase) return false;
-    const { error } = await supabase.from('notifications').insert(notification);
-    return !error;
-  },
+    try {
+      // Note: Real user creation in auth.users requires admin API or specific edge function.
+      // Here we manage the profile and roles linking.
+      const { data: profile, error: pError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: userData.id || undefined, // If creating new, auth id would come from a trigger or edge function
+          name: userData.name,
+          last_name: userData.last_name,
+          email: userData.email,
+          position: userData.position,
+          avatar_url: userData.avatar_url
+        })
+        .select()
+        .single();
+      
+      if (pError) throw pError;
 
-  markNotificationRead: async (id: string): Promise<void> => {
-    if (!supabase) return;
-    await supabase.from('notifications').update({ is_read: true }).eq('id', id);
-  },
+      // Update roles in junction table
+      if (roleIds.length > 0) {
+        // Clear existing
+        await supabase.from('user_roles').delete().eq('user_id', profile.id);
+        // Insert new ones
+        const rolePayload = roleIds.map(rid => ({ user_id: profile.id, role_id: rid }));
+        const { error: rError } = await supabase.from('user_roles').insert(rolePayload);
+        if (rError) throw rError;
+      }
 
-  deleteNotification: async (id: string): Promise<void> => {
-    if (!supabase) return;
-    await supabase.from('notifications').delete().eq('id', id);
+      return true;
+    } catch (err) {
+      console.error("Error upserting user:", err);
+      return false;
+    }
   },
 
   // --- ASSOCIATES ---
@@ -306,10 +322,15 @@ export const api = {
         .from('event_registrations')
         .select('*')
         .eq('event_id', eventId);
+      
       if (regError) throw regError;
+      
       const { data: associates, error: assocError } = await supabase
-        .from('associates').select('name, last_name, email');
+        .from('associates')
+        .select('name, last_name, email');
+      
       if (assocError) throw assocError;
+
       return (regs || []).map(r => {
         const assoc = associates.find(a => a.email === r.user_email);
         return {
@@ -318,6 +339,7 @@ export const api = {
         };
       });
     } catch (err) {
+      console.error("Error fetching event registrations:", err);
       return [];
     }
   },
@@ -353,15 +375,19 @@ export const api = {
     return !error;
   },
 
+  // --- DOCUMENTATION ---
+
   getDocuments: async (parentId: number | null): Promise<DocItem[]> => {
     if (!supabase) return [];
     try {
-      let query = supabase.from('documents').select('*').order('type', { ascending: true }).order('name', { ascending: true });
+      let query = supabase.from('documents').select('*').order('type', { ascending: true }).order('name', { ascending: true }); 
+      
       if (parentId === null) {
         query = query.is('parent_id', null);
       } else {
         query = query.eq('parent_id', parentId);
       }
+
       const { data, error } = await query;
       if (error) throw error;
       return (data || []).map((d: any) => ({
@@ -369,38 +395,72 @@ export const api = {
           created_at: new Date(d.created_at).toLocaleDateString('es-ES')
       }));
     } catch (err) {
+      console.error("Error fetching documents:", err);
       return [];
     }
   },
 
   createFolder: async (name: string, parentId: number | null): Promise<DocItem | null> => {
     if (!supabase) return null;
-    const { data, error } = await supabase.from('documents').insert({ name, type: 'folder', parent_id: parentId }).select().single();
-    if (error) return null;
+    const { data, error } = await supabase.from('documents').insert({
+      name,
+      type: 'folder',
+      parent_id: parentId
+    }).select().single();
+    
+    if (error) {
+      console.error("Error creating folder:", error);
+      return null;
+    }
     return data;
   },
 
   uploadFile: async (file: File, parentId: number | null): Promise<DocItem | null> => {
     if (!supabase) return null;
+
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${file.name.replace(/\s/g, '_')}`;
+      const fileName = `${Date.now()}_${file.name.replace(/\s/g, '_')}`; 
       const filePath = `uploads/${fileName}`;
-      const { error: uploadError } = await supabase.storage.from('documentation').upload(filePath, file);
+
+      const { error: uploadError } = await supabase.storage
+        .from('documentation')
+        .upload(filePath, file);
+
       if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage.from('documentation').getPublicUrl(filePath);
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('documentation')
+        .getPublicUrl(filePath);
+
       let type: FileType = 'other';
       if (['pdf'].includes(fileExt?.toLowerCase() || '')) type = 'pdf';
       else if (['doc', 'docx'].includes(fileExt?.toLowerCase() || '')) type = 'doc';
       else if (['xls', 'xlsx', 'csv'].includes(fileExt?.toLowerCase() || '')) type = 'xls';
       else if (['jpg', 'jpeg', 'png', 'gif'].includes(fileExt?.toLowerCase() || '')) type = 'img';
       else if (['mp4', 'mov'].includes(fileExt?.toLowerCase() || '')) type = 'video';
+
       const sizeMB = file.size / (1024 * 1024);
       const sizeStr = sizeMB < 1 ? `${(file.size / 1024).toFixed(0)} KB` : `${sizeMB.toFixed(1)} MB`;
-      const { data, error: dbError } = await supabase.from('documents').insert({ name: file.name, type, size: sizeStr, parent_id: parentId, url: publicUrl, storage_path: filePath }).select().single();
+
+      const { data, error: dbError } = await supabase.from('documents').insert({
+        name: file.name,
+        type,
+        size: sizeStr,
+        parent_id: parentId,
+        url: publicUrl,
+        storage_path: filePath
+      }).select().single();
+
       if (dbError) throw dbError;
-      return { ...data, created_at: new Date(data.created_at).toLocaleDateString('es-ES') };
+
+      return {
+          ...data,
+          created_at: new Date(data.created_at).toLocaleDateString('es-ES')
+      };
+
     } catch (err) {
+      console.error("Error uploading file:", err);
       return null;
     }
   },
@@ -409,12 +469,19 @@ export const api = {
     if (!supabase) return false;
     try {
         if (doc.type !== 'folder' && doc.storage_path) {
-            await supabase.storage.from('documentation').remove([doc.storage_path]);
+            const { error: storageError } = await supabase.storage
+                .from('documentation')
+                .remove([doc.storage_path]);
+            
+            if (storageError) console.warn("Could not delete file from bucket", storageError);
         }
+
         const { error } = await supabase.from('documents').delete().eq('id', doc.id);
         if (error) throw error;
+        
         return true;
     } catch (err) {
+        console.error("Error deleting document:", err);
         return false;
     }
   }
