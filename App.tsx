@@ -9,7 +9,6 @@ import Training from './components/Training';
 import EventsCalendar from './components/EventsCalendar';
 import EventDetail from './components/EventDetail';
 import AdminPanel from './components/AdminPanel';
-import AIAssistant from './components/AIAssistant';
 import Documentation from './components/Documentation';
 import Suppliers from './components/Suppliers';
 import NoticeDetail from './components/NoticeDetail';
@@ -198,8 +197,6 @@ const App: React.FC = () => {
             </div>
         </div>
       </footer>
-
-      <AIAssistant />
     </div>
   );
 };

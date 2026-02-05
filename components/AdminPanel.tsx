@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { api, Associate, Event, EventRegistration, Seller } from '../services/api';
+import React, { useState, useEffect, useRef } from 'react';
+import { api, Associate, Event, EventRegistration, Seller, DocItem, FileType } from '../services/api';
 import { Notice, UserProfile, Role } from '../types';
 
-type AdminSection = 'overview' | 'directory' | 'notices' | 'events' | 'blog' | 'sellers' | 'users';
+type AdminSection = 'overview' | 'directory' | 'notices' | 'events' | 'blog' | 'sellers' | 'users' | 'documents';
 
 const AdminPanel: React.FC = () => {
   const [activeSection, setActiveSection] = useState<AdminSection>('overview');
@@ -13,21 +13,31 @@ const AdminPanel: React.FC = () => {
   }, []);
 
   // Shared UI Components
-  const SectionHeader = ({ title, subtitle, actionLabel, onAction }: { title: string, subtitle: string, actionLabel?: string, onAction?: () => void }) => (
+  const SectionHeader = ({ title, subtitle, actionLabel, onAction, secondActionLabel, onSecondAction }: { title: string, subtitle: string, actionLabel?: string, onAction?: () => void, secondActionLabel?: string, onSecondAction?: () => void }) => (
     <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-6">
       <div>
         <span className="text-accent text-[10px] font-bold uppercase tracking-[4px] mb-2 block">Administración</span>
         <h2 className="text-4xl font-serif font-medium text-primary leading-tight">{title}</h2>
         <p className="text-secondary text-sm mt-2">{subtitle}</p>
       </div>
-      {actionLabel && (
-        <button 
-          onClick={onAction}
-          className="bg-brand text-white px-8 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all duration-300 shadow-xl flex items-center gap-3"
-        >
-          <i className="fa-solid fa-plus"></i> {actionLabel}
-        </button>
-      )}
+      <div className="flex gap-4">
+        {secondActionLabel && (
+          <button 
+            onClick={onSecondAction}
+            className="bg-white border border-brand text-brand px-8 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-brand hover:text-white transition-all duration-300 shadow-xl flex items-center gap-3"
+          >
+            <i className="fa-solid fa-folder-plus"></i> {secondActionLabel}
+          </button>
+        )}
+        {actionLabel && (
+          <button 
+            onClick={onAction}
+            className="bg-brand text-white px-8 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all duration-300 shadow-xl flex items-center gap-3"
+          >
+            <i className="fa-solid fa-plus"></i> {actionLabel}
+          </button>
+        )}
+      </div>
     </div>
   );
 
@@ -40,7 +50,7 @@ const AdminPanel: React.FC = () => {
           <h3 className="text-xl font-serif">Management</h3>
         </div>
         
-        <nav className="flex-1 py-6">
+        <nav className="flex-1 py-6 overflow-y-auto no-scrollbar">
           <button 
             onClick={() => setActiveSection('overview')}
             className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'overview' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}
@@ -52,6 +62,12 @@ const AdminPanel: React.FC = () => {
             className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'users' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}
           >
             <i className="fa-solid fa-users-gear w-5"></i> Usuarios
+          </button>
+          <button 
+            onClick={() => setActiveSection('documents')}
+            className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'documents' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}
+          >
+            <i className="fa-solid fa-folder-tree w-5"></i> Documentos
           </button>
           <button 
             onClick={() => setActiveSection('directory')}
@@ -96,6 +112,7 @@ const AdminPanel: React.FC = () => {
       <main className="flex-1 p-8 md:p-12 overflow-y-auto bg-[#F9FAFB]">
         {activeSection === 'overview' && <AdminOverview setActive={setActiveSection} />}
         {activeSection === 'users' && <AdminUsers Header={SectionHeader} />}
+        {activeSection === 'documents' && <AdminDocuments Header={SectionHeader} />}
         {activeSection === 'directory' && <AdminDirectory Header={SectionHeader} />}
         {activeSection === 'sellers' && <AdminSellers Header={SectionHeader} />}
         {activeSection === 'notices' && <AdminNotices Header={SectionHeader} />}
@@ -106,7 +123,154 @@ const AdminPanel: React.FC = () => {
   );
 };
 
-/* --- SUB-COMPONENT: USERS MANAGEMENT --- */
+/* --- SUB-COMPONENT: DOCUMENTS MANAGEMENT --- */
+const AdminDocuments = ({ Header }: any) => {
+  const [currentFolderId, setCurrentFolderId] = useState<number | null>(null);
+  const [items, setItems] = useState<DocItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [history, setHistory] = useState<{id: number | null, name: string}[]>([{ id: null, name: 'Raíz' }]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { loadItems(); }, [currentFolderId]);
+
+  const loadItems = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getDocuments(currentFolderId);
+      setItems(data);
+    } finally { setLoading(false); }
+  };
+
+  const handleCreateFolder = async () => {
+    const name = prompt("Nombre de la carpeta:");
+    if (name) {
+      const folder = await api.createFolder(name, currentFolderId);
+      if (folder) loadItems();
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setIsUploading(true);
+      try {
+        await api.uploadFile(e.target.files[0], currentFolderId);
+        loadItems();
+      } finally { setIsUploading(false); }
+    }
+  };
+
+  const navigateToFolder = (folder: DocItem) => {
+    setCurrentFolderId(folder.id);
+    setHistory([...history, { id: folder.id, name: folder.name }]);
+  };
+
+  const goBackTo = (index: number) => {
+    const newHistory = history.slice(0, index + 1);
+    setHistory(newHistory);
+    setCurrentFolderId(newHistory[newHistory.length - 1].id);
+  };
+
+  const handleDelete = async (doc: DocItem) => {
+    if (confirm(`¿Eliminar definitivamente "${doc.name}"?`)) {
+      await api.deleteDocument(doc);
+      loadItems();
+    }
+  };
+
+  const getIcon = (type: FileType) => {
+    switch(type) {
+      case 'folder': return 'fa-folder text-brand';
+      case 'pdf': return 'fa-file-pdf text-red-500';
+      case 'img': return 'fa-file-image text-purple-500';
+      default: return 'fa-file text-secondary';
+    }
+  };
+
+  return (
+    <div className="animate-fade-in">
+      <Header 
+        title="Gestor de Archivos" 
+        subtitle="Organiza la documentación corporativa en categorías y subcategorías." 
+        actionLabel={isUploading ? "Subiendo..." : "Subir Archivo"}
+        onAction={() => fileInputRef.current?.click()}
+        secondActionLabel="Nueva Carpeta"
+        onSecondAction={handleCreateFolder}
+      />
+      <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+
+      {/* Breadcrumbs Navigation */}
+      <div className="flex items-center gap-2 mb-8 bg-white p-4 border border-neutral overflow-x-auto no-scrollbar">
+        {history.map((item, idx) => (
+          <React.Fragment key={idx}>
+            <button 
+              onClick={() => goBackTo(idx)}
+              className={`text-[10px] font-bold uppercase tracking-widest whitespace-nowrap transition-colors ${idx === history.length - 1 ? 'text-brand cursor-default' : 'text-secondary hover:text-brand'}`}
+            >
+              {item.name}
+            </button>
+            {idx < history.length - 1 && <i className="fa-solid fa-chevron-right text-[8px] text-neutral"></i>}
+          </React.Fragment>
+        ))}
+      </div>
+
+      <div className="bg-white border border-neutral shadow-sm overflow-hidden min-h-[400px]">
+        <table className="w-full text-left">
+          <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
+            <tr>
+              <th className="px-8 py-5">Nombre</th>
+              <th className="px-8 py-5">Tipo / Tamaño</th>
+              <th className="px-8 py-5">Fecha</th>
+              <th className="px-8 py-5 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral">
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => <tr key={i} className="animate-pulse h-16 bg-gray-50/50"></tr>)
+            ) : items.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-8 py-20 text-center">
+                  <i className="fa-solid fa-folder-open text-3xl text-neutral mb-3 block"></i>
+                  <p className="text-secondary font-serif italic">Esta carpeta está vacía.</p>
+                </td>
+              </tr>
+            ) : items.map((item) => (
+              <tr key={item.id} className="hover:bg-background/30 group transition-colors">
+                <td className="px-8 py-4">
+                  <div 
+                    className={`flex items-center gap-4 ${item.type === 'folder' ? 'cursor-pointer' : ''}`}
+                    onClick={() => item.type === 'folder' && navigateToFolder(item)}
+                  >
+                    <i className={`fa-solid ${getIcon(item.type)} text-xl`}></i>
+                    <span className={`text-sm font-medium ${item.type === 'folder' ? 'text-brand font-bold' : 'text-primary'}`}>
+                      {item.name}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-8 py-4 text-[10px] font-bold uppercase text-secondary">
+                  {item.type === 'folder' ? 'Carpeta' : item.size || 'Archivo'}
+                </td>
+                <td className="px-8 py-4 text-xs text-secondary">{item.created_at}</td>
+                <td className="px-8 py-4 text-right">
+                  <div className="flex justify-end gap-3">
+                    {item.url && (
+                      <a href={item.url} target="_blank" className="p-2 text-secondary hover:text-brand"><i className="fa-solid fa-eye"></i></a>
+                    )}
+                    <button onClick={() => handleDelete(item)} className="p-2 text-secondary hover:text-red-600"><i className="fa-solid fa-trash"></i></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+/* --- OTROS COMPONENTES EXISTENTES (AdminUsers, AdminDirectory, etc. se mantienen igual) --- */
+/* ... rest of the file ... */
+
 const AdminUsers = ({ Header }: any) => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
