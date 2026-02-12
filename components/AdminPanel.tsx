@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { api, Associate, Event, EventRegistration, Seller, DocItem, FileType } from '../services/api';
+import { api, Associate, Event, EventRegistration, Seller, DocItem, FileType, RecordedWebinar, WEBINAR_CATEGORIES } from '../services/api';
 import { Notice, UserProfile, Role } from '../types';
 
-type AdminSection = 'overview' | 'directory' | 'notices' | 'events' | 'blog' | 'sellers' | 'users' | 'documents';
+type AdminSection = 'overview' | 'directory' | 'notices' | 'events' | 'blog' | 'sellers' | 'users' | 'documents' | 'recorded_webinars';
 
 const AdminPanel: React.FC = () => {
   const [activeSection, setActiveSection] = useState<AdminSection>('overview');
@@ -12,7 +13,6 @@ const AdminPanel: React.FC = () => {
     setDbStatus(api.isSupabaseConnected() ? 'connected' : 'error');
   }, []);
 
-  // Shared UI Components
   const SectionHeader = ({ title, subtitle, actionLabel, onAction, secondActionLabel, onSecondAction }: { title: string, subtitle: string, actionLabel?: string, onAction?: () => void, secondActionLabel?: string, onSecondAction?: () => void }) => (
     <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-6">
       <div>
@@ -43,7 +43,6 @@ const AdminPanel: React.FC = () => {
 
   return (
     <div className="min-h-[80vh] flex flex-col lg:flex-row bg-background animate-fade-in">
-      {/* Admin Sidebar */}
       <aside className="w-full lg:w-72 bg-primary text-white border-r border-white/5 flex flex-col">
         <div className="p-8 border-b border-white/5">
           <p className="text-[10px] font-bold uppercase tracking-[3px] text-accent mb-1">Compass</p>
@@ -51,46 +50,28 @@ const AdminPanel: React.FC = () => {
         </div>
         
         <nav className="flex-1 py-6 overflow-y-auto no-scrollbar">
-          <button 
-            onClick={() => setActiveSection('overview')}
-            className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'overview' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}
-          >
+          <button onClick={() => setActiveSection('overview')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'overview' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
             <i className="fa-solid fa-chart-line w-5"></i> Dashboard
           </button>
-          <button 
-            onClick={() => setActiveSection('users')}
-            className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'users' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}
-          >
+          <button onClick={() => setActiveSection('users')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'users' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
             <i className="fa-solid fa-users-gear w-5"></i> Usuarios
           </button>
-          <button 
-            onClick={() => setActiveSection('documents')}
-            className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'documents' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}
-          >
+          <button onClick={() => setActiveSection('recorded_webinars')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'recorded_webinars' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+            <i className="fa-solid fa-play w-5"></i> Webinars Grabados
+          </button>
+          <button onClick={() => setActiveSection('documents')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'documents' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
             <i className="fa-solid fa-folder-tree w-5"></i> Documentos
           </button>
-          <button 
-            onClick={() => setActiveSection('directory')}
-            className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'directory' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}
-          >
+          <button onClick={() => setActiveSection('directory')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'directory' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
             <i className="fa-solid fa-address-book w-5"></i> Directorio
           </button>
-          <button 
-            onClick={() => setActiveSection('sellers')}
-            className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'sellers' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}
-          >
+          <button onClick={() => setActiveSection('sellers')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'sellers' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
             <i className="fa-solid fa-trophy w-5"></i> Top Producers
           </button>
-          <button 
-            onClick={() => setActiveSection('notices')}
-            className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'notices' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}
-          >
+          <button onClick={() => setActiveSection('notices')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'notices' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
             <i className="fa-solid fa-bullhorn w-5"></i> Avisos
           </button>
-          <button 
-            onClick={() => setActiveSection('events')}
-            className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'events' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}
-          >
+          <button onClick={() => setActiveSection('events')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'events' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
             <i className="fa-solid fa-calendar-days w-5"></i> Eventos
           </button>
         </nav>
@@ -108,10 +89,10 @@ const AdminPanel: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Content Area */}
       <main className="flex-1 p-8 md:p-12 overflow-y-auto bg-[#F9FAFB]">
         {activeSection === 'overview' && <AdminOverview setActive={setActiveSection} />}
         {activeSection === 'users' && <AdminUsers Header={SectionHeader} />}
+        {activeSection === 'recorded_webinars' && <AdminRecordedWebinars Header={SectionHeader} />}
         {activeSection === 'documents' && <AdminDocuments Header={SectionHeader} />}
         {activeSection === 'directory' && <AdminDirectory Header={SectionHeader} />}
         {activeSection === 'sellers' && <AdminSellers Header={SectionHeader} />}
@@ -123,141 +104,99 @@ const AdminPanel: React.FC = () => {
   );
 };
 
-/* --- SUB-COMPONENT: DOCUMENTS MANAGEMENT --- */
-const AdminDocuments = ({ Header }: any) => {
-  const [currentFolderId, setCurrentFolderId] = useState<number | null>(null);
-  const [items, setItems] = useState<DocItem[]>([]);
+/* --- SUB-COMPONENT: RECORDED WEBINARS MANAGEMENT --- */
+const AdminRecordedWebinars = ({ Header }: any) => {
+  const [webinars, setWebinars] = useState<RecordedWebinar[]>([]);
   const [loading, setLoading] = useState(true);
-  const [history, setHistory] = useState<{id: number | null, name: string}[]>([{ id: null, name: 'Raíz' }]);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState<Partial<RecordedWebinar>>({
+    name: '', category: WEBINAR_CATEGORIES[0], cover_image: '', access_link: '', access_code: ''
+  });
 
-  useEffect(() => { loadItems(); }, [currentFolderId]);
+  useEffect(() => { loadWebinars(); }, []);
 
-  const loadItems = async () => {
+  const loadWebinars = async () => {
     setLoading(true);
     try {
-      const data = await api.getDocuments(currentFolderId);
-      setItems(data);
+      const data = await api.getRecordedWebinars();
+      setWebinars(data);
     } finally { setLoading(false); }
   };
 
-  const handleCreateFolder = async () => {
-    const name = prompt("Nombre de la carpeta:");
-    if (name) {
-      const folder = await api.createFolder(name, currentFolderId);
-      if (folder) loadItems();
-    }
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setIsUploading(true);
-      try {
-        await api.uploadFile(e.target.files[0], currentFolderId);
-        loadItems();
-      } finally { setIsUploading(false); }
-    }
-  };
-
-  const navigateToFolder = (folder: DocItem) => {
-    setCurrentFolderId(folder.id);
-    setHistory([...history, { id: folder.id, name: folder.name }]);
-  };
-
-  const goBackTo = (index: number) => {
-    const newHistory = history.slice(0, index + 1);
-    setHistory(newHistory);
-    setCurrentFolderId(newHistory[newHistory.length - 1].id);
-  };
-
-  const handleDelete = async (doc: DocItem) => {
-    if (confirm(`¿Eliminar definitivamente "${doc.name}"?`)) {
-      await api.deleteDocument(doc);
-      loadItems();
-    }
-  };
-
-  const getIcon = (type: FileType) => {
-    switch(type) {
-      case 'folder': return 'fa-folder text-brand';
-      case 'pdf': return 'fa-file-pdf text-red-500';
-      case 'img': return 'fa-file-image text-purple-500';
-      default: return 'fa-file text-secondary';
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.upsertRecordedWebinar(formData);
+      setIsFormOpen(false);
+      setFormData({ name: '', category: WEBINAR_CATEGORIES[0], cover_image: '', access_link: '', access_code: '' });
+      loadWebinars();
+    } finally { setSaving(false); }
   };
 
   return (
     <div className="animate-fade-in">
-      <Header 
-        title="Gestor de Archivos" 
-        subtitle="Organiza la documentación corporativa en categorías y subcategorías." 
-        actionLabel={isUploading ? "Subiendo..." : "Subir Archivo"}
-        onAction={() => fileInputRef.current?.click()}
-        secondActionLabel="Nueva Carpeta"
-        onSecondAction={handleCreateFolder}
-      />
-      <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+      <Header title="Biblioteca de Webinars" subtitle="Gestiona las grabaciones de capacitaciones por categorías." actionLabel={isFormOpen ? "Cancelar" : "Nuevo Webinar"} onAction={() => setIsFormOpen(!isFormOpen)} />
 
-      {/* Breadcrumbs Navigation */}
-      <div className="flex items-center gap-2 mb-8 bg-white p-4 border border-neutral overflow-x-auto no-scrollbar">
-        {history.map((item, idx) => (
-          <React.Fragment key={idx}>
-            <button 
-              onClick={() => goBackTo(idx)}
-              className={`text-[10px] font-bold uppercase tracking-widest whitespace-nowrap transition-colors ${idx === history.length - 1 ? 'text-brand cursor-default' : 'text-secondary hover:text-brand'}`}
-            >
-              {item.name}
+      {isFormOpen && (
+        <div className="mb-12 bg-white border border-accent/20 p-10 shadow-2xl animate-slide-down">
+          <h3 className="font-serif text-2xl text-primary mb-8 border-b border-neutral pb-4">Detalles de la Capacitación</h3>
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="md:col-span-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Nombre de Capacitación</label>
+                <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" placeholder="Ej. Sesión de Familiarización 01" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Categoría Oficial</label>
+                <select required value={formData.category} onChange={e => setFormData({...formData, category: e.target.value as any})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent">
+                  {WEBINAR_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Imagen de Portada (URL)</label>
+                <input required type="url" value={formData.cover_image} onChange={e => setFormData({...formData, cover_image: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" placeholder="https://traveliz.com/img.jpg" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Link de Acceso (Zoom/Video)</label>
+                <input required type="url" value={formData.access_link} onChange={e => setFormData({...formData, access_link: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" placeholder="https://zoom.us/rec/..." />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Código de Acceso</label>
+                <input type="text" value={formData.access_code} onChange={e => setFormData({...formData, access_code: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" placeholder="Contraseña si aplica" />
+              </div>
+            </div>
+            <button type="submit" disabled={saving} className="bg-brand text-white px-12 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all shadow-xl">
+              {saving ? 'Guardando...' : 'Guardar en Biblioteca'}
             </button>
-            {idx < history.length - 1 && <i className="fa-solid fa-chevron-right text-[8px] text-neutral"></i>}
-          </React.Fragment>
-        ))}
-      </div>
+          </form>
+        </div>
+      )}
 
-      <div className="bg-white border border-neutral shadow-sm overflow-hidden min-h-[400px]">
+      <div className="bg-white border border-neutral shadow-sm overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
             <tr>
-              <th className="px-8 py-5">Nombre</th>
-              <th className="px-8 py-5">Tipo / Tamaño</th>
-              <th className="px-8 py-5">Fecha</th>
+              <th className="px-8 py-5">Capacitación</th>
+              <th className="px-8 py-5">Categoría</th>
               <th className="px-8 py-5 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral">
             {loading ? (
-              Array.from({ length: 4 }).map((_, i) => <tr key={i} className="animate-pulse h-16 bg-gray-50/50"></tr>)
-            ) : items.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-8 py-20 text-center">
-                  <i className="fa-solid fa-folder-open text-3xl text-neutral mb-3 block"></i>
-                  <p className="text-secondary font-serif italic">Esta carpeta está vacía.</p>
-                </td>
-              </tr>
-            ) : items.map((item) => (
-              <tr key={item.id} className="hover:bg-background/30 group transition-colors">
-                <td className="px-8 py-4">
-                  <div 
-                    className={`flex items-center gap-4 ${item.type === 'folder' ? 'cursor-pointer' : ''}`}
-                    onClick={() => item.type === 'folder' && navigateToFolder(item)}
-                  >
-                    <i className={`fa-solid ${getIcon(item.type)} text-xl`}></i>
-                    <span className={`text-sm font-medium ${item.type === 'folder' ? 'text-brand font-bold' : 'text-primary'}`}>
-                      {item.name}
-                    </span>
+              <tr className="animate-pulse h-16"><td colSpan={3}></td></tr>
+            ) : webinars.map(w => (
+              <tr key={w.id} className="hover:bg-background/30">
+                <td className="px-8 py-6">
+                  <div className="flex items-center gap-4">
+                    <img src={w.cover_image} className="w-12 h-8 object-cover border border-neutral" />
+                    <span className="text-sm font-medium">{w.name}</span>
                   </div>
                 </td>
-                <td className="px-8 py-4 text-[10px] font-bold uppercase text-secondary">
-                  {item.type === 'folder' ? 'Carpeta' : item.size || 'Archivo'}
-                </td>
-                <td className="px-8 py-4 text-xs text-secondary">{item.created_at}</td>
-                <td className="px-8 py-4 text-right">
-                  <div className="flex justify-end gap-3">
-                    {item.url && (
-                      <a href={item.url} target="_blank" className="p-2 text-secondary hover:text-brand"><i className="fa-solid fa-eye"></i></a>
-                    )}
-                    <button onClick={() => handleDelete(item)} className="p-2 text-secondary hover:text-red-600"><i className="fa-solid fa-trash"></i></button>
-                  </div>
+                <td className="px-8 py-6 text-[9px] font-bold uppercase tracking-widest text-brand">{w.category}</td>
+                <td className="px-8 py-6 text-right">
+                  <button onClick={async () => { if(confirm('¿Eliminar de la biblioteca?')) { await api.deleteRecordedWebinar(w.id!); loadWebinars(); }}} className="text-secondary hover:text-red-600 px-3"><i className="fa-solid fa-trash"></i></button>
                 </td>
               </tr>
             ))}
@@ -268,9 +207,7 @@ const AdminDocuments = ({ Header }: any) => {
   );
 };
 
-/* --- OTROS COMPONENTES EXISTENTES (AdminUsers, AdminDirectory, etc. se mantienen igual) --- */
-/* ... rest of the file ... */
-
+/* --- REST OF THE COMPONENTS (AdminUsers, AdminDocuments, etc. unchanged) --- */
 const AdminUsers = ({ Header }: any) => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -416,6 +353,108 @@ const AdminUsers = ({ Header }: any) => {
                 <td className="px-8 py-6 text-right">
                    <button className="text-secondary hover:text-brand px-3"><i className="fa-solid fa-user-pen"></i></button>
                    <button className="text-secondary hover:text-red-600 px-3"><i className="fa-solid fa-shield-halved"></i></button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+/* --- SUB-COMPONENT: DOCUMENTS MANAGEMENT --- */
+const AdminDocuments = ({ Header }: any) => {
+  const [documents, setDocuments] = useState<DocItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentFolderId, setCurrentFolderId] = useState<number | null>(null);
+  const [history, setHistory] = useState<{id: number | null, name: string}[]>([{ id: null, name: 'Inicio' }]);
+
+  useEffect(() => { loadDocs(); }, [currentFolderId]);
+
+  const loadDocs = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getDocuments(currentFolderId);
+      setDocuments(data);
+    } catch (error) {
+      console.error("Error loading docs:", error);
+    } finally { setLoading(false); }
+  };
+
+  const handleFolderClick = (f: DocItem) => {
+    setCurrentFolderId(f.id);
+    setHistory([...history, { id: f.id, name: f.name }]);
+  };
+
+  const goToBreadcrumb = (idx: number) => {
+    const newHistory = history.slice(0, idx + 1);
+    setHistory(newHistory);
+    setCurrentFolderId(newHistory[newHistory.length - 1].id);
+  };
+
+  const handleDelete = async (doc: DocItem) => {
+    if (confirm(`¿Eliminar "${doc.name}"?`)) {
+      const success = await api.deleteDocument(doc);
+      if (success) loadDocs();
+      else alert("Error al eliminar");
+    }
+  };
+
+  return (
+    <div className="animate-fade-in">
+      <Header 
+        title="Gestión de Documentos" 
+        subtitle="Organiza y elimina archivos o carpetas de la biblioteca corporativa." 
+      />
+
+      <div className="flex items-center gap-2 mb-8 text-[10px] font-bold uppercase tracking-widest overflow-x-auto pb-2 border-b border-neutral">
+        {history.map((item, index) => (
+          <React.Fragment key={index}>
+            <button 
+                onClick={() => goToBreadcrumb(index)}
+                className={index === history.length - 1 ? 'text-brand cursor-default' : 'text-secondary hover:text-accent'}
+            >
+                {item.name}
+            </button>
+            {index < history.length - 1 && <span className="text-gray-300 mx-1">/</span>}
+          </React.Fragment>
+        ))}
+      </div>
+
+      <div className="bg-white border border-neutral shadow-sm overflow-hidden">
+        <table className="w-full text-left">
+          <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
+            <tr>
+              <th className="px-8 py-5">Nombre</th>
+              <th className="px-8 py-5">Tipo</th>
+              <th className="px-8 py-5">Fecha</th>
+              <th className="px-8 py-5 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral">
+            {loading ? (
+              <tr className="animate-pulse h-16"><td colSpan={4}></td></tr>
+            ) : documents.length === 0 ? (
+              <tr><td colSpan={4} className="px-8 py-12 text-center text-secondary italic text-sm">Carpeta vacía</td></tr>
+            ) : documents.map(doc => (
+              <tr key={doc.id} className="hover:bg-background/30 transition-colors">
+                <td className="px-8 py-6">
+                  <div className="flex items-center gap-4">
+                    <i className={`fa-solid ${doc.type === 'folder' ? 'fa-folder text-brand' : 'fa-file text-secondary'} text-lg`}></i>
+                    {doc.type === 'folder' ? (
+                      <button onClick={() => handleFolderClick(doc)} className="text-sm font-bold text-primary hover:text-brand transition-colors text-left">{doc.name}</button>
+                    ) : (
+                      <span className="text-sm text-primary">{doc.name}</span>
+                    )}
+                  </div>
+                </td>
+                <td className="px-8 py-6">
+                   <span className="text-[10px] font-bold uppercase tracking-widest text-secondary">{doc.type}</span>
+                </td>
+                <td className="px-8 py-6 text-xs text-secondary">{doc.created_at}</td>
+                <td className="px-8 py-6 text-right">
+                   <button onClick={() => handleDelete(doc)} className="text-secondary hover:text-red-600 px-3"><i className="fa-solid fa-trash"></i></button>
                 </td>
               </tr>
             ))}

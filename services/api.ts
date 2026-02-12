@@ -11,6 +11,39 @@ const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
 
 // --- INTERFACES ---
 
+export type WebinarCategory = 
+  | "ONBOARDING TRAVELIZ - SESIONES DE FAMILIARIZACIÓN"
+  | "ONBOARDING TRAVELIZ - SESIONES DE REFUERZO (TERRESTRE)"
+  | "TEMAS GENERALES"
+  | "HOTELES"
+  | "DMC´s Y OTROS PROVEEDORES"
+  | "DESTINOS"
+  | "CERTIFICADO TRAVELIZ SAFARIS"
+  | "CRUCEROS"
+  | "TRAVELIZ - LUXURY CRUISES - PLAYBOOK";
+
+export interface RecordedWebinar {
+  id?: number;
+  name: string;
+  category: WebinarCategory;
+  cover_image: string;
+  access_link: string;
+  access_code?: string;
+  created_at?: string;
+}
+
+export const WEBINAR_CATEGORIES: WebinarCategory[] = [
+  "ONBOARDING TRAVELIZ - SESIONES DE FAMILIARIZACIÓN",
+  "ONBOARDING TRAVELIZ - SESIONES DE REFUERZO (TERRESTRE)",
+  "TEMAS GENERALES",
+  "HOTELES",
+  "DMC´s Y OTROS PROVEEDORES",
+  "DESTINOS",
+  "CERTIFICADO TRAVELIZ SAFARIS",
+  "CRUCEROS",
+  "TRAVELIZ - LUXURY CRUISES - PLAYBOOK"
+];
+
 export interface Associate {
   id?: number;
   name: string;
@@ -84,6 +117,41 @@ export interface DocItem {
 export const api = {
   isSupabaseConnected: () => !!supabase,
 
+  // --- RECORDED WEBINARS ---
+  getRecordedWebinars: async (): Promise<RecordedWebinar[]> => {
+    if (!supabase) return [];
+    try {
+      const { data, error } = await supabase.from('recorded_webinars').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      console.error("Error fetching webinars:", err);
+      return [];
+    }
+  },
+
+  upsertRecordedWebinar: async (webinar: Partial<RecordedWebinar>): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase.from('recorded_webinars').upsert(webinar);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error("Error saving webinar:", err);
+      return false;
+    }
+  },
+
+  deleteRecordedWebinar: async (id: number): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase.from('recorded_webinars').delete().eq('id', id);
+      return !error;
+    } catch (err) {
+      return false;
+    }
+  },
+
   // --- USERS & ROLES ---
   getRoles: async (): Promise<Role[]> => {
     if (!supabase) return [];
@@ -95,7 +163,6 @@ export const api = {
   getUsers: async (): Promise<UserProfile[]> => {
     if (!supabase) return [];
     try {
-      // Fetch profiles with their associated roles through the user_roles junction table
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -125,12 +192,10 @@ export const api = {
   createUserProfile: async (userData: Partial<UserProfile>, roleIds: number[]): Promise<boolean> => {
     if (!supabase) return false;
     try {
-      // Note: Real user creation in auth.users requires admin API or specific edge function.
-      // Here we manage the profile and roles linking.
       const { data: profile, error: pError } = await supabase
         .from('profiles')
         .upsert({
-          id: userData.id || undefined, // If creating new, auth id would come from a trigger or edge function
+          id: userData.id || undefined,
           name: userData.name,
           last_name: userData.last_name,
           email: userData.email,
@@ -142,11 +207,8 @@ export const api = {
       
       if (pError) throw pError;
 
-      // Update roles in junction table
       if (roleIds.length > 0) {
-        // Clear existing
         await supabase.from('user_roles').delete().eq('user_id', profile.id);
-        // Insert new ones
         const rolePayload = roleIds.map(rid => ({ user_id: profile.id, role_id: rid }));
         const { error: rError } = await supabase.from('user_roles').insert(rolePayload);
         if (rError) throw rError;
@@ -374,8 +436,6 @@ export const api = {
     const { error } = await supabase.from('sellers').delete().eq('id', id);
     return !error;
   },
-
-  // --- DOCUMENTATION ---
 
   getDocuments: async (parentId: number | null): Promise<DocItem[]> => {
     if (!supabase) return [];
