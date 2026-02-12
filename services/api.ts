@@ -1,3 +1,4 @@
+
 import { Notice, UserProfile, Role } from '../types';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 
@@ -115,18 +116,33 @@ export interface DocItem {
 // --- SERVICE LAYER ---
 
 export const api = {
-  isSupabaseConnected: () => !!supabase,
+  isSupabaseConnected: () => {
+    if (!supabase) return false;
+    // Simple verification
+    return true;
+  },
 
   // --- RECORDED WEBINARS ---
   getRecordedWebinars: async (): Promise<RecordedWebinar[]> => {
-    if (!supabase) return [];
+    if (!supabase) {
+        console.error("Supabase client is null");
+        return [];
+    }
     try {
-      const { data, error } = await supabase.from('recorded_webinars').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from('recorded_webinars')
+        .select('*')
+        .order('category', { ascending: true })
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+          console.error("Supabase Query Error (recorded_webinars):", error.message, error.details);
+          throw error;
+      }
       return data || [];
     } catch (err) {
-      console.error("Error fetching webinars:", err);
-      return [];
+      console.error("Critical error in getRecordedWebinars:", err);
+      throw err;
     }
   },
 
