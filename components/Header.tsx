@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { User, NavigationItem } from '../types';
+import { User, NavigationItem, Notice } from '../types';
+import { api } from '../services/api';
 
 interface HeaderProps {
   user: User;
@@ -8,23 +9,62 @@ interface HeaderProps {
   currentNav: NavigationItem;
   onNavigate: (nav: NavigationItem) => void;
   onSearch: (term: string) => void;
+  onNoticeClick?: (id: string) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate, onSearch }) => {
+const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate, onSearch, onNoticeClick }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [notifications, setNotifications] = useState<Notice[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setIsProfileOpen(false);
       }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setIsNotificationsOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    const loadNotifications = async () => {
+      if (!user) return;
+      setLoadingNotifications(true);
+      try {
+        const [noticesData, myAssociateData] = await Promise.all([
+          api.getNotices(),
+          api.getAssociateByUserId(user.id)
+        ]);
+
+        const directedNotices = noticesData.filter((notice: Notice) => {
+          if (!notice.recipient_ids || notice.recipient_ids.trim() === '') return false;
+          if (!myAssociateData) return false;
+          const ids = notice.recipient_ids.split(',').map(id => id.trim());
+          return ids.includes(myAssociateData.id?.toString() || '');
+        });
+
+        setNotifications(directedNotices);
+      } catch (err) {
+        console.error("Error loading notifications:", err);
+      } finally {
+        setLoadingNotifications(false);
+      }
+    };
+
+    loadNotifications();
+    // Refresh every 5 minutes
+    const interval = setInterval(loadNotifications, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [user.id]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,10 +121,71 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate,
           </div>
 
           <div className="flex items-center gap-3 sm:gap-6">
-            <button className="relative p-2 text-secondary hover:text-white transition-colors">
-              <i className="fa-regular fa-bell text-xl"></i>
-              <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-primary"></span>
-            </button>
+            <div className="relative" ref={notificationsRef}>
+              <button 
+                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                className={`relative p-2 transition-colors ${isNotificationsOpen ? 'text-accent' : 'text-secondary hover:text-white'}`}
+              >
+                <i className="fa-regular fa-bell text-xl"></i>
+                {notifications.length > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 rounded-full ring-2 ring-primary text-[8px] font-bold flex items-center justify-center text-white">
+                    {notifications.length}
+                  </span>
+                )}
+              </button>
+
+              {isNotificationsOpen && (
+                <div className="absolute right-0 mt-3 w-80 bg-surface rounded-none shadow-2xl ring-1 ring-black/5 py-0 animate-fade-in origin-top-right z-50">
+                  <div className="px-6 py-4 border-b border-neutral bg-background/50">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-primary">Notificaciones Personales</h3>
+                  </div>
+                  
+                  <div className="max-h-96 overflow-y-auto">
+                    {loadingNotifications ? (
+                      <div className="p-8 text-center">
+                        <i className="fa-solid fa-circle-notch fa-spin text-brand"></i>
+                      </div>
+                    ) : notifications.length === 0 ? (
+                      <div className="p-10 text-center">
+                        <i className="fa-regular fa-bell-slash text-neutral text-2xl mb-3 block"></i>
+                        <p className="text-xs text-secondary italic">No tienes mensajes nuevos.</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-neutral">
+                        {notifications.map((notice) => (
+                          <button 
+                            key={notice.id}
+                            onClick={() => {
+                              if (onNoticeClick) onNoticeClick(notice.id);
+                              setIsNotificationsOpen(false);
+                            }}
+                            className="w-full text-left p-4 hover:bg-background transition-colors group"
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${notice.priority === 'high' ? 'bg-red-500' : 'bg-brand'}`}></div>
+                              <div>
+                                <p className="text-xs font-bold text-primary group-hover:text-brand transition-colors line-clamp-1">{notice.title}</p>
+                                <p className="text-[10px] text-secondary mt-1 line-clamp-2 leading-relaxed">{notice.content}</p>
+                                <p className="text-[9px] text-neutral mt-2 uppercase tracking-tighter">{notice.date}</p>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="p-3 border-t border-neutral text-center bg-background/30">
+                    <button 
+                      onClick={() => { onNavigate(NavigationItem.AVISOS); setIsNotificationsOpen(false); }}
+                      className="text-[9px] font-bold uppercase tracking-widest text-brand hover:text-accent transition-colors"
+                    >
+                      Ver todos los avisos
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="relative" ref={profileRef}>
               <button 

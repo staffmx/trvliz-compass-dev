@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { api, Event, EventRegistration, Seller, RecordedWebinar, WEBINAR_CATEGORIES, MentorshipRequest } from '../services/api';
-import { Notice, UserProfile, Role, DocumentCategory, Document as DocType, Associate } from '../types';
+import { api, EventRegistration, Seller, RecordedWebinar, WEBINAR_CATEGORIES, MentorshipRequest } from '../services/api';
+import { Notice, UserProfile, Role, DocumentCategory, Document as DocType, Associate, Certification, Event, SearchLog } from '../types';
 
-type AdminSection = 'overview' | 'directory' | 'notices' | 'events' | 'blog' | 'sellers' | 'users' | 'documents' | 'recorded_webinars' | 'mentorships';
+type AdminSection = 'overview' | 'directory' | 'notices' | 'events' | 'blog' | 'sellers' | 'users' | 'documents' | 'recorded_webinars' | 'mentorships' | 'certifications' | 'search_logs';
 
 const AdminPanel: React.FC = () => {
   const [activeSection, setActiveSection] = useState<AdminSection>('overview');
@@ -53,14 +53,8 @@ const AdminPanel: React.FC = () => {
           <button onClick={() => setActiveSection('overview')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'overview' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
             <i className="fa-solid fa-chart-line w-5"></i> Dashboard
           </button>
-          <button onClick={() => setActiveSection('users')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'users' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-            <i className="fa-solid fa-users-gear w-5"></i> Usuarios
-          </button>
-          <button onClick={() => setActiveSection('recorded_webinars')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'recorded_webinars' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-            <i className="fa-solid fa-play w-5"></i> Webinars Grabados
-          </button>
-          <button onClick={() => setActiveSection('documents')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'documents' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-            <i className="fa-solid fa-folder-tree w-5"></i> Documentos
+          <button onClick={() => setActiveSection('notices')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'notices' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+            <i className="fa-solid fa-bullhorn w-5"></i> Avisos
           </button>
           <button onClick={() => setActiveSection('directory')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'directory' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
             <i className="fa-solid fa-address-book w-5"></i> Directorio
@@ -68,14 +62,34 @@ const AdminPanel: React.FC = () => {
           <button onClick={() => setActiveSection('sellers')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'sellers' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
             <i className="fa-solid fa-trophy w-5"></i> Top Producers
           </button>
-          <button onClick={() => setActiveSection('notices')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'notices' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-            <i className="fa-solid fa-bullhorn w-5"></i> Avisos
-          </button>
           <button onClick={() => setActiveSection('events')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'events' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
             <i className="fa-solid fa-calendar-days w-5"></i> Eventos
           </button>
-          <button onClick={() => setActiveSection('mentorships')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'mentorships' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-            <i className="fa-solid fa-graduation-cap w-5"></i> Mentorías
+          <button onClick={() => setActiveSection('documents')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'documents' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+            <i className="fa-solid fa-folder-tree w-5"></i> Documentos
+          </button>
+
+          <div className="px-8 py-4 mt-4 mb-2">
+            <p className="text-[10px] font-bold uppercase tracking-[3px] text-accent/60">Capacitación</p>
+          </div>
+
+          <button onClick={() => setActiveSection('recorded_webinars')} className={`w-full flex items-center gap-4 px-10 py-3 text-[11px] font-bold uppercase tracking-widest transition-all ${activeSection === 'recorded_webinars' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+            <i className="fa-solid fa-play w-4"></i> Webinars Grabados
+          </button>
+          <button onClick={() => setActiveSection('certifications')} className={`w-full flex items-center gap-4 px-10 py-3 text-[11px] font-bold uppercase tracking-widest transition-all ${activeSection === 'certifications' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+            <i className="fa-solid fa-award w-4"></i> Certificaciones
+          </button>
+          <button onClick={() => setActiveSection('mentorships')} className={`w-full flex items-center gap-4 px-10 py-3 text-[11px] font-bold uppercase tracking-widest transition-all ${activeSection === 'mentorships' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+            <i className="fa-solid fa-graduation-cap w-4"></i> Mentoría 1:1
+          </button>
+
+          <div className="my-4 border-t border-white/5 mx-8"></div>
+
+          <button onClick={() => setActiveSection('users')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'users' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+            <i className="fa-solid fa-users-gear w-5"></i> Usuarios
+          </button>
+          <button onClick={() => setActiveSection('search_logs')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'search_logs' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+            <i className="fa-solid fa-magnifying-glass w-5"></i> Búsquedas
           </button>
         </nav>
 
@@ -102,6 +116,8 @@ const AdminPanel: React.FC = () => {
         {activeSection === 'notices' && <AdminNotices Header={SectionHeader} />}
         {activeSection === 'events' && <AdminEvents Header={SectionHeader} />}
         {activeSection === 'mentorships' && <AdminMentorships Header={SectionHeader} />}
+        {activeSection === 'certifications' && <AdminCertifications Header={SectionHeader} />}
+        {activeSection === 'search_logs' && <AdminSearchLogs Header={SectionHeader} />}
         {activeSection === 'blog' && <div className="p-20 text-center"><i className="fa-solid fa-tools text-4xl mb-4 text-secondary opacity-30"></i><p className="text-secondary italic">Módulo de Blog en desarrollo...</p></div>}
       </main>
     </div>
@@ -391,7 +407,8 @@ const AdminSellers = ({ Header }: any) => {
   const emptyForm: Partial<Seller> = { 
     name: '', 
     avatar: '', 
-    ranking: 1 
+    ranking: 1,
+    branch: ''
   };
   const [formData, setFormData] = useState<Partial<Seller>>(emptyForm);
   const [selectedAssociateId, setSelectedAssociateId] = useState<string>('');
@@ -431,10 +448,11 @@ const AdminSellers = ({ Header }: any) => {
         setFormData({
             ...formData,
             name: `${assoc.name} ${assoc.last_name || ''}`.trim(),
-            avatar: assoc.image
+            avatar: assoc.image,
+            branch: assoc.branch || ''
         });
     } else {
-        setFormData({ ...formData, name: '', avatar: '' });
+        setFormData({ ...formData, name: '', avatar: '', branch: '' });
     }
   };
 
@@ -547,6 +565,17 @@ const AdminSellers = ({ Header }: any) => {
                     onChange={(e) => setFormData({...formData, ranking: parseInt(e.target.value)})}
                 />
               </div>
+
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Sucursal</label>
+                <input 
+                    type="text" 
+                    placeholder="Ej. ROBLE, CDMX"
+                    className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none" 
+                    value={formData.branch}
+                    onChange={(e) => setFormData({...formData, branch: e.target.value})}
+                />
+              </div>
             </div>
             <button type="submit" disabled={saving || loadingAssociates} className="bg-brand text-white px-12 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all shadow-xl disabled:opacity-50">
               {saving ? 'Guardando...' : 'Guardar Productor'}
@@ -561,6 +590,7 @@ const AdminSellers = ({ Header }: any) => {
             <tr>
               <th className="px-8 py-5">Ranking</th>
               <th className="px-8 py-5">Vendedor</th>
+              <th className="px-8 py-5">Sucursal</th>
               <th className="px-8 py-5 text-right">Acciones</th>
             </tr>
           </thead>
@@ -575,6 +605,9 @@ const AdminSellers = ({ Header }: any) => {
                       <img src={seller.avatar} alt={seller.name} className="w-12 h-12 rounded-full object-cover border border-neutral ring-1 ring-neutral/20 group-hover:ring-accent transition-all" />
                       <p className="font-bold text-primary group-hover:text-brand transition-colors">{seller.name}</p>
                    </div>
+                </td>
+                <td className="px-8 py-6">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-secondary">{seller.branch || 'N/A'}</span>
                 </td>
                 <td className="px-8 py-6 text-right">
                    <button onClick={() => handleEdit(seller)} className="text-secondary hover:text-brand px-3"><i className="fa-solid fa-pen"></i></button>
@@ -598,9 +631,11 @@ const AdminSellers = ({ Header }: any) => {
 const AdminUsers = ({ Header }: any) => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [associates, setAssociates] = useState<Associate[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<UserProfile>>({
     name: '', last_name: '', email: '', position: '', avatar_url: ''
   });
@@ -611,9 +646,14 @@ const AdminUsers = ({ Header }: any) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [usersData, rolesData] = await Promise.all([api.getUsers(), api.getRoles()]);
+      const [usersData, rolesData, assocData] = await Promise.all([
+        api.getUsers(), 
+        api.getRoles(),
+        api.getAssociates()
+      ]);
       setUsers(usersData);
       setRoles(rolesData);
+      setAssociates(assocData);
     } catch (err) {
       console.error(err);
     } finally { setLoading(false); }
@@ -625,6 +665,36 @@ const AdminUsers = ({ Header }: any) => {
     );
   };
 
+  const handleEdit = (user: UserProfile) => {
+    setEditingId(user.id);
+    setFormData({
+      id: user.id,
+      name: user.name,
+      last_name: user.last_name,
+      email: user.email,
+      position: user.position,
+      avatar_url: user.avatar_url
+    });
+    setSelectedRoleIds(user.roles?.map(r => r.id) || []);
+    setIsFormOpen(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDelete = async (userId: string) => {
+    if (!window.confirm("¿Estás seguro de que deseas eliminar este perfil de usuario?")) return;
+    setSaving(true);
+    try {
+      const success = await api.deleteUserProfile(userId);
+      if (success) {
+        loadData();
+      } else {
+        alert("Error al eliminar el usuario.");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -632,6 +702,7 @@ const AdminUsers = ({ Header }: any) => {
       const success = await api.createUserProfile(formData, selectedRoleIds);
       if (success) {
         setIsFormOpen(false);
+        setEditingId(null);
         setFormData({ name: '', last_name: '', email: '', position: '', avatar_url: '' });
         setSelectedRoleIds([]);
         loadData();
@@ -647,12 +718,21 @@ const AdminUsers = ({ Header }: any) => {
         title="Gestión de Usuarios" 
         subtitle="Administra cuentas de acceso y asigna múltiples roles de seguridad." 
         actionLabel={isFormOpen ? "Cancelar" : "Agregar Usuario"} 
-        onAction={() => setIsFormOpen(!isFormOpen)} 
+        onAction={() => {
+          if (!isFormOpen) {
+            setFormData({ name: '', last_name: '', email: '', position: '', avatar_url: '' });
+            setSelectedRoleIds([]);
+            setEditingId(null);
+          }
+          setIsFormOpen(!isFormOpen);
+        }} 
       />
 
       {isFormOpen && (
         <div className="mb-12 bg-white border border-accent/20 p-10 shadow-2xl animate-slide-down">
-          <h3 className="font-serif text-2xl text-primary mb-8 border-b border-neutral pb-4">Detalles del Nuevo Usuario</h3>
+          <h3 className="font-serif text-2xl text-primary mb-8 border-b border-neutral pb-4">
+            {editingId ? 'Editar Usuario' : 'Detalles del Nuevo Usuario'}
+          </h3>
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
@@ -694,7 +774,7 @@ const AdminUsers = ({ Header }: any) => {
             </div>
             <div className="pt-4">
               <button type="submit" disabled={saving} className="bg-brand text-white px-12 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all shadow-xl disabled:opacity-50">
-                {saving ? 'Guardando...' : 'Crear Usuario y Perfil'}
+                {saving ? 'Guardando...' : editingId ? 'Actualizar Usuario' : 'Crear Usuario y Perfil'}
               </button>
             </div>
           </form>
@@ -707,6 +787,7 @@ const AdminUsers = ({ Header }: any) => {
             <tr>
               <th className="px-8 py-5">Usuario</th>
               <th className="px-8 py-5">Roles Asignados</th>
+              <th className="px-8 py-5">Perfil Vinculado</th>
               <th className="px-8 py-5">Cargo</th>
               <th className="px-8 py-5 text-right">Acciones</th>
             </tr>
@@ -714,7 +795,9 @@ const AdminUsers = ({ Header }: any) => {
           <tbody className="divide-y divide-neutral">
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => <tr key={i} className="animate-pulse h-20 bg-gray-50/50"></tr>)
-            ) : users.map((u) => (
+            ) : users.map((u) => {
+              const linkedAssoc = associates.find(a => a.user_id === u.id);
+              return (
               <tr key={u.id} className="hover:bg-background/30 transition-colors">
                 <td className="px-8 py-6">
                   <div className="flex items-center gap-4">
@@ -736,13 +819,26 @@ const AdminUsers = ({ Header }: any) => {
                     )) || <span className="text-[10px] text-secondary italic">Sin roles</span>}
                   </div>
                 </td>
+                <td className="px-8 py-6">
+                  {linkedAssoc ? (
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{linkedAssoc.name} {linkedAssoc.last_name}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-neutral rounded-full"></span>
+                      <span className="text-[10px] text-secondary italic">Sin vincular</span>
+                    </div>
+                  )}
+                </td>
                 <td className="px-8 py-6 text-xs text-secondary font-serif italic">{u.position}</td>
                 <td className="px-8 py-6 text-right">
-                   <button className="text-secondary hover:text-brand px-3"><i className="fa-solid fa-user-pen"></i></button>
-                   <button className="text-secondary hover:text-red-600 px-3"><i className="fa-solid fa-shield-halved"></i></button>
+                   <button onClick={() => handleEdit(u)} className="text-secondary hover:text-brand px-3 transition-colors"><i className="fa-solid fa-user-pen"></i></button>
+                   <button onClick={() => handleDelete(u.id)} className="text-secondary hover:text-red-600 px-3 transition-colors"><i className="fa-solid fa-trash"></i></button>
                 </td>
               </tr>
-            ))}
+            );})}
           </tbody>
         </table>
       </div>
@@ -935,30 +1031,50 @@ const AdminDocuments = ({ Header }: any) => {
 
 /* --- SUB-COMPONENT: OVERVIEW --- */
 const AdminOverview = ({ setActive }: { setActive: (s: AdminSection) => void }) => {
-  const [stats, setStats] = useState({ associates: 0, notices: 0, events: 0, blogPosts: 0, sellers: 0, users: 0 });
+  const [stats, setStats] = useState({ 
+    associates: 0, 
+    notices: 0, 
+    documents: 0, 
+    mentorships: 0, 
+    webinars: 0 
+  });
+  const [topSellers, setTopSellers] = useState<Seller[]>([]);
+  const [latestSearchLogs, setLatestSearchLogs] = useState<SearchLog[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        const [associates, notices, events, blog, sellers, users] = await Promise.allSettled([
+        const [associates, notices, docs, mentorships, webinars, sellers, logs] = await Promise.allSettled([
           api.getAssociates(),
           api.getNotices(),
-          api.getEvents(),
-          api.getBlogPosts(),
+          api.getAllDocuments(),
+          api.getMentorshipRequests(),
+          api.getRecordedWebinars(),
           api.getTopSellers(),
-          api.getUsers()
+          api.getSearchLogs()
         ]);
         
+        const newMentorships = mentorships.status === 'fulfilled' 
+          ? mentorships.value.filter(m => m.status === 'pending').length 
+          : 0;
+
         setStats({
           associates: associates.status === 'fulfilled' ? associates.value.length : 0,
           notices: notices.status === 'fulfilled' ? notices.value.length : 0,
-          events: events.status === 'fulfilled' ? events.value.length : 0,
-          blogPosts: blog.status === 'fulfilled' ? blog.value.length : 0,
-          sellers: sellers.status === 'fulfilled' ? sellers.value.length : 0,
-          users: users.status === 'fulfilled' ? users.value.length : 0
+          documents: docs.status === 'fulfilled' ? docs.value.data.length : 0,
+          mentorships: newMentorships,
+          webinars: webinars.status === 'fulfilled' ? webinars.value.length : 0
         });
+
+        if (sellers.status === 'fulfilled') {
+          setTopSellers(sellers.value);
+        }
+
+        if (logs.status === 'fulfilled') {
+          setLatestSearchLogs(logs.value.slice(0, 10));
+        }
       } catch (error) {
         console.error("Error fetching admin stats:", error);
       } finally {
@@ -969,11 +1085,20 @@ const AdminOverview = ({ setActive }: { setActive: (s: AdminSection) => void }) 
   }, []);
 
   const statCards = [
-    { label: 'Cuentas de Usuario', count: stats.users, icon: 'fa-users-gear', section: 'users' as AdminSection },
-    { label: 'Asociadas Directorio', count: stats.associates, icon: 'fa-address-book', section: 'directory' as AdminSection },
     { label: 'Avisos Totales', count: stats.notices, icon: 'fa-bullhorn', section: 'notices' as AdminSection },
-    { label: 'Eventos', count: stats.events, icon: 'fa-calendar', section: 'events' as AdminSection },
+    { label: 'Traveliz Advisors', count: stats.associates, icon: 'fa-address-book', section: 'directory' as AdminSection },
+    { label: 'Documentos Activos', count: stats.documents, icon: 'fa-folder-tree', section: 'documents' as AdminSection },
+    { label: 'Nuevas Mentorías 1:1', count: stats.mentorships, icon: 'fa-graduation-cap', section: 'mentorships' as AdminSection },
+    { label: 'Webinars Grabados', count: stats.webinars, icon: 'fa-play', section: 'recorded_webinars' as AdminSection },
   ];
+
+  // Group sellers by branch
+  const sellersByBranch = topSellers.reduce((acc, seller) => {
+    const branch = seller.branch || 'OTRO';
+    if (!acc[branch]) acc[branch] = [];
+    acc[branch].push(seller);
+    return acc;
+  }, {} as Record<string, Seller[]>);
 
   return (
     <div className="animate-fade-in">
@@ -982,25 +1107,89 @@ const AdminOverview = ({ setActive }: { setActive: (s: AdminSection) => void }) 
         <p className="text-secondary text-sm mt-2">Bienvenido al centro de administración de Traveliz Compass.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-12">
         {statCards.map((stat, i) => (
           <button 
             key={i} 
             onClick={() => setActive(stat.section)}
-            className="bg-surface border border-neutral p-8 text-left hover:border-accent hover:shadow-xl transition-all group overflow-hidden relative"
+            className="bg-surface border border-neutral p-6 text-left hover:border-accent hover:shadow-xl transition-all group overflow-hidden relative"
           >
             <div className="flex justify-between items-start mb-4 relative z-10">
-              <div className="w-12 h-12 bg-background flex items-center justify-center text-brand group-hover:bg-brand group-hover:text-white transition-colors">
-                <i className={`fa-solid ${stat.icon} text-xl`}></i>
+              <div className="w-10 h-10 bg-background flex items-center justify-center text-brand group-hover:bg-brand group-hover:text-white transition-colors">
+                <i className={`fa-solid ${stat.icon} text-lg`}></i>
               </div>
-              <span className="text-3xl font-serif font-bold text-primary">
+              <span className="text-2xl font-serif font-bold text-primary">
                 {loading ? <i className="fa-solid fa-circle-notch fa-spin text-sm text-neutral"></i> : stat.count.toString().padStart(2, '0')}
               </span>
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-secondary group-hover:text-brand transition-colors relative z-10">{stat.label}</p>
-            <i className={`fa-solid ${stat.icon} absolute -bottom-4 -right-4 text-6xl opacity-[0.03] group-hover:opacity-[0.07] transition-opacity`}></i>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-secondary group-hover:text-brand transition-colors relative z-10">{stat.label}</p>
+            <i className={`fa-solid ${stat.icon} absolute -bottom-4 -right-4 text-5xl opacity-[0.03] group-hover:opacity-[0.07] transition-opacity`}></i>
           </button>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        {/* Top Producers by Branch */}
+        <div className="bg-white border border-neutral p-8 shadow-sm">
+          <div className="flex justify-between items-center mb-8">
+            <h3 className="text-xl font-serif font-medium text-primary">Top Producers por Sucursal</h3>
+            <button onClick={() => setActive('sellers')} className="text-[10px] font-bold uppercase tracking-widest text-accent hover:text-brand transition-colors">Ver todos</button>
+          </div>
+          
+          <div className="space-y-8">
+            {Object.entries(sellersByBranch).length === 0 && !loading ? (
+              <p className="text-secondary italic text-sm">No hay datos de productores disponibles.</p>
+            ) : (
+              (Object.entries(sellersByBranch) as [string, Seller[]][]).map(([branch, sellers]) => (
+                <div key={branch}>
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-4 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-accent rounded-full"></span>
+                    Sucursal {branch}
+                  </h4>
+                  <div className="space-y-3">
+                    {sellers.sort((a, b) => a.ranking - b.ranking).map((seller) => (
+                      <div key={seller.id} className="flex items-center justify-between p-3 bg-background/30 border border-neutral/50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-neutral flex items-center justify-center text-xs font-bold text-primary overflow-hidden">
+                            {seller.avatar ? <img src={seller.avatar} className="w-full h-full object-cover" /> : seller.name.charAt(0)}
+                          </div>
+                          <span className="text-sm text-primary">{seller.name}</span>
+                        </div>
+                        <span className="text-xs font-bold text-accent">#{seller.ranking}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Latest Searches */}
+        <div className="bg-white border border-neutral p-8 shadow-sm">
+          <div className="flex justify-between items-center mb-8">
+            <h3 className="text-xl font-serif font-medium text-primary">Últimas Búsquedas</h3>
+            <button onClick={() => setActive('search_logs')} className="text-[10px] font-bold uppercase tracking-widest text-accent hover:text-brand transition-colors">Ver historial</button>
+          </div>
+          
+          <div className="space-y-4">
+            {latestSearchLogs.length === 0 && !loading ? (
+              <p className="text-secondary italic text-sm">No hay registros de búsqueda aún.</p>
+            ) : (
+              latestSearchLogs.map((log) => (
+                <div key={log.id} className="flex items-center justify-between p-4 border-b border-neutral last:border-0 hover:bg-background/20 transition-colors">
+                  <div>
+                    <p className="text-sm font-medium text-primary">"{log.query}"</p>
+                    <p className="text-[10px] text-secondary mt-1">{log.user_name} • {new Date(log.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-none ${log.results_count === 0 ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
+                    {log.results_count} res
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1009,8 +1198,26 @@ const AdminOverview = ({ setActive }: { setActive: (s: AdminSection) => void }) 
 /* --- SUB-COMPONENT: DIRECTORY MANAGEMENT --- */
 const AdminDirectory = ({ Header }: any) => {
   const [associates, setAssociates] = useState<Associate[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  
+  const emptyForm: Associate = {
+    name: '',
+    last_name: '',
+    email: '',
+    position: '',
+    branch: '',
+    image: '',
+    content: '',
+    whatsapp: '',
+    user_id: ''
+  };
+  
+  const [formData, setFormData] = useState<Associate>(emptyForm);
 
   useEffect(() => {
     loadData();
@@ -1020,14 +1227,25 @@ const AdminDirectory = ({ Header }: any) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getAssociates();
-      setAssociates(data || []);
+      const [assocData, usersData] = await Promise.all([
+        api.getAssociates(),
+        api.getUsers()
+      ]);
+      setAssociates(assocData || []);
+      setUsers(usersData || []);
     } catch (err: any) {
       console.error("Admin Directory Error:", err);
       setError(err.message || "Error al cargar los datos desde Supabase.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEdit = (assoc: Associate) => {
+    setEditingId(assoc.id || null);
+    setFormData({ ...assoc });
+    setIsFormOpen(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id: number) => {
@@ -1041,14 +1259,102 @@ const AdminDirectory = ({ Header }: any) => {
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const result = await api.upsertAssociate(formData);
+      if (result) {
+        setIsFormOpen(false);
+        setEditingId(null);
+        setFormData(emptyForm);
+        loadData();
+      } else {
+        alert("Error al guardar el perfil.");
+      }
+    } catch (err: any) {
+      console.error("Error saving associate:", err);
+      alert(`Error: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="animate-fade-in">
       <Header 
         title="Directorio de Equipo" 
         subtitle="Administra los perfiles de las asociadas visibles en la sección pública." 
-        actionLabel="Agregar Nueva" 
-        onAction={() => alert("Formulario en desarrollo")} 
+        actionLabel={isFormOpen ? "Cancelar" : "Agregar Nueva"} 
+        onAction={() => {
+          if (!isFormOpen) {
+            setFormData(emptyForm);
+            setEditingId(null);
+          }
+          setIsFormOpen(!isFormOpen);
+        }} 
       />
+
+      {isFormOpen && (
+        <div className="mb-12 bg-white border border-accent/20 p-10 shadow-2xl animate-slide-down">
+          <h3 className="font-serif text-2xl text-primary mb-8 border-b border-neutral pb-4">
+            {editingId ? 'Editar Perfil' : 'Nueva Asociada'}
+          </h3>
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Nombre(s)</label>
+                <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Apellidos</label>
+                <input required type="text" value={formData.last_name} onChange={e => setFormData({...formData, last_name: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Email Corporativo</label>
+                <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Cargo / Posición</label>
+                <input required type="text" value={formData.position} onChange={e => setFormData({...formData, position: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Sucursal</label>
+                <input type="text" value={formData.branch} onChange={e => setFormData({...formData, branch: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" placeholder="Ej. ROBLE" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">WhatsApp</label>
+                <input type="text" value={formData.whatsapp || ''} onChange={e => setFormData({...formData, whatsapp: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Vincular a Usuario (Opcional)</label>
+                <select 
+                  value={formData.user_id || ''} 
+                  onChange={e => setFormData({...formData, user_id: e.target.value})} 
+                  className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent"
+                >
+                  <option value="">No vincular</option>
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>{u.name} {u.last_name} ({u.email})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Imagen de Perfil (URL)</label>
+                <input type="url" value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" placeholder="https://..." />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Biografía / Resumen</label>
+                <textarea rows={4} value={formData.content || ''} onChange={e => setFormData({...formData, content: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent resize-none"></textarea>
+              </div>
+            </div>
+            <button type="submit" disabled={saving} className="bg-brand text-white px-12 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all shadow-xl disabled:opacity-50">
+              {saving ? 'Guardando...' : 'Guardar Perfil'}
+            </button>
+          </form>
+        </div>
+      )}
+
       <div className="bg-surface border border-neutral overflow-hidden shadow-sm">
         <table className="w-full text-left">
           <thead className="bg-background border-b border-neutral">
@@ -1067,7 +1373,7 @@ const AdminDirectory = ({ Header }: any) => {
                   <td className="px-6 py-6">
                     <div className="flex items-center gap-4">
                       <img 
-                        src={assoc.image} 
+                        src={assoc.image || `https://ui-avatars.com/api/?name=${assoc.name}+${assoc.last_name}&background=f8f9fa&color=1a1a1a`} 
                         className="w-10 h-10 rounded-full object-cover grayscale" 
                         onError={(e) => (e.target as any).src = "https://via.placeholder.com/100"}
                       />
@@ -1080,7 +1386,7 @@ const AdminDirectory = ({ Header }: any) => {
                   <td className="px-6 py-6 text-xs font-bold text-brand uppercase tracking-widest">{assoc.branch || '-'}</td>
                   <td className="px-6 py-6 text-xs text-secondary italic font-serif">{assoc.position}</td>
                   <td className="px-6 py-6 text-right">
-                    <button className="text-secondary hover:text-brand px-2 transition-colors"><i className="fa-solid fa-pen"></i></button>
+                    <button onClick={() => handleEdit(assoc)} className="text-secondary hover:text-brand px-2 transition-colors"><i className="fa-solid fa-pen"></i></button>
                     <button onClick={() => assoc.id && handleDelete(assoc.id)} className="text-secondary hover:text-red-600 px-2 transition-colors"><i className="fa-solid fa-trash"></i></button>
                   </td>
                 </tr>
@@ -1095,16 +1401,23 @@ const AdminDirectory = ({ Header }: any) => {
 /* --- SUB-COMPONENT: NOTICES MANAGEMENT --- */
 const AdminNotices = ({ Header }: any) => {
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [associates, setAssociates] = useState<Associate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingAssociates, setLoadingAssociates] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<Notice>>({
     title: '', content: '', priority: 'medium', category: 'General',
+    recipient_ids: '',
     date: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
   });
 
-  useEffect(() => { loadInitialData(); }, []);
+  useEffect(() => { 
+    loadInitialData();
+    loadAssociates();
+  }, []);
 
   const loadInitialData = async () => {
     setLoading(true);
@@ -1116,42 +1429,100 @@ const AdminNotices = ({ Header }: any) => {
     } finally { setLoading(false); }
   };
 
-  const handleDelete = async (id: number) => {
+  const loadAssociates = async () => {
+    setLoadingAssociates(true);
+    try {
+      const data = await api.getAssociates();
+      setAssociates(data || []);
+    } catch (err) {
+      console.error("Error loading associates:", err);
+    } finally {
+      setLoadingAssociates(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
     setSaving(true);
     try {
       const success = await api.deleteNotice(id);
       if (success) {
         loadInitialData();
         setConfirmDeleteId(null);
+      } else {
+        alert("No se pudo eliminar el aviso. Es posible que no tengas permisos suficientes.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error deleting notice:", err);
+      alert(`Error al eliminar: ${err.message || 'Error desconocido'}`);
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleEdit = (notice: Notice) => {
+    setFormData({ ...notice, recipient_ids: notice.recipient_ids || '' });
+    setEditingId(notice.id);
+    setIsFormOpen(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const toggleRecipient = (id: string) => {
+    const currentIds = formData.recipient_ids ? formData.recipient_ids.split(',').filter(i => i) : [];
+    let newIds;
+    if (currentIds.includes(id)) {
+      newIds = currentIds.filter(i => i !== id);
+    } else {
+      newIds = [...currentIds, id];
+    }
+    setFormData({ ...formData, recipient_ids: newIds.join(',') });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.upsertNotice(formData);
-      setIsFormOpen(false);
-      setFormData({ 
-        title: '', content: '', priority: 'medium', category: 'General',
-        date: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) 
-      });
-      loadInitialData();
-    } catch (err: any) { console.error(err); } finally { setSaving(false); }
+      const result = await api.upsertNotice(formData);
+      if (result) {
+        setIsFormOpen(false);
+        setEditingId(null);
+        setFormData({ 
+          title: '', content: '', priority: 'medium', category: 'General',
+          date: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) 
+        });
+        loadInitialData();
+      } else {
+        alert("No se pudo guardar el aviso.");
+      }
+    } catch (err: any) { 
+      console.error("Error in handleSubmit:", err);
+      alert(`Error al guardar: ${err.message || 'Error desconocido'}`);
+    } finally { setSaving(false); }
   };
 
   return (
     <div className="animate-fade-in relative">
-      <Header title="Avisos Importantes" subtitle="Publica noticias y anuncios críticos." actionLabel={isFormOpen ? "Cancelar" : "Nuevo Aviso"} onAction={() => setIsFormOpen(!isFormOpen)} />
+      <Header 
+        title="Avisos Importantes" 
+        subtitle="Publica noticias y anuncios críticos." 
+        actionLabel={isFormOpen ? "Cancelar" : "Nuevo Aviso"} 
+        onAction={() => {
+          if (!isFormOpen) {
+            setFormData({ 
+              title: '', content: '', priority: 'medium', category: 'General',
+              recipient_ids: '',
+              date: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) 
+            });
+            setEditingId(null);
+          }
+          setIsFormOpen(!isFormOpen);
+        }} 
+      />
       
       {isFormOpen && (
         <div className="mb-12 bg-white border border-accent/20 p-10 shadow-2xl animate-slide-down">
-          <h3 className="font-serif text-2xl text-primary mb-8 border-b border-neutral pb-4">Detalles del Aviso</h3>
+          <h3 className="font-serif text-2xl text-primary mb-8 border-b border-neutral pb-4">
+            {editingId ? 'Editar Aviso' : 'Detalles del Nuevo Aviso'}
+          </h3>
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Prioridad Select */}
@@ -1185,6 +1556,43 @@ const AdminNotices = ({ Header }: any) => {
               </div>
 
               <div className="md:col-span-2">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-3">Destinatarios (Vacio = Todos)</label>
+                <div className="border border-neutral p-4 bg-[#F9FAFB] max-h-48 overflow-y-auto space-y-2">
+                  <div className="flex items-center gap-2 pb-2 border-b border-neutral/50 mb-2">
+                    <input 
+                      type="checkbox" 
+                      id="all-recipients"
+                      checked={!formData.recipient_ids} 
+                      onChange={() => setFormData({...formData, recipient_ids: ''})}
+                      className="accent-brand"
+                    />
+                    <label htmlFor="all-recipients" className="text-sm font-bold text-primary cursor-pointer">Público General (Todos)</label>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                    {associates.map(assoc => {
+                      const idStr = assoc.id?.toString() || '';
+                      const isSelected = formData.recipient_ids?.split(',').includes(idStr);
+                      return (
+                        <div key={idStr} className="flex items-center gap-2">
+                          <input 
+                            type="checkbox" 
+                            id={`recipient-${idStr}`}
+                            checked={isSelected}
+                            onChange={() => toggleRecipient(idStr)}
+                            className="accent-brand"
+                          />
+                          <label htmlFor={`recipient-${idStr}`} className="text-xs text-secondary truncate cursor-pointer" title={`${assoc.name} ${assoc.last_name}`}>
+                            {assoc.name} {assoc.last_name}
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <p className="text-[10px] text-secondary mt-2 italic">Selecciona usuarios específicos o deja sin marcar para que sea un aviso general.</p>
+              </div>
+
+              <div className="md:col-span-2">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-3">Título</label>
                 <input 
                   type="text" 
@@ -1210,7 +1618,7 @@ const AdminNotices = ({ Header }: any) => {
             </div>
             
             <button type="submit" disabled={saving} className="bg-brand text-white px-12 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all shadow-xl disabled:opacity-50">
-              {saving ? 'Publicando...' : 'Publicar Aviso'}
+              {saving ? 'Guardando...' : (editingId ? 'Actualizar Aviso' : 'Publicar Aviso')}
             </button>
           </form>
         </div>
@@ -1239,32 +1647,50 @@ const AdminNotices = ({ Header }: any) => {
                 </td>
                 <td className="px-8 py-8">
                   <p className="text-base font-serif font-medium text-primary leading-tight">{notice.title}</p>
-                  <p className="text-[10px] text-secondary mt-1 uppercase tracking-widest">{notice.date}</p>
+                  <div className="flex items-center gap-3 mt-1">
+                    <p className="text-[10px] text-secondary uppercase tracking-widest">{notice.date}</p>
+                    <span className="text-[10px] text-neutral">•</span>
+                    <span className={`text-[10px] font-bold uppercase tracking-widest ${notice.recipient_ids ? 'text-brand' : 'text-secondary'}`}>
+                      {notice.recipient_ids ? `Dirigido (${notice.recipient_ids.split(',').length})` : 'General'}
+                    </span>
+                  </div>
                 </td>
                 <td className="px-8 py-8 text-right">
-                  {confirmDeleteId === notice.id ? (
-                    <div className="flex items-center justify-end gap-2 animate-fade-in">
-                      <button 
-                        onClick={() => notice.id && handleDelete(notice.id)}
-                        className="bg-red-600 text-white text-[9px] px-2 py-1 uppercase font-bold hover:bg-red-700 transition-colors"
-                      >
-                        Confirmar
-                      </button>
-                      <button 
-                        onClick={() => setConfirmDeleteId(null)}
-                        className="bg-neutral text-primary text-[9px] px-2 py-1 uppercase font-bold hover:bg-neutral/80 transition-colors"
-                      >
-                        No
-                      </button>
-                    </div>
-                  ) : (
-                    <button 
-                      onClick={() => setConfirmDeleteId(notice.id || null)}
-                      className="text-secondary hover:text-red-600 transition-colors p-2"
-                    >
-                      <i className="fa-solid fa-trash"></i>
-                    </button>
-                  )}
+                  <div className="flex items-center justify-end gap-2">
+                    {confirmDeleteId === notice.id ? (
+                      <div className="flex items-center justify-end gap-2 animate-fade-in">
+                        <button 
+                          onClick={() => notice.id && handleDelete(notice.id)}
+                          className="bg-red-600 text-white text-[9px] px-2 py-1 uppercase font-bold hover:bg-red-700 transition-colors"
+                        >
+                          Confirmar
+                        </button>
+                        <button 
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="bg-neutral text-primary text-[9px] px-2 py-1 uppercase font-bold hover:bg-neutral/80 transition-colors"
+                        >
+                          No
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <button 
+                          onClick={() => handleEdit(notice)}
+                          className="text-secondary hover:text-brand transition-colors p-2"
+                          title="Editar aviso"
+                        >
+                          <i className="fa-solid fa-pen"></i>
+                        </button>
+                        <button 
+                          onClick={() => setConfirmDeleteId(notice.id || null)}
+                          className="text-secondary hover:text-red-600 transition-colors p-2"
+                          title="Eliminar aviso"
+                        >
+                          <i className="fa-solid fa-trash"></i>
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -1613,6 +2039,435 @@ const AdminEvents: React.FC<{ Header: any }> = ({ Header }) => {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+};
+
+/* --- SUB-COMPONENT: CERTIFICATIONS MANAGEMENT --- */
+const AdminCertifications: React.FC<{ Header: any }> = ({ Header }) => {
+  const [certifications, setCertifications] = useState<Certification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+
+  const emptyForm: Partial<Certification> = {
+    name: '',
+    company: '',
+    start_date: new Date().toISOString().split('T')[0],
+    end_date: new Date().toISOString().split('T')[0],
+    cost: 'Gratuito',
+    mode: 'Online',
+    description: '',
+    img_certificacion: ''
+  };
+
+  const [formData, setFormData] = useState<Partial<Certification>>(emptyForm);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { loadCertifications(); }, []);
+
+  const loadCertifications = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getCertifications();
+      setCertifications(data);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (cert: Certification) => {
+    setEditingId(cert.id);
+    setFormData({ ...cert });
+    setSelectedFile(null);
+    setIsFormOpen(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDelete = async (id: number) => {
+    setSaving(true);
+    try {
+      const success = await api.deleteCertification(id);
+      if (success) {
+        loadCertifications();
+        setConfirmDeleteId(null);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      let imgUrl = formData.img_certificacion;
+
+      if (selectedFile) {
+        const uploadedUrl = await api.uploadCertificationFlyer(selectedFile);
+        if (uploadedUrl) {
+          imgUrl = uploadedUrl;
+        } else {
+          alert("Error al subir el flyer. Por favor intenta de nuevo.");
+          setSaving(false);
+          return;
+        }
+      }
+
+      const result = await api.upsertCertification({
+        ...formData,
+        img_certificacion: imgUrl
+      });
+
+      if (result) {
+        setIsFormOpen(false);
+        setEditingId(null);
+        setFormData(emptyForm);
+        setSelectedFile(null);
+        loadCertifications();
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="animate-fade-in">
+      <Header 
+        title="Gestión de Certificaciones" 
+        subtitle="Administra las próximas certificaciones y cursos disponibles." 
+        actionLabel={isFormOpen ? "Cancelar" : "Nueva Certificación"} 
+        onAction={() => {
+          if (isFormOpen) {
+            setIsFormOpen(false);
+            setEditingId(null);
+            setFormData(emptyForm);
+            setSelectedFile(null);
+          } else {
+            setIsFormOpen(true);
+          }
+        }} 
+      />
+
+      {isFormOpen && (
+        <div className="mb-12 bg-white border border-accent/20 p-10 shadow-2xl animate-slide-down">
+          <h3 className="font-serif text-2xl text-primary mb-8 border-b border-neutral pb-4">
+            {editingId ? 'Editar Certificación' : 'Nueva Certificación'}
+          </h3>
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="md:col-span-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Nombre de la Certificación</label>
+                <input 
+                  type="text" required 
+                  value={formData.name || ''} 
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none" 
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Empresa / Marca</label>
+                <input 
+                  type="text" required 
+                  value={formData.company || ''} 
+                  onChange={(e) => setFormData({...formData, company: e.target.value})}
+                  className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none" 
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Costo ($ o Gratuito)</label>
+                <input 
+                  type="text" required 
+                  value={formData.cost || ''} 
+                  onChange={(e) => setFormData({...formData, cost: e.target.value})}
+                  className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none" 
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Fecha Inicio</label>
+                <input 
+                  type="date" required 
+                  value={formData.start_date || ''} 
+                  onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+                  className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none" 
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Fecha Fin</label>
+                <input 
+                  type="date" required 
+                  value={formData.end_date || ''} 
+                  onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+                  className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none" 
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Modo</label>
+                <select 
+                  value={formData.mode} 
+                  onChange={(e) => setFormData({...formData, mode: e.target.value as any})}
+                  className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none"
+                >
+                  <option value="Online">Online</option>
+                  <option value="Presencial">Presencial</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Flyer de la Certificación (Archivo)</label>
+                <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    ref={fileInputRef}
+                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                    className="hidden" 
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-6 py-3 border border-dashed border-brand text-brand hover:bg-brand/5 transition-all text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"
+                  >
+                    <i className="fa-solid fa-upload"></i> {selectedFile ? 'Cambiar Archivo' : 'Subir Imagen'}
+                  </button>
+                  {selectedFile && (
+                    <span className="text-xs text-secondary italic">{selectedFile.name}</span>
+                  )}
+                  {formData.img_certificacion && !selectedFile && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-brand font-bold">✓ Imagen cargada</span>
+                      <img src={formData.img_certificacion} alt="Preview" className="w-10 h-10 object-cover border border-neutral" />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Descripción</label>
+                <textarea 
+                  rows={4} required 
+                  value={formData.description || ''} 
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none resize-none" 
+                />
+              </div>
+            </div>
+            <button 
+              type="submit" disabled={saving}
+              className="bg-brand text-white px-10 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all shadow-xl disabled:opacity-50"
+            >
+              {saving ? 'Procesando...' : editingId ? 'Actualizar Certificación' : 'Guardar Certificación'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      <div className="bg-white border border-neutral overflow-hidden shadow-sm">
+        <table className="w-full text-left">
+          <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
+            <tr>
+              <th className="px-8 py-5">Certificación</th>
+              <th className="px-8 py-5">Empresa</th>
+              <th className="px-8 py-5">Fechas</th>
+              <th className="px-8 py-5 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral">
+            {certifications.map((cert) => (
+              <tr key={cert.id} className="hover:bg-background/30 transition-colors">
+                <td className="px-8 py-8">
+                  <p className="text-base font-serif font-medium text-primary">{cert.name}</p>
+                  <span className={`text-[9px] font-bold uppercase px-2 py-0.5 mt-1 inline-block ${cert.mode === 'Online' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
+                    {cert.mode}
+                  </span>
+                </td>
+                <td className="px-8 py-8 text-sm text-secondary">{cert.company}</td>
+                <td className="px-8 py-8 text-sm text-secondary">{cert.start_date} - {cert.end_date}</td>
+                <td className="px-8 py-8 text-right">
+                  <div className="flex justify-end gap-2">
+                    <button 
+                      onClick={() => handleEdit(cert)}
+                      className="w-9 h-9 flex items-center justify-center text-secondary hover:bg-background hover:text-brand transition-all"
+                    >
+                      <i className="fa-solid fa-pen text-sm"></i>
+                    </button>
+                    {confirmDeleteId === cert.id ? (
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => handleDelete(cert.id)} className="bg-red-600 text-white text-[9px] px-2 py-1 uppercase font-bold">Sí</button>
+                        <button onClick={() => setConfirmDeleteId(null)} className="bg-neutral text-primary text-[9px] px-2 py-1 uppercase font-bold">No</button>
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => setConfirmDeleteId(cert.id)}
+                        className="w-9 h-9 flex items-center justify-center text-secondary hover:bg-red-50 hover:text-red-600 transition-all"
+                      >
+                        <i className="fa-solid fa-trash text-sm"></i>
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+const AdminSearchLogs: React.FC<{ Header: any }> = ({ Header }) => {
+  const [logs, setLogs] = useState<SearchLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 40;
+
+  const fetchLogs = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getSearchLogs();
+      setLogs(data);
+      setCurrentPage(1); // Reset to first page on refresh
+    } catch (err) {
+      console.error("Error fetching search logs:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs();
+  }, []);
+
+  // Pagination logic
+  const totalPages = Math.ceil(logs.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = logs.slice(indexOfFirstItem, indexOfLastItem);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
+  return (
+    <div className="animate-fade-in">
+      <div className="flex justify-between items-end mb-8">
+        <Header 
+          title="Log de Búsquedas" 
+          subtitle="Monitorea lo que los usuarios están buscando en la plataforma" 
+        />
+        <button 
+          onClick={fetchLogs}
+          disabled={loading}
+          className="mb-8 px-6 py-3 bg-white border border-black/10 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-background transition-all flex items-center gap-2"
+        >
+          <i className={`fa-solid fa-rotate ${loading ? 'animate-spin' : ''}`}></i>
+          Actualizar
+        </button>
+      </div>
+
+      <div className="bg-white border border-black/5 shadow-sm overflow-hidden mb-8">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-primary text-white text-[10px] font-bold uppercase tracking-widest">
+              <th className="px-8 py-5">Usuario</th>
+              <th className="px-8 py-5">Término de Búsqueda</th>
+              <th className="px-8 py-5">Resultados</th>
+              <th className="px-8 py-5 text-right">Fecha</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral">
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i} className="animate-pulse">
+                  <td colSpan={4} className="px-8 py-6 bg-gray-50/50"></td>
+                </tr>
+              ))
+            ) : currentItems.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-8 py-20 text-center text-secondary font-serif italic">
+                  No hay registros de búsqueda aún.
+                </td>
+              </tr>
+            ) : (
+              currentItems.map((log) => (
+                <tr key={log.id} className="hover:bg-background/30 transition-colors">
+                  <td className="px-8 py-6">
+                    <p className="text-sm font-medium text-primary">{log.user_name}</p>
+                    <p className="text-[10px] text-secondary font-mono">{log.user_id}</p>
+                  </td>
+                  <td className="px-8 py-6">
+                    <span className="px-3 py-1 bg-accent/5 text-accent text-xs font-medium border border-accent/10">
+                      {log.query}
+                    </span>
+                  </td>
+                  <td className="px-8 py-6">
+                    <span className={`text-xs font-bold ${log.results_count === 0 ? 'text-red-500' : 'text-green-600'}`}>
+                      {log.results_count} {log.results_count === 1 ? 'resultado' : 'resultados'}
+                    </span>
+                  </td>
+                  <td className="px-8 py-6 text-right text-xs text-secondary">
+                    {new Date(log.created_at).toLocaleString('es-ES', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination Controls */}
+      {!loading && totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mb-12">
+          <button 
+            onClick={() => paginate(currentPage - 1)}
+            disabled={currentPage === 1}
+            className={`w-10 h-10 flex items-center justify-center border border-black/5 transition-all ${currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-primary hover:bg-white hover:shadow-sm'}`}
+          >
+            <i className="fa-solid fa-chevron-left text-xs"></i>
+          </button>
+          
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }).map((_, i) => {
+              const pageNum = i + 1;
+              // Show only a few page numbers if there are too many
+              if (
+                pageNum === 1 || 
+                pageNum === totalPages || 
+                (pageNum >= currentPage - 2 && pageNum <= currentPage + 2)
+              ) {
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => paginate(pageNum)}
+                    className={`w-10 h-10 text-[10px] font-bold uppercase transition-all border ${currentPage === pageNum ? 'bg-primary text-white border-primary' : 'bg-white text-secondary border-black/5 hover:bg-background'}`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              } else if (
+                pageNum === currentPage - 3 || 
+                pageNum === currentPage + 3
+              ) {
+                return <span key={pageNum} className="text-secondary px-1">...</span>;
+              }
+              return null;
+            })}
+          </div>
+
+          <button 
+            onClick={() => paginate(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className={`w-10 h-10 flex items-center justify-center border border-black/5 transition-all ${currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-primary hover:bg-white hover:shadow-sm'}`}
+          >
+            <i className="fa-solid fa-chevron-right text-xs"></i>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

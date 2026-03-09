@@ -1,14 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
-import { api, Event } from '../services/api';
-import { Notice, NavigationItem } from '../types';
+import { api } from '../services/api';
+import { Notice, NavigationItem, Event, User, Associate } from '../types';
 
 interface NoticesListProps {
+  user: User;
   onNavigate?: (nav: NavigationItem) => void;
   onEventClick?: (eventId: number) => void;
 }
 
-const NoticesList: React.FC<NoticesListProps> = ({ onNavigate, onEventClick }) => {
+const NoticesList: React.FC<NoticesListProps> = ({ user, onNavigate, onEventClick }) => {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,11 +19,20 @@ const NoticesList: React.FC<NoticesListProps> = ({ onNavigate, onEventClick }) =
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [noticesData, eventsData] = await Promise.all([
+        const [noticesData, eventsData, myAssociateData] = await Promise.all([
           api.getNotices(),
-          api.getEvents()
+          api.getEvents(),
+          api.getAssociateByUserId(user.id)
         ]);
-        setNotices(noticesData);
+
+        const filteredNotices = noticesData.filter((notice: Notice) => {
+          if (!notice.recipient_ids || notice.recipient_ids.trim() === '') return true;
+          if (!myAssociateData) return false;
+          const ids = notice.recipient_ids.split(',').map(id => id.trim());
+          return ids.includes(myAssociateData.id?.toString() || '');
+        });
+
+        setNotices(filteredNotices);
         setEvents(eventsData);
       } catch (error) {
         console.error("Error al cargar datos en Avisos:", error);
@@ -31,7 +41,7 @@ const NoticesList: React.FC<NoticesListProps> = ({ onNavigate, onEventClick }) =
       }
     };
     fetchData();
-  }, []);
+  }, [user.id]);
 
   const toggleAccordion = (id: string) => {
     setExpandedId(expandedId === id ? null : id);

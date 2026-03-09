@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { api, Event } from '../services/api';
-import { User } from '../types';
+import { api } from '../services/api';
+import { User, Event } from '../types';
 
 interface EventDetailProps {
   eventId: number;

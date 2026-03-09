@@ -1,3 +1,16 @@
+export interface Certification {
+  id: number;
+  name: string;
+  company: string;
+  start_date: string;
+  end_date: string;
+  cost: string; // e.g., "$100" or "Gratuito"
+  mode: 'Presencial' | 'Online';
+  description: string;
+  img_certificacion?: string;
+  created_at?: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -32,6 +45,7 @@ export interface Notice {
   priority: 'high' | 'medium' | 'low';
   category: 'General' | 'Corporativo' | 'Capacitación';
   target_associate_id?: number | null;
+  recipient_ids?: string | null;
 }
 
 export interface QuickLink {
@@ -93,10 +107,40 @@ export enum NavigationItem {
   PROVEEDORES = 'proveedores',
   NOTICE_DETAIL = 'notice_detail',
   MY_PROFILE = 'my_profile',
+  SEARCH_RESULTS = 'search_results',
 }
 
 export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
   isError?: boolean;
+}
+
+export interface Event {
+  id?: number;
+  type: 'Webinar' | 'Presencial' | 'Viaje' | 'Social' | 'Corporativo';
+  title: string;
+  description?: string;
+  event_date: string; 
+  month?: string;     
+  day?: string;       
+  time: string;
+  link?: string;
+}
+
+export interface SearchResults {
+  notices: Notice[];
+  events: Event[];
+  certifications: Certification[];
+  associates: Associate[];
+  documents: Document[];
+}
+
+export interface SearchLog {
+  id: string;
+  user_id: string;
+  user_name: string;
+  query: string;
+  results_count: number;
+  created_at: string;
 }

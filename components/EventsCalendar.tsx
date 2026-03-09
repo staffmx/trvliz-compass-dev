@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { api, Event } from '../services/api';
+import { api } from '../services/api';
+import { Event } from '../types';
 
 interface EventsCalendarProps {
   onEventClick?: (eventId: number) => void;

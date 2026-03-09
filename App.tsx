@@ -15,7 +15,9 @@ import Suppliers from './components/Suppliers';
 import NoticeDetail from './components/NoticeDetail';
 import NoticesList from './components/NoticesList';
 import MyProfile from './components/MyProfile';
-import { User, NavigationItem } from './types';
+import SearchResults from './components/SearchResults';
+import { User, NavigationItem, SearchResults as SearchResultsType } from './types';
+import { api } from './services/api';
 
 const PlaceholderPage: React.FC<{ title: string; icon: string }> = ({ title, icon }) => (
   <div className="max-w-site mx-auto px-mobile-x py-section-y text-center animate-fade-in">
@@ -34,6 +36,9 @@ const App: React.FC = () => {
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [selectedAssociateId, setSelectedAssociateId] = useState<number | null>(null);
   const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<SearchResultsType | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('traveliz_user');
@@ -56,8 +61,21 @@ const App: React.FC = () => {
     setCurrentNav(NavigationItem.DASHBOARD);
   };
 
-  const handleSearch = (term: string) => {
-    alert(`Buscando: ${term}\n(Funcionalidad de búsqueda en desarrollo)`);
+  const handleSearch = async (term: string) => {
+    if (!term.trim()) return;
+    
+    setSearchTerm(term);
+    setIsSearching(true);
+    setCurrentNav(NavigationItem.SEARCH_RESULTS);
+    
+    try {
+      const results = await api.search(term, user ? { id: user.id, name: user.name } : undefined);
+      setSearchResults(results);
+    } catch (error) {
+      console.error("Search failed:", error);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const handleNavigateToEvent = (eventId: number) => {
@@ -86,6 +104,7 @@ const App: React.FC = () => {
         />;
       case NavigationItem.AVISOS:
         return <NoticesList 
+            user={user!}
             onNavigate={setCurrentNav} 
             onEventClick={handleNavigateToEvent}
         />;
@@ -93,6 +112,7 @@ const App: React.FC = () => {
         return selectedNoticeId ? (
             <NoticeDetail 
                 noticeId={selectedNoticeId} 
+                user={user!}
                 onBack={() => setCurrentNav(NavigationItem.DASHBOARD)} 
             />
         ) : <PlaceholderPage title="Aviso no encontrado" icon="fa-triangle-exclamation" />;
@@ -126,6 +146,22 @@ const App: React.FC = () => {
         return <AdminPanel />;
       case NavigationItem.MY_PROFILE:
         return <MyProfile user={user!} onBack={() => setCurrentNav(NavigationItem.DASHBOARD)} onUserUpdate={setUser} />;
+      case NavigationItem.SEARCH_RESULTS:
+        return isSearching ? (
+          <div className="flex flex-col items-center justify-center py-32 animate-fade-in">
+            <div className="w-12 h-12 border-2 border-accent border-t-transparent rounded-full animate-spin mb-6"></div>
+            <p className="text-secondary font-light tracking-widest uppercase text-[10px]">Buscando en el universo Traveliz...</p>
+          </div>
+        ) : searchResults ? (
+          <SearchResults 
+            results={searchResults} 
+            searchTerm={searchTerm}
+            onNavigate={setCurrentNav}
+            onEventClick={handleNavigateToEvent}
+            onNoticeClick={handleNavigateToNotice}
+            onViewProfile={handleViewAssociate}
+          />
+        ) : <PlaceholderPage title="No hay resultados" icon="fa-magnifying-glass" />;
       default:
         return <Dashboard 
             user={user!} 
@@ -148,6 +184,7 @@ const App: React.FC = () => {
         currentNav={currentNav}
         onNavigate={setCurrentNav}
         onSearch={handleSearch}
+        onNoticeClick={handleNavigateToNotice}
       />
       
       <main className="flex-grow">

@@ -1,21 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { Notice } from '../types';
+import { Notice, User } from '../types';
 
 interface NoticeDetailProps {
   noticeId: string;
+  user: User;
   onBack: () => void;
 }
 
-const NoticeDetail: React.FC<NoticeDetailProps> = ({ noticeId, onBack }) => {
+const NoticeDetail: React.FC<NoticeDetailProps> = ({ noticeId, user, onBack }) => {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAllowed, setIsAllowed] = useState(true);
 
   useEffect(() => {
     const fetchNotice = async () => {
       setLoading(true);
       try {
-        const data = await api.getNoticeById(noticeId);
+        const [data, myAssociate] = await Promise.all([
+          api.getNoticeById(noticeId),
+          api.getAssociateByUserId(user.id)
+        ]);
+        
+        if (data) {
+          if (data.recipient_ids && data.recipient_ids.trim() !== '') {
+            if (!myAssociate) {
+              setIsAllowed(false);
+            } else {
+              const ids = data.recipient_ids.split(',').map(id => id.trim());
+              if (!ids.includes(myAssociate.id?.toString() || '')) {
+                setIsAllowed(false);
+              }
+            }
+          }
+        }
+        
         setNotice(data);
       } catch (error) {
         console.error("Error fetching notice:", error);
@@ -24,7 +43,7 @@ const NoticeDetail: React.FC<NoticeDetailProps> = ({ noticeId, onBack }) => {
       }
     };
     fetchNotice();
-  }, [noticeId]);
+  }, [noticeId, user.id]);
 
   if (loading) {
     return (
@@ -35,11 +54,13 @@ const NoticeDetail: React.FC<NoticeDetailProps> = ({ noticeId, onBack }) => {
     );
   }
 
-  if (!notice) {
+  if (!notice || !isAllowed) {
     return (
       <div className="max-w-site mx-auto px-mobile-x py-section-y text-center animate-fade-in">
         <i className="fa-solid fa-triangle-exclamation text-5xl text-neutral mb-6"></i>
-        <h2 className="text-3xl font-serif text-primary mb-4">Aviso no encontrado</h2>
+        <h2 className="text-3xl font-serif text-primary mb-4">
+          {!notice ? "Aviso no encontrado" : "No tienes permiso para ver este aviso"}
+        </h2>
         <button onClick={onBack} className="text-brand font-bold uppercase tracking-widest text-xs hover:text-accent transition-colors">
           Volver a Avisos
         </button>

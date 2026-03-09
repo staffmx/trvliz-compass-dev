@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { api, RecordedWebinar, WEBINAR_CATEGORIES } from '../services/api';
-import { User } from '../types';
+import { User, Certification } from '../types';
 
 const ITEMS_PER_PAGE = 12;
 
@@ -12,8 +12,11 @@ interface TrainingProps {
 const Training: React.FC<TrainingProps> = ({ user }) => {
   const [showLibrary, setShowLibrary] = useState(false);
   const [showMentorshipForm, setShowMentorshipForm] = useState(false);
+  const [showCertifications, setShowCertifications] = useState(false);
   const [webinars, setWebinars] = useState<RecordedWebinar[]>([]);
+  const [certifications, setCertifications] = useState<Certification[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingCerts, setLoadingCerts] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +38,12 @@ const Training: React.FC<TrainingProps> = ({ user }) => {
     }
   }, [showLibrary]);
 
+  useEffect(() => {
+    if (showCertifications) {
+      loadCertifications();
+    }
+  }, [showCertifications]);
+
   const loadLibrary = async () => {
     setLoading(true);
     setError(null);
@@ -46,6 +55,18 @@ const Training: React.FC<TrainingProps> = ({ user }) => {
       setError("No se pudo sincronizar con la base de datos de webinars.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCertifications = async () => {
+    setLoadingCerts(true);
+    try {
+      const data = await api.getCertifications();
+      setCertifications(data);
+    } catch (err) {
+      console.error("Error loading certifications:", err);
+    } finally {
+      setLoadingCerts(false);
     }
   };
 
@@ -314,6 +335,91 @@ const Training: React.FC<TrainingProps> = ({ user }) => {
     );
   }
 
+  if (showCertifications) {
+    return (
+        <div className="max-w-site mx-auto px-mobile-x py-12 animate-fade-in">
+            <button 
+                onClick={() => setShowCertifications(false)} 
+                className="group flex items-center gap-3 text-[10px] font-bold uppercase tracking-[3px] text-secondary hover:text-brand transition-colors mb-12"
+            >
+                <i className="fa-solid fa-arrow-left group-hover:-translate-x-1 transition-transform"></i> Volver a Academy
+            </button>
+
+            <div className="mb-16 border-b border-neutral pb-12">
+                <span className="text-accent text-[10px] font-bold uppercase tracking-[4px] mb-3 block">Crecimiento Profesional</span>
+                <h1 className="text-4xl md:text-5xl font-serif font-medium text-primary">Próximas Certificaciones</h1>
+                <p className="text-secondary text-base mt-4 font-light max-w-2xl leading-relaxed">
+                    Mantente a la vanguardia con las certificaciones más exclusivas del sector de lujo.
+                </p>
+            </div>
+
+            {loadingCerts ? (
+                <div className="py-32 text-center">
+                    <i className="fa-solid fa-circle-notch fa-spin text-4xl text-brand/20 mb-4"></i>
+                    <p className="text-secondary font-serif italic">Cargando certificaciones...</p>
+                </div>
+            ) : certifications.length === 0 ? (
+                <div className="py-32 text-center border border-dashed border-neutral">
+                    <i className="fa-solid fa-award text-4xl text-neutral mb-4 opacity-20"></i>
+                    <h3 className="text-xl font-serif text-primary">No hay certificaciones próximas</h3>
+                    <p className="text-secondary text-sm">Vuelve pronto para ver nuevas oportunidades.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {certifications.map(cert => (
+                        <div key={cert.id} className="bg-white border border-neutral hover:shadow-2xl transition-all duration-500 group flex flex-col">
+                            {cert.img_certificacion && (
+                                <div className="aspect-[4/3] overflow-hidden bg-primary relative">
+                                    <img 
+                                        src={cert.img_certificacion} 
+                                        alt={cert.name} 
+                                        className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-700"
+                                        referrerPolicy="no-referrer"
+                                    />
+                                    <div className="absolute top-4 right-4">
+                                        <span className={`text-[8px] font-bold uppercase px-3 py-1 shadow-lg ${cert.mode === 'Online' ? 'bg-blue-600 text-white' : 'bg-orange-600 text-white'}`}>
+                                            {cert.mode}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            <div className="p-8 flex-1 flex flex-col">
+                                <div className="flex justify-between items-start mb-6">
+                                    <div>
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-brand mb-2 block">{cert.company}</span>
+                                        <h3 className="text-2xl font-serif text-primary group-hover:text-brand transition-colors">{cert.name}</h3>
+                                    </div>
+                                    {!cert.img_certificacion && (
+                                        <span className={`text-[9px] font-bold uppercase px-3 py-1 ${cert.mode === 'Online' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
+                                            {cert.mode}
+                                        </span>
+                                    )}
+                                </div>
+
+                                <p className="text-sm text-secondary leading-relaxed mb-8 line-clamp-3 font-light flex-grow">
+                                    {cert.description}
+                                </p>
+
+                                <div className="grid grid-cols-2 gap-6 pt-6 border-t border-neutral mt-auto">
+                                    <div>
+                                        <span className="text-[9px] font-bold uppercase tracking-widest text-secondary block mb-1">Fechas</span>
+                                        <p className="text-xs text-primary font-medium">{cert.start_date} - {cert.end_date}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-[9px] font-bold uppercase tracking-widest text-secondary block mb-1">Costo</span>
+                                        <p className="text-xs text-primary font-bold">{cert.cost}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+  }
+
   if (showMentorshipForm) {
     return (
         <div className="max-w-site mx-auto px-mobile-x py-12 animate-fade-in">
@@ -438,7 +544,8 @@ const Training: React.FC<TrainingProps> = ({ user }) => {
                 icon="fa-graduation-cap" 
                 title="Certificaciones" 
                 desc="Rutas de aprendizaje estructuradas para obtener el sello de Agente Elite. Mantente certificado en las marcas más exclusivas."
-                label="Mis Cursos"
+                label="Próximos Cursos"
+                onClick={() => setShowCertifications(true)}
             />
             <TrainingLinkCard 
                 icon="fa-play" 

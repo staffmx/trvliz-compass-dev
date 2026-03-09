@@ -1,5 +1,5 @@
 
-import { Notice, UserProfile, Role, DocumentCategory, Document as DocType, Associate } from '../types';
+import { Notice, UserProfile, Role, DocumentCategory, Document as DocType, Associate, Certification, Event, SearchResults, SearchLog } from '../types';
 import { createClient } from '@supabase/supabase-js';
 
 // --- SUPABASE CONFIGURATION ---
@@ -46,18 +46,6 @@ export const WEBINAR_CATEGORIES: WebinarCategory[] = [
 ];
 
 
-export interface Event {
-  id?: number;
-  type: 'Webinar' | 'Presencial' | 'Viaje' | 'Social' | 'Corporativo';
-  title: string;
-  description?: string;
-  event_date: string; 
-  month?: string;     
-  day?: string;       
-  time: string;
-  link?: string;
-}
-
 export interface EventRegistration {
   id: number;
   event_id: number;
@@ -95,6 +83,7 @@ export interface Seller {
   name: string;
   avatar: string;
   ranking: number;
+  branch?: string;
 }
 
 export type FileType = 'folder' | 'pdf' | 'doc' | 'xls' | 'img' | 'video' | 'other';
@@ -176,6 +165,7 @@ export const api = {
   getUsers: async (): Promise<UserProfile[]> => {
     if (!supabase) return [];
     try {
+      // Intentamos primero con el join (más eficiente)
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -190,7 +180,27 @@ export const api = {
           )
         `);
       
-      if (error) throw error;
+      if (error) {
+        console.warn("Error fetching users with join, falling back to separate fetches:", error.message);
+        
+        // Fallback: Fetch profiles and roles separately if relationship is missing in schema cache
+        const { data: profiles, error: pError } = await supabase.from('profiles').select('*');
+        if (pError) throw pError;
+
+        const { data: userRoles, error: urError } = await supabase.from('user_roles').select('*, roles(*)');
+        
+        return (profiles || []).map(profile => {
+          const roles = (userRoles || [])
+            .filter((ur: any) => ur.user_id === profile.id)
+            .map((ur: any) => ur.roles)
+            .filter(Boolean);
+          
+          return {
+            ...profile,
+            roles
+          };
+        });
+      }
       
       return (data || []).map(profile => ({
         ...profile,
@@ -230,6 +240,21 @@ export const api = {
       return true;
     } catch (err) {
       console.error("Error upserting user:", err);
+      return false;
+    }
+  },
+
+  deleteUserProfile: async (userId: string): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      // First delete roles
+      await supabase.from('user_roles').delete().eq('user_id', userId);
+      // Then delete profile
+      const { error } = await supabase.from('profiles').delete().eq('id', userId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error("Error deleting user profile:", err);
       return false;
     }
   },
@@ -327,19 +352,48 @@ export const api = {
 
   upsertNotice: async (notice: Partial<Notice>): Promise<Notice | null> => {
     if (!supabase) return null;
-    const payload = { ...notice };
-    if (payload.id) {
-      (payload as any).id = parseInt(payload.id);
+    try {
+      const { id, ...rest } = notice;
+      let query;
+      
+      if (id && id !== 'null' && id !== '') {
+        // Update
+        query = supabase.from('notices').update(rest).eq('id', id);
+      } else {
+        // Insert
+        // Ensure we don't send an empty ID or null ID for new records
+        query = supabase.from('notices').insert(rest);
+      }
+
+      const { data, error } = await query.select().single();
+      if (error) {
+        console.error("Supabase upsertNotice error:", error);
+        throw error;
+      }
+      return { ...data, id: data.id.toString() };
+    } catch (err) {
+      console.error("Critical error in upsertNotice:", err);
+      throw err;
     }
-    const { data, error } = await supabase.from('notices').upsert(payload).select().single();
-    if (error) throw error;
-    return { ...data, id: data.id.toString() };
   },
 
   deleteNotice: async (id: string): Promise<boolean> => {
     if (!supabase) return false;
-    const { error } = await supabase.from('notices').delete().eq('id', parseInt(id));
-    return !error;
+    try {
+      if (!id) {
+        console.error("Missing ID for deleteNotice");
+        return false;
+      }
+      const { error } = await supabase.from('notices').delete().eq('id', id);
+      if (error) {
+        console.error("Supabase deleteNotice error:", error);
+        throw error;
+      }
+      return true;
+    } catch (err) {
+      console.error("Critical error in deleteNotice:", err);
+      return false;
+    }
   },
 
   getEvents: async (): Promise<Event[]> => {
@@ -411,6 +465,76 @@ export const api = {
     if (!supabase) return false;
     const { error } = await supabase.from('events').delete().eq('id', id);
     return !error;
+  },
+
+  getCertifications: async (): Promise<Certification[]> => {
+    if (!supabase) return [];
+    try {
+      const { data, error } = await supabase.from('certifications').select('*').order('start_date', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      console.error("Error fetching certifications:", err);
+      return [];
+    }
+  },
+
+  upsertCertification: async (cert: Partial<Certification>): Promise<Certification | null> => {
+    if (!supabase) return null;
+    try {
+      let query;
+      if (cert.id && cert.id !== 0) {
+        // Si hay un ID, realizamos un UPDATE explícito
+        const { id, created_at, ...updateData } = cert as any;
+        query = supabase.from('certifications').update(updateData).eq('id', id);
+      } else {
+        // Si no hay ID, realizamos un INSERT explícito y dejamos que la DB genere el ID
+        const { id, created_at, ...insertData } = cert as any;
+        query = supabase.from('certifications').insert(insertData);
+      }
+
+      const { data, error } = await query.select().single();
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error("Error upserting certification:", err);
+      return null;
+    }
+  },
+
+  deleteCertification: async (id: number): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase.from('certifications').delete().eq('id', id);
+      return !error;
+    } catch (err) {
+      console.error("Error deleting certification:", err);
+      return false;
+    }
+  },
+
+  uploadCertificationFlyer: async (file: File): Promise<string | null> => {
+    if (!supabase) return null;
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const filePath = `flyers/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('certifications')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('certifications')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (err) {
+      console.error("Error uploading flyer:", err);
+      return null;
+    }
   },
 
   registerForEvent: async (eventId: number, userEmail: string): Promise<boolean> => {
@@ -791,6 +915,124 @@ export const api = {
     } catch (err) {
       console.error("Error deleting mentorship request:", err);
       return false;
+    }
+  },
+
+  search: async (query: string, user?: { id: string, name: string }): Promise<SearchResults> => {
+    if (!supabase) return { notices: [], events: [], certifications: [], associates: [], documents: [] };
+    
+    const term = `%${query}%`;
+    
+    try {
+      const [notices, events, certifications, associates, documents, myAssociate] = await Promise.all([
+        supabase.from('notices').select('*').or(`title.ilike.${term},content.ilike.${term}`),
+        supabase.from('events').select('*').or(`title.ilike.${term},description.ilike.${term}`),
+        supabase.from('certifications').select('*').or(`name.ilike.${term},description.ilike.${term}`),
+        supabase.from('associates').select('*').or(`name.ilike.${term},last_name.ilike.${term},position.ilike.${term},email.ilike.${term}`),
+        supabase.from('documents').select('*').or(`name.ilike.${term},description.ilike.${term}`),
+        user ? supabase.from('associates').select('id').eq('user_id', user.id).single() : Promise.resolve({ data: null })
+      ]);
+
+      let filteredNotices = (notices.data || []).map((d: any) => ({ ...d, id: d.id.toString() }));
+      
+      if (user && myAssociate.data) {
+        const myId = myAssociate.data.id.toString();
+        filteredNotices = filteredNotices.filter((notice: any) => {
+          if (!notice.recipient_ids || notice.recipient_ids.trim() === '') return true;
+          const ids = notice.recipient_ids.split(',').map((id: string) => id.trim());
+          return ids.includes(myId);
+        });
+      }
+
+      const results = {
+        notices: filteredNotices,
+        events: (events.data || []).map((e: any) => {
+          const dateObj = new Date(e.event_date + 'T00:00:00');
+          return {
+            ...e,
+            day: dateObj.getDate().toString().padStart(2, '0'),
+            month: dateObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '')
+          };
+        }),
+        certifications: certifications.data || [],
+        associates: associates.data || [],
+        documents: (documents.data || []).map((d: any) => {
+          const storagePath = d.storage_path || d.ruta_almacenamiento || d.ruta || '';
+          let finalUrl = '';
+
+          if (storagePath.startsWith('http')) {
+            finalUrl = storagePath;
+          } else {
+            let cleanPath = storagePath.startsWith('/') ? storagePath.substring(1) : storagePath;
+            if (cleanPath.startsWith('documentation/')) {
+              cleanPath = cleanPath.replace('documentation/', '');
+            }
+            const { data: { publicUrl } } = supabase.storage
+              .from('documentation')
+              .getPublicUrl(cleanPath);
+            finalUrl = publicUrl;
+          }
+          
+          return {
+            id: parseInt(d.id, 10),
+            name: d.name || d.nombre || 'Sin nombre',
+            type: d.type || d.tipo || 'other',
+            size: d.size || d.tamaño || d.tamano || '0 KB',
+            storage_path: storagePath,
+            cat_id: parseInt(d.cat_id !== undefined ? d.cat_id : d.categoria_id, 10) || 0,
+            description: d.description || d.descripcion || '',
+            created_at: new Date(d.created_at).toLocaleDateString('es-ES'),
+            url: finalUrl
+          };
+        })
+      };
+
+      // Log the search if user info is provided
+      if (user) {
+        const totalResults = results.notices.length + results.events.length + results.certifications.length + results.associates.length + results.documents.length;
+        console.log(`Logging search for ${user.name}: "${query}" with ${totalResults} results`);
+        api.logSearch(user.id, user.name, query, totalResults)
+          .then(success => console.log("Search log status:", success ? "Success" : "Failed"))
+          .catch(err => console.error("Failed to log search:", err));
+      }
+
+      return results;
+    } catch (err) {
+      console.error("Search error:", err);
+      return { notices: [], events: [], certifications: [], associates: [], documents: [] };
+    }
+  },
+
+  logSearch: async (userId: string, userName: string, query: string, resultsCount: number): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase.from('search_logs').insert({
+        user_id: userId,
+        user_name: userName,
+        query: query,
+        results_count: resultsCount
+      });
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error("Error logging search:", err);
+      return false;
+    }
+  },
+
+  getSearchLogs: async (): Promise<SearchLog[]> => {
+    if (!supabase) return [];
+    try {
+      const { data, error } = await supabase
+        .from('search_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      console.error("Error getting search logs:", err);
+      return [];
     }
   }
 };

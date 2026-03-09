@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { User, Notice, NavigationItem, Associate } from '../types';
-import { api, Event, BlogPost, Seller } from '../services/api';
+import { User, Notice, NavigationItem, Associate, Event } from '../types';
+import { api, BlogPost, Seller } from '../services/api';
 
 interface DashboardProps {
   user: User;
@@ -31,7 +31,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
           api.getAssociates(),
           api.getAssociateByUserId(user.id)
         ]);
-        setNotices(noticesData);
+        const filteredNotices = noticesData.filter((notice: Notice) => {
+          if (!notice.recipient_ids || notice.recipient_ids.trim() === '') return true;
+          if (!myAssociateData) return false;
+          const ids = notice.recipient_ids.split(',').map(id => id.trim());
+          return ids.includes(myAssociateData.id.toString());
+        });
+        setNotices(filteredNotices);
         setEvents(eventsData);
         setSellers(sellersData);
         setBlogPosts(blogData);

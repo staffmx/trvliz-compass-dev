@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { NavigationItem } from '../types';
-import { api, BlogPost, Event } from '../services/api';
+import { NavigationItem, Event } from '../types';
+import { api, BlogPost } from '../services/api';
 
 interface InspirationProps {
     onNavigate: (nav: NavigationItem) => void;
