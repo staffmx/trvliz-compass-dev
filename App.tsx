@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
 import Header from './components/Header';
@@ -13,6 +14,7 @@ import Documentation from './components/Documentation';
 import Suppliers from './components/Suppliers';
 import NoticeDetail from './components/NoticeDetail';
 import NoticesList from './components/NoticesList';
+import MyProfile from './components/MyProfile';
 import { User, NavigationItem } from './types';
 
 const PlaceholderPage: React.FC<{ title: string; icon: string }> = ({ title, icon }) => (
@@ -83,7 +85,10 @@ const App: React.FC = () => {
             onNoticeClick={handleNavigateToNotice}
         />;
       case NavigationItem.AVISOS:
-        return <NoticesList />;
+        return <NoticesList 
+            onNavigate={setCurrentNav} 
+            onEventClick={handleNavigateToEvent}
+        />;
       case NavigationItem.NOTICE_DETAIL:
         return selectedNoticeId ? (
             <NoticeDetail 
@@ -104,7 +109,7 @@ const App: React.FC = () => {
             <AssociateProfile associateId={selectedAssociateId} onBack={() => setCurrentNav(NavigationItem.DIRECTORIO)} />
         ) : <Directory onViewProfile={handleViewAssociate} />;
       case NavigationItem.CAPACITACION:
-        return <Training />;
+        return <Training user={user!} />;
       case NavigationItem.CALENDARIO:
         return <EventsCalendar onEventClick={handleNavigateToEvent} />;
       case NavigationItem.EVENT_DETAIL:
@@ -119,6 +124,8 @@ const App: React.FC = () => {
         );
       case NavigationItem.ADMIN:
         return <AdminPanel />;
+      case NavigationItem.MY_PROFILE:
+        return <MyProfile user={user!} onBack={() => setCurrentNav(NavigationItem.DASHBOARD)} onUserUpdate={setUser} />;
       default:
         return <Dashboard 
             user={user!} 

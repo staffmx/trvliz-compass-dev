@@ -1,12 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
-import { User, Notice, NavigationItem } from '../types';
+import { User, Notice, NavigationItem, Associate } from '../types';
 import { api, Event, BlogPost, Seller } from '../services/api';
 
 interface DashboardProps {
   user: User;
   onNavigate: (nav: NavigationItem) => void;
-  onEventClick?: (eventId: number) => void; // Added prop for event navigation
-  onNoticeClick?: (noticeId: string) => void; // Added prop for notice navigation
+  onEventClick?: (eventId: number) => void; 
+  onNoticeClick?: (noticeId: string) => void; 
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, onNoticeClick }) => {
@@ -14,22 +15,28 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
   const [events, setEvents] = useState<Event[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [teamMembers, setTeamMembers] = useState<Associate[]>([]);
+  const [currentUserAssociate, setCurrentUserAssociate] = useState<Associate | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadAllData = async () => {
       setLoading(true);
       try {
-        const [noticesData, eventsData, sellersData, blogData] = await Promise.all([
+        const [noticesData, eventsData, sellersData, blogData, associatesData, myAssociateData] = await Promise.all([
           api.getNotices(),
           api.getEvents(),
           api.getTopSellers(),
-          api.getBlogPosts(3)
+          api.getBlogPosts(3),
+          api.getAssociates(),
+          api.getAssociateByUserId(user.id)
         ]);
         setNotices(noticesData);
         setEvents(eventsData);
         setSellers(sellersData);
         setBlogPosts(blogData);
+        setTeamMembers(associatesData.slice(0, 5)); // Show first 5 associates
+        setCurrentUserAssociate(myAssociateData);
       } catch (error) {
         console.error("Dashboard failed to load", error);
       } finally {
@@ -37,12 +44,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
       }
     };
     loadAllData();
-  }, []);
+  }, [user.id]);
 
   const CalendarSection = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between border-b border-neutral pb-4">
-          <h2 className="text-2xl font-serif font-light text-primary">Calendario</h2>
+          <h2 className="text-2xl font-serif font-light text-primary">Próximos Eventos</h2>
           <button onClick={() => onNavigate(NavigationItem.CALENDARIO)} className="text-xs font-semibold uppercase tracking-widest text-brand hover:text-accent transition-colors">
               Ver Todo
           </button>
@@ -50,7 +57,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
       
       <div className="bg-surface rounded-none shadow-sm border border-neutral divide-y divide-neutral">
           {loading ? (
-             Array.from({ length: 3 }).map((_, i) => (
+             Array.from({ length: 6 }).map((_, i) => (
                <div key={i} className="p-5 flex gap-4 animate-pulse">
                   <div className="w-14 h-14 bg-gray-200"></div>
                   <div className="flex-1 space-y-2">
@@ -60,7 +67,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
                </div>
              ))
           ) : (
-            events.map((event) => (
+            events.slice(0, 6).map((event) => (
                 <button 
                     key={event.id} 
                     onClick={() => event.id && onEventClick && onEventClick(event.id)}
@@ -88,6 +95,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
                 </button>
             ))
           )}
+          {!loading && events.length === 0 && (
+            <div className="p-10 text-center text-secondary text-sm italic">No hay eventos programados.</div>
+          )}
       </div>
     </div>
   );
@@ -96,15 +106,35 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
     <div className="max-w-site mx-auto px-mobile-x pt-[50px] pb-section-y animate-fade-in">
       <div className="mb-12 relative overflow-hidden rounded-none bg-brand text-white shadow-2xl">
         <div className="relative p-10 md:p-16 flex flex-col md:flex-row items-center justify-between gap-10">
-          <div className="text-center md:text-left space-y-6">
-            <h1 className="text-5xl md:text-7xl font-serif font-medium tracking-tight text-white leading-none">
-              Your World, <span className="italic text-accent">Tailored.</span>
-            </h1>
-            <div className="space-y-2">
-                <p className="text-xl md:text-2xl text-white font-light tracking-wide">
-                  Te damos la Bienvenida a Compass, <span className="font-semibold">{user.name.split(' ')[0]}</span>
-                </p>
-                <p className="text-gray-400 text-xs md:text-sm font-light tracking-[3px] uppercase">Diseñar viajes extraordinarios empieza aquí.</p>
+          <div className="flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
+            {/* User Avatar from Profile */}
+            <div className="relative">
+                <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-white/10 shadow-2xl">
+                    <img 
+                        src={currentUserAssociate?.image || user.avatar || 'https://via.placeholder.com/200'} 
+                        alt={user.name} 
+                        className="w-full h-full object-cover"
+                    />
+                </div>
+                {currentUserAssociate?.branch && (
+                    <div className="absolute -bottom-2 -right-2 bg-accent text-white px-3 py-1 text-[8px] font-bold uppercase tracking-widest shadow-lg">
+                        {currentUserAssociate.branch}
+                    </div>
+                )}
+            </div>
+
+            <div className="space-y-4">
+                <h1 className="text-4xl md:text-6xl font-serif font-medium tracking-tight text-white leading-none">
+                Your World, <span className="italic text-accent">Tailored.</span>
+                </h1>
+                <div className="space-y-1">
+                    <p className="text-xl md:text-2xl text-white font-light tracking-wide">
+                    Te damos la Bienvenida, <span className="font-semibold">{user.name.split(' ')[0]}</span>
+                    </p>
+                    {currentUserAssociate?.position && (
+                        <p className="text-accent text-[10px] font-bold uppercase tracking-[4px]">{currentUserAssociate.position}</p>
+                    )}
+                </div>
             </div>
           </div>
           <button onClick={() => onNavigate(NavigationItem.AVISOS)} className="px-[30px] py-[15px] bg-white text-brand font-semibold uppercase tracking-[2px] rounded-none shadow-lg hover:text-accent transition-all transform hover:-translate-y-1 text-xs md:text-sm flex-shrink-0">
@@ -182,7 +212,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
         <div className="space-y-10">
           <div className="hidden lg:block"><CalendarSection /></div>
           
-          <div className="bg-brand rounded-none p-8 text-white shadow-xl relative overflow-hidden sticky top-24">
+          <div className="bg-brand rounded-none p-8 text-white shadow-xl relative overflow-hidden">
              <div className="relative z-10">
                  <div className="flex items-center justify-between mb-8">
                     <h3 className="font-serif text-xl font-light tracking-wide text-white">Top Producers</h3>
@@ -211,6 +241,35 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
                     )}
                  </div>
              </div>
+          </div>
+
+          <div className="bg-white border border-neutral p-8 shadow-sm">
+              <div className="flex items-center justify-between mb-8 border-b border-neutral pb-4">
+                  <h3 className="font-serif text-xl font-light text-primary">Mi Equipo</h3>
+                  <button onClick={() => onNavigate(NavigationItem.DIRECTORIO)} className="text-[10px] font-bold uppercase tracking-widest text-brand hover:text-accent transition-colors">Ver Directorio</button>
+              </div>
+              <div className="space-y-6">
+                  {loading ? (
+                      Array.from({ length: 4 }).map((_, i) => (
+                          <div key={i} className="flex items-center gap-4 animate-pulse">
+                              <div className="w-10 h-10 bg-neutral rounded-full"></div>
+                              <div className="space-y-2 flex-1"><div className="h-3 bg-neutral w-3/4"></div><div className="h-2 bg-neutral w-1/4"></div></div>
+                          </div>
+                      ))
+                  ) : (
+                      teamMembers.map((member) => (
+                          <div key={member.id} className="flex items-center gap-4 group cursor-pointer" onClick={() => onNavigate(NavigationItem.DIRECTORIO)}>
+                              <div className="w-10 h-10 rounded-full overflow-hidden border border-neutral grayscale group-hover:grayscale-0 transition-all">
+                                  <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-primary truncate group-hover:text-brand transition-colors">{member.name} {member.last_name}</p>
+                                  <p className="text-[10px] text-secondary uppercase tracking-widest truncate">{member.position || 'Travel Consultant'}</p>
+                              </div>
+                          </div>
+                      ))
+                  )}
+              </div>
           </div>
         </div>
       </div>

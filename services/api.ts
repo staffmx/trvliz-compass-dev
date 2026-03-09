@@ -1,6 +1,6 @@
 
-import { Notice, UserProfile, Role } from '../types';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
+import { Notice, UserProfile, Role, DocumentCategory, Document as DocType, Associate } from '../types';
+import { createClient } from '@supabase/supabase-js';
 
 // --- SUPABASE CONFIGURATION ---
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://klknrbnipvgwywjbzafh.supabase.co';
@@ -45,21 +45,6 @@ export const WEBINAR_CATEGORIES: WebinarCategory[] = [
   "TRAVELIZ - LUXURY CRUISES - PLAYBOOK"
 ];
 
-export interface Associate {
-  id?: number;
-  name: string;
-  last_name?: string;
-  email: string;
-  image: string;
-  whatsapp?: string;
-  position?: string;
-  associate_type?: string;
-  content?: string;
-  instagram?: string;
-  facebook?: string;
-  tiktok?: string;
-  created_at?: string;
-}
 
 export interface Event {
   id?: number;
@@ -91,6 +76,18 @@ export interface BlogPost {
   read_time: string;   
   author: string;
   publish_date: string; 
+}
+
+export interface MentorshipRequest {
+  id?: number;
+  user_id: string;
+  name: string;
+  email: string;
+  tentative_date: string;
+  topic: string;
+  comments?: string;
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  created_at?: string;
 }
 
 export interface Seller {
@@ -262,6 +259,39 @@ export const api = {
     }
   },
 
+  getAssociateByUserId: async (userId: string): Promise<Associate | null> => {
+    if (!supabase) return null;
+    try {
+      const { data, error } = await supabase.from('associates').select('*').eq('user_id', userId).maybeSingle();
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error("API Error getAssociateByUserId:", err);
+      return null;
+    }
+  },
+
+  updateProfile: async (profileData: Partial<UserProfile>): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: profileData.name,
+          last_name: profileData.last_name,
+          position: profileData.position,
+          avatar_url: profileData.avatar_url
+        })
+        .eq('id', profileData.id);
+      
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      return false;
+    }
+  },
+
   upsertAssociate: async (associate: Associate): Promise<Associate | null> => {
     if (!supabase) return null;
     const { data, error } = await supabase.from('associates').upsert(associate).select().single();
@@ -346,14 +376,35 @@ export const api = {
 
   upsertEvent: async (event: Partial<Event>): Promise<Event | null> => {
     if (!supabase) return null;
-    const { data, error } = await supabase.from('events').upsert(event).select().single();
-    if (error) throw error;
-    const dateObj = new Date(data.event_date + 'T00:00:00');
-    return {
-      ...data,
-      day: dateObj.getDate().toString().padStart(2, '0'),
-      month: dateObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '')
-    };
+    
+    // Limpiar el objeto de campos que no pertenecen a la tabla
+    const { day, month, ...payload } = event as any;
+    
+    try {
+      let query;
+      if (payload.id && payload.id !== 0) {
+        // Si hay un ID, realizamos un UPDATE explícito
+        const { id, ...updateData } = payload;
+        query = supabase.from('events').update(updateData).eq('id', id);
+      } else {
+        // Si no hay ID, realizamos un INSERT explícito y dejamos que la DB genere el ID
+        const { id, ...insertData } = payload;
+        query = supabase.from('events').insert(insertData);
+      }
+
+      const { data, error } = await query.select().single();
+      if (error) throw error;
+      
+      const dateObj = new Date(data.event_date + 'T00:00:00');
+      return {
+        ...data,
+        day: dateObj.getDate().toString().padStart(2, '0'),
+        month: dateObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '')
+      };
+    } catch (err) {
+      console.error("Error in upsertEvent:", err);
+      throw err;
+    }
   },
 
   deleteEvent: async (id: number): Promise<boolean> => {
@@ -453,45 +504,162 @@ export const api = {
     return !error;
   },
 
-  getDocuments: async (parentId: number | null): Promise<DocItem[]> => {
+  // --- DOCUMENTATION ---
+  getDocumentCategories: async (): Promise<DocumentCategory[]> => {
+    if (!supabase) return [];
+    const tableNames = ['documents_categoria', 'documents_categorias', 'document_categories'];
+    
+    for (const tableName of tableNames) {
+      try {
+        console.log(`Attempting to fetch categories from '${tableName}'...`);
+        // First try to just get the data without ordering to avoid column name errors
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('*');
+        
+        if (!error && data) {
+          console.log(`Successfully fetched ${data.length} categories from '${tableName}'`);
+          if (data.length > 0) {
+            console.log("Sample raw category data:", data[0]);
+          }
+          const mapped = data.map((c: any) => ({
+            id: parseInt(c.id, 10),
+            name: c.name || c.nombre || 'Sin nombre',
+            parent_id: parseInt(c.parent_id !== undefined ? c.parent_id : (c.categoria_padre_id || 0), 10) || 0,
+            created_at: c.created_at
+          }));
+          // Sort manually in JS to be safe
+          return mapped.sort((a, b) => a.name.localeCompare(b.name));
+        }
+        console.warn(`Failed to fetch from '${tableName}':`, error?.message);
+      } catch (err) {
+        console.error(`Error with table '${tableName}':`, err);
+      }
+    }
+    return [];
+  },
+
+  getDocumentsByCategory: async (catId: number): Promise<DocType[]> => {
     if (!supabase) return [];
     try {
-      let query = supabase.from('documents').select('*').order('type', { ascending: true }).order('name', { ascending: true }); 
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('cat_id', catId)
+        .order('name', { ascending: true });
       
-      if (parentId === null) {
-        query = query.is('parent_id', null);
-      } else {
-        query = query.eq('parent_id', parentId);
+      if (error) {
+        console.error("Error fetching documents by category:", error.message);
+        throw error;
       }
+      
+      return (data || []).map((d: any) => {
+        const storagePath = d.storage_path || d.ruta_almacenamiento || d.ruta || '';
+        let finalUrl = '';
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []).map((d: any) => ({
-          ...d,
-          created_at: new Date(d.created_at).toLocaleDateString('es-ES')
-      }));
+        if (storagePath.startsWith('http')) {
+          finalUrl = storagePath;
+        } else {
+          // Si el path ya incluye el nombre del bucket al principio, lo removemos para getPublicUrl
+          let cleanPath = storagePath.startsWith('/') ? storagePath.substring(1) : storagePath;
+          if (cleanPath.startsWith('documentation/')) {
+            cleanPath = cleanPath.replace('documentation/', '');
+          }
+          
+          const { data: { publicUrl } } = supabase.storage
+            .from('documentation')
+            .getPublicUrl(cleanPath);
+          finalUrl = publicUrl;
+        }
+        
+        return {
+          id: parseInt(d.id, 10),
+          name: d.name || d.nombre || 'Sin nombre',
+          type: d.type || d.tipo || 'other',
+          size: d.size || d.tamaño || d.tamano || '0 KB',
+          storage_path: storagePath,
+          cat_id: parseInt(d.cat_id !== undefined ? d.cat_id : d.categoria_id, 10) || 0,
+          description: d.description || d.descripcion || '',
+          created_at: new Date(d.created_at).toLocaleDateString('es-ES'),
+          url: finalUrl
+        };
+      });
     } catch (err) {
-      console.error("Error fetching documents:", err);
+      console.error("Error in getDocumentsByCategory:", err);
       return [];
     }
   },
 
-  createFolder: async (name: string, parentId: number | null): Promise<DocItem | null> => {
+  getAllDocuments: async (): Promise<{data: DocType[], error: any}> => {
+    if (!supabase) return { data: [], error: 'No connection' };
+    const tableNames = ['documents', 'documentos'];
+    
+    for (const tableName of tableNames) {
+      try {
+        console.log(`Attempting to fetch documents from '${tableName}'...`);
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (!error && data) {
+          console.log(`Successfully fetched ${data.length} documents from '${tableName}'`);
+          const docs = data.map((d: any) => {
+            const storagePath = d.storage_path || d.ruta_almacenamiento || d.ruta || '';
+            let finalUrl = '';
+
+            if (storagePath.startsWith('http')) {
+              finalUrl = storagePath;
+            } else {
+              let cleanPath = storagePath.startsWith('/') ? storagePath.substring(1) : storagePath;
+              if (cleanPath.startsWith('documentation/')) {
+                cleanPath = cleanPath.replace('documentation/', '');
+              }
+
+              const { data: { publicUrl } } = supabase.storage
+                .from('documentation')
+                .getPublicUrl(cleanPath);
+              finalUrl = publicUrl;
+            }
+            
+            return {
+              id: parseInt(d.id, 10),
+              name: d.name || d.nombre || 'Sin nombre',
+              type: d.type || d.tipo || 'other',
+              size: d.size || d.tamaño || d.tamano || '0 KB',
+              storage_path: storagePath,
+              cat_id: parseInt(d.cat_id !== undefined ? d.cat_id : d.categoria_id, 10) || 0,
+              description: d.description || d.descripcion || '',
+              created_at: new Date(d.created_at).toLocaleDateString('es-ES'),
+              url: finalUrl
+            };
+          });
+          return { data: docs, error: null };
+        }
+        console.warn(`Failed to fetch from '${tableName}':`, error?.message);
+      } catch (err) {
+        console.error(`Error with table '${tableName}':`, err);
+      }
+    }
+    return { data: [], error: 'Could not find documents table' };
+  },
+
+  createCategory: async (name: string, parentId: number = 0): Promise<DocumentCategory | null> => {
     if (!supabase) return null;
-    const { data, error } = await supabase.from('documents').insert({
-      name,
-      type: 'folder',
-      parent_id: parentId
-    }).select().single();
+    const { data, error } = await supabase
+      .from('documents_categoria')
+      .insert({ name, parent_id: parentId })
+      .select()
+      .single();
     
     if (error) {
-      console.error("Error creating folder:", error);
+      console.error("Error creating category:", error);
       return null;
     }
     return data;
   },
 
-  uploadFile: async (file: File, parentId: number | null): Promise<DocItem | null> => {
+  uploadDocument: async (file: File, catId: number, description?: string): Promise<DocType | null> => {
     if (!supabase) return null;
 
     try {
@@ -505,60 +673,124 @@ export const api = {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('documentation')
-        .getPublicUrl(filePath);
-
-      let type: FileType = 'other';
-      if (['pdf'].includes(fileExt?.toLowerCase() || '')) type = 'pdf';
-      else if (['doc', 'docx'].includes(fileExt?.toLowerCase() || '')) type = 'doc';
-      else if (['xls', 'xlsx', 'csv'].includes(fileExt?.toLowerCase() || '')) type = 'xls';
-      else if (['jpg', 'jpeg', 'png', 'gif'].includes(fileExt?.toLowerCase() || '')) type = 'img';
-      else if (['mp4', 'mov'].includes(fileExt?.toLowerCase() || '')) type = 'video';
-
       const sizeMB = file.size / (1024 * 1024);
       const sizeStr = sizeMB < 1 ? `${(file.size / 1024).toFixed(0)} KB` : `${sizeMB.toFixed(1)} MB`;
 
       const { data, error: dbError } = await supabase.from('documents').insert({
         name: file.name,
-        type,
+        type: fileExt || 'other',
         size: sizeStr,
-        parent_id: parentId,
-        url: publicUrl,
-        storage_path: filePath
+        cat_id: catId,
+        storage_path: filePath,
+        description: description || ''
       }).select().single();
 
       if (dbError) throw dbError;
 
+      const { data: { publicUrl } } = supabase.storage
+        .from('documentation')
+        .getPublicUrl(data.storage_path);
+
       return {
-          ...data,
-          created_at: new Date(data.created_at).toLocaleDateString('es-ES')
+        ...data,
+        url: publicUrl,
+        created_at: new Date(data.created_at).toLocaleDateString('es-ES')
       };
 
     } catch (err) {
-      console.error("Error uploading file:", err);
+      console.error("Error uploading document:", err);
       return null;
     }
   },
 
-  deleteDocument: async (doc: DocItem): Promise<boolean> => {
+  deleteDocument: async (docId: number, storagePath: string): Promise<boolean> => {
     if (!supabase) return false;
     try {
-        if (doc.type !== 'folder' && doc.storage_path) {
-            const { error: storageError } = await supabase.storage
-                .from('documentation')
-                .remove([doc.storage_path]);
-            
-            if (storageError) console.warn("Could not delete file from bucket", storageError);
-        }
+      const { error: storageError } = await supabase.storage
+        .from('documentation')
+        .remove([storagePath]);
+      
+      if (storageError) console.warn("Could not delete file from bucket", storageError);
 
-        const { error } = await supabase.from('documents').delete().eq('id', doc.id);
-        if (error) throw error;
-        
-        return true;
+      const { error } = await supabase.from('documents').delete().eq('id', docId);
+      if (error) throw error;
+      
+      return true;
     } catch (err) {
-        console.error("Error deleting document:", err);
-        return false;
+      console.error("Error deleting document:", err);
+      return false;
+    }
+  },
+
+  deleteCategory: async (catId: number): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase.from('documents_categoria').delete().eq('id', catId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error("Error deleting category:", err);
+      return false;
+    }
+  },
+
+  // --- MENTORSHIP ---
+  createMentorshipRequest: async (request: Partial<MentorshipRequest>): Promise<{ success: boolean; error?: string }> => {
+    if (!supabase) return { success: false, error: "Supabase no está configurado." };
+    try {
+      const { error } = await supabase.from('mentorship_requests').insert(request);
+      if (error) throw error;
+      return { success: true };
+    } catch (err: any) {
+      console.error("Error creating mentorship request:", err);
+      return { 
+        success: false, 
+        error: err.message || "Error desconocido al guardar en la base de datos." 
+      };
+    }
+  },
+
+  getMentorshipRequests: async (userId?: string): Promise<MentorshipRequest[]> => {
+    if (!supabase) return [];
+    try {
+      let query = supabase.from('mentorship_requests').select('*').order('created_at', { ascending: false });
+      if (userId) query = query.eq('user_id', userId);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      console.error("Error fetching mentorship requests:", err);
+      return [];
+    }
+  },
+
+  updateMentorshipStatus: async (requestId: number, status: MentorshipRequest['status']): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase
+        .from('mentorship_requests')
+        .update({ status })
+        .eq('id', requestId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error("Error updating mentorship status:", err);
+      return false;
+    }
+  },
+
+  deleteMentorshipRequest: async (requestId: number): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase
+        .from('mentorship_requests')
+        .delete()
+        .eq('id', requestId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error("Error deleting mentorship request:", err);
+      return false;
     }
   }
 };

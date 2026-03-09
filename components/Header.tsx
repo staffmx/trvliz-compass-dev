@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { User, NavigationItem } from '../types';
 
@@ -57,9 +58,9 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate,
               onClick={() => onNavigate(NavigationItem.DASHBOARD)}
             >
                <img 
-                  src="https://traveliz.com/new-2025/wp-content/uploads/2025/07/Traveliz_Logo_white.png" 
-                  alt="Traveliz Logo" 
-                  className="h-10 sm:h-12 w-auto object-contain"
+                  src="https://traveliz.com/trvconnect/16-547x184.png" 
+                  alt="TRV Connect Logo" 
+                  className="h-12 sm:h-16 w-auto object-contain"
                />
             </div>
           </div>
@@ -116,9 +117,12 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate,
                     </button>
                   )}
 
-                  <a href="#" className="block px-6 py-2.5 text-sm text-primary hover:bg-background hover:text-brand transition-colors">
+                  <button 
+                    onClick={() => { onNavigate(NavigationItem.MY_PROFILE); setIsProfileOpen(false); }}
+                    className="w-full text-left block px-6 py-2.5 text-sm text-primary hover:bg-background hover:text-brand transition-colors"
+                  >
                     <i className="fa-regular fa-user w-6"></i> Mi Perfil
-                  </a>
+                  </button>
                   <div className="border-t border-neutral my-2"></div>
                   <button 
                     onClick={onLogout}

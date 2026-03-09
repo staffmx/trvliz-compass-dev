@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { api, Associate } from '../services/api';
+import { api } from '../services/api';
+import { Associate } from '../types';
 
 interface AssociateProfileProps {
   associateId: number;
@@ -122,6 +123,12 @@ const AssociateProfile: React.FC<AssociateProfileProps> = ({ associateId, onBack
                     <span className="text-secondary italic font-serif text-lg">
                         {associate.position || 'Agente Elite'}
                     </span>
+                    {associate.branch && (
+                        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                            <i className="fa-solid fa-location-dot text-accent"></i>
+                            {associate.branch}
+                        </span>
+                    )}
                 </div>
             </div>
 

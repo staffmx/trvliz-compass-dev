@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 
 interface LoginProps {
@@ -51,9 +52,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="text-center mb-12">
           <div className="flex justify-center mb-8">
               <img 
-                  src="https://traveliz.com/new-2025/wp-content/uploads/2025/07/Traveliz_Logo_white.png" 
-                  alt="Traveliz Logo" 
-                  className="h-12 sm:h-16 w-auto object-contain"
+                  src="https://traveliz.com/trvconnect/16-547x184.png" 
+                  alt="TRV Connect Logo" 
+                  className="h-20 sm:h-28 w-auto object-contain"
               />
           </div>
           <p className="text-secondary text-xs tracking-[4px] uppercase font-semibold">Intranet Corporativa</p>

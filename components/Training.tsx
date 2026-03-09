@@ -1,17 +1,33 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { api, RecordedWebinar, WEBINAR_CATEGORIES } from '../services/api';
+import { User } from '../types';
 
 const ITEMS_PER_PAGE = 12;
 
-const Training: React.FC = () => {
+interface TrainingProps {
+  user: User;
+}
+
+const Training: React.FC<TrainingProps> = ({ user }) => {
   const [showLibrary, setShowLibrary] = useState(false);
+  const [showMentorshipForm, setShowMentorshipForm] = useState(false);
   const [webinars, setWebinars] = useState<RecordedWebinar[]>([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
+
+  const [mentorshipData, setMentorshipData] = useState({
+    name: user.name,
+    email: user.email,
+    date: '',
+    topic: 'capacitación sobre cruceros',
+    comments: ''
+  });
 
   useEffect(() => {
     if (showLibrary) {
@@ -30,6 +46,45 @@ const Training: React.FC = () => {
       setError("No se pudo sincronizar con la base de datos de webinars.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMentorshipSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    try {
+      const result = await api.createMentorshipRequest({
+        user_id: user.id,
+        name: mentorshipData.name,
+        email: mentorshipData.email,
+        tentative_date: mentorshipData.date,
+        topic: mentorshipData.topic,
+        comments: mentorshipData.comments,
+        status: 'pending'
+      });
+
+      if (result.success) {
+        setSubmitted(true);
+        setTimeout(() => {
+          setSubmitted(false);
+          setShowMentorshipForm(false);
+          setMentorshipData({
+              name: user.name,
+              email: user.email,
+              date: '',
+              topic: 'capacitación sobre cruceros',
+              comments: ''
+          });
+        }, 3000);
+      } else {
+        setError(result.error || "No se pudo enviar la solicitud. Por favor intenta de nuevo.");
+      }
+    } catch (err) {
+      console.error("Error submitting mentorship:", err);
+      setError("Ocurrió un error inesperado.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -139,7 +194,6 @@ const Training: React.FC = () => {
         ) : (
             <>
                 <div className="space-y-24">
-                    {/* Fixed error by casting items as RecordedWebinar[] to avoid "Property 'map' does not exist on type 'unknown'" */}
                     {Object.entries(groupedWebinars).map(([category, items]) => (
                         <section key={category} className="animate-slide-up">
                             <div className="flex items-center gap-4 mb-10">
@@ -260,6 +314,115 @@ const Training: React.FC = () => {
     );
   }
 
+  if (showMentorshipForm) {
+    return (
+        <div className="max-w-site mx-auto px-mobile-x py-12 animate-fade-in">
+            <button 
+                onClick={() => setShowMentorshipForm(false)} 
+                className="group flex items-center gap-3 text-[10px] font-bold uppercase tracking-[3px] text-secondary hover:text-brand transition-colors mb-12"
+            >
+                <i className="fa-solid fa-arrow-left group-hover:-translate-x-1 transition-transform"></i> Volver a Academy
+            </button>
+
+            <div className="max-w-3xl mx-auto">
+                <div className="text-center mb-16">
+                    <span className="text-accent text-[10px] font-bold uppercase tracking-[4px] mb-3 block">Crecimiento Profesional</span>
+                    <h1 className="text-4xl md:text-5xl font-serif font-medium text-primary">Mentoria 1:1</h1>
+                    <p className="text-secondary text-base mt-4 font-light leading-relaxed">
+                        Agenda una sesión personalizada para resolver dudas específicas sobre tus expedientes o estrategias de venta.
+                    </p>
+                </div>
+
+                {error && (
+                    <div className="bg-red-50 border border-red-100 p-4 mb-6 text-red-700 text-sm animate-fade-in">
+                        <i className="fa-solid fa-triangle-exclamation mr-2"></i> {error}
+                    </div>
+                )}
+
+                {submitted ? (
+                    <div className="bg-emerald-50 border border-emerald-100 p-12 text-center animate-slide-up">
+                        <div className="w-20 h-20 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                            <i className="fa-solid fa-check text-3xl"></i>
+                        </div>
+                        <h2 className="text-2xl font-serif text-emerald-900 mb-2">¡Solicitud Enviada!</h2>
+                        <p className="text-emerald-700 font-light">Un especialista senior se pondrá en contacto contigo pronto para confirmar la sesión.</p>
+                    </div>
+                ) : (
+                    <form onSubmit={handleMentorshipSubmit} className="bg-white border border-neutral p-8 md:p-12 shadow-xl space-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-3">Nombre Completo</label>
+                                <input 
+                                    type="text" 
+                                    value={mentorshipData.name || ''}
+                                    disabled
+                                    className="w-full p-4 bg-gray-50 border border-neutral text-sm text-gray-500 outline-none cursor-not-allowed"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-3">Email Corporativo</label>
+                                <input 
+                                    type="email" 
+                                    value={mentorshipData.email || ''}
+                                    disabled
+                                    className="w-full p-4 bg-gray-50 border border-neutral text-sm text-gray-500 outline-none cursor-not-allowed"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-3">Fecha y Hora Tentativa</label>
+                                <input 
+                                    type="datetime-local" 
+                                    required
+                                    value={mentorshipData.date || ''}
+                                    onChange={(e) => setMentorshipData({...mentorshipData, date: e.target.value})}
+                                    className="w-full p-4 border border-neutral focus:border-brand outline-none text-sm bg-background transition-colors"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-3">Tema a Tratar</label>
+                                <select 
+                                    required
+                                    value={mentorshipData.topic || ''}
+                                    onChange={(e) => setMentorshipData({...mentorshipData, topic: e.target.value})}
+                                    className="w-full p-4 border border-neutral focus:border-brand outline-none text-sm bg-background transition-colors appearance-none"
+                                >
+                                    <option value="capacitación sobre cruceros">Capacitación sobre cruceros</option>
+                                    <option value="capacitación sobre tierra">Capacitación sobre tierra</option>
+                                    <option value="cruceros de lujo">Cruceros de lujo</option>
+                                    <option value="comisiones">Comisiones</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-3">Comentarios / Dudas Específicas</label>
+                            <textarea 
+                                rows={4}
+                                value={mentorshipData.comments || ''}
+                                onChange={(e) => setMentorshipData({...mentorshipData, comments: e.target.value})}
+                                placeholder="Cuéntanos un poco más sobre lo que te gustaría revisar..."
+                                className="w-full p-4 border border-neutral focus:border-brand outline-none text-sm bg-background transition-colors resize-none"
+                            ></textarea>
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            disabled={submitting}
+                            className="w-full py-5 bg-brand text-white font-bold uppercase tracking-[4px] text-xs hover:bg-primary transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-3"
+                        >
+                            {submitting ? (
+                                <>
+                                    <i className="fa-solid fa-circle-notch fa-spin"></i> Procesando...
+                                </>
+                            ) : 'Solicitar Mentoria'}
+                        </button>
+                    </form>
+                )}
+            </div>
+        </div>
+    );
+  }
+
   return (
     <div className="max-w-site mx-auto px-mobile-x py-section-y animate-fade-in">
         <div className="text-center mb-20">
@@ -290,6 +453,7 @@ const Training: React.FC = () => {
                 title="Mentoria 1:1" 
                 desc="Sesiones personalizadas con especialistas senior para resolver dudas sobre expedientes complejos o desarrollo de negocio."
                 label="Agendar Sesión"
+                onClick={() => setShowMentorshipForm(true)}
             />
         </div>
     </div>

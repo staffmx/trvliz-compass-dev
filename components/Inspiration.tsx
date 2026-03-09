@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { NavigationItem } from '../types';
 import { api, BlogPost, Event } from '../services/api';
@@ -96,20 +97,37 @@ const Inspiration: React.FC<InspirationProps> = ({ onNavigate }) => {
                 </div>
                 <div className="lg:col-span-3 space-y-12">
                   <div className="bg-surface p-6 border border-neutral">
-                    <h2 className="text-xl font-serif mb-6 border-b border-neutral pb-4">Próximos Eventos</h2>
+                    <div className="flex items-center justify-between mb-6 border-b border-neutral pb-4">
+                        <h2 className="text-xl font-serif">Próximos Eventos</h2>
+                    </div>
                     <div className="space-y-4">
-                        {events.map(event => (
-                          <div key={event.id} className="flex gap-4 items-center">
-                            <div className="bg-brand text-white w-10 h-10 flex flex-col items-center justify-center text-[8px]">
-                              <span>{event.month}</span>
-                              <span className="font-bold text-xs">{event.day}</span>
+                        {loading ? (
+                          Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="flex gap-4 animate-pulse">
+                              <div className="bg-gray-200 w-10 h-10"></div>
+                              <div className="flex-1 space-y-2">
+                                <div className="h-3 bg-gray-200 w-3/4"></div>
+                                <div className="h-2 bg-gray-200 w-1/2"></div>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-xs font-bold text-primary truncate max-w-[150px]">{event.title}</p>
-                              <p className="text-[10px] text-secondary">{event.time}</p>
+                          ))
+                        ) : (
+                          events.slice(0, 6).map(event => (
+                            <div key={event.id} className="flex gap-4 items-center group cursor-pointer hover:bg-background p-1 transition-colors">
+                              <div className="bg-brand text-white w-10 h-10 flex flex-col items-center justify-center text-[8px] group-hover:bg-accent transition-colors shrink-0">
+                                <span>{event.month}</span>
+                                <span className="font-bold text-xs">{event.day}</span>
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-primary truncate group-hover:text-accent transition-colors">{event.title}</p>
+                                <p className="text-[10px] text-secondary">{event.time}</p>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))
+                        )}
+                        {!loading && events.length === 0 && (
+                          <p className="text-xs text-secondary italic text-center py-4">Sin eventos próximos.</p>
+                        )}
                     </div>
                   </div>
                 </div>

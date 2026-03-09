@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { api, Associate, Event, EventRegistration, Seller, DocItem, FileType, RecordedWebinar, WEBINAR_CATEGORIES } from '../services/api';
-import { Notice, UserProfile, Role } from '../types';
+import { api, Event, EventRegistration, Seller, RecordedWebinar, WEBINAR_CATEGORIES, MentorshipRequest } from '../services/api';
+import { Notice, UserProfile, Role, DocumentCategory, Document as DocType, Associate } from '../types';
 
-type AdminSection = 'overview' | 'directory' | 'notices' | 'events' | 'blog' | 'sellers' | 'users' | 'documents' | 'recorded_webinars';
+type AdminSection = 'overview' | 'directory' | 'notices' | 'events' | 'blog' | 'sellers' | 'users' | 'documents' | 'recorded_webinars' | 'mentorships';
 
 const AdminPanel: React.FC = () => {
   const [activeSection, setActiveSection] = useState<AdminSection>('overview');
@@ -74,6 +74,9 @@ const AdminPanel: React.FC = () => {
           <button onClick={() => setActiveSection('events')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'events' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
             <i className="fa-solid fa-calendar-days w-5"></i> Eventos
           </button>
+          <button onClick={() => setActiveSection('mentorships')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'mentorships' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+            <i className="fa-solid fa-graduation-cap w-5"></i> Mentorías
+          </button>
         </nav>
 
         <div className="p-8 border-t border-white/5">
@@ -98,6 +101,7 @@ const AdminPanel: React.FC = () => {
         {activeSection === 'sellers' && <AdminSellers Header={SectionHeader} />}
         {activeSection === 'notices' && <AdminNotices Header={SectionHeader} />}
         {activeSection === 'events' && <AdminEvents Header={SectionHeader} />}
+        {activeSection === 'mentorships' && <AdminMentorships Header={SectionHeader} />}
         {activeSection === 'blog' && <div className="p-20 text-center"><i className="fa-solid fa-tools text-4xl mb-4 text-secondary opacity-30"></i><p className="text-secondary italic">Módulo de Blog en desarrollo...</p></div>}
       </main>
     </div>
@@ -200,6 +204,389 @@ const AdminRecordedWebinars = ({ Header }: any) => {
                 </td>
               </tr>
             ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+/* --- SUB-COMPONENT: MENTORSHIPS MANAGEMENT --- */
+const AdminMentorships = ({ Header }: any) => {
+  const [requests, setRequests] = useState<MentorshipRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedRequest, setSelectedRequest] = useState<MentorshipRequest | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => { loadRequests(); }, []);
+
+  const loadRequests = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getMentorshipRequests();
+      setRequests(data);
+    } finally { setLoading(false); }
+  };
+
+  const handleStatusChange = async (id: number, newStatus: MentorshipRequest['status']) => {
+    const success = await api.updateMentorshipStatus(id, newStatus);
+    if (success) {
+      loadRequests();
+    } else {
+      alert("Error al actualizar el estado.");
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("¿Seguro que deseas eliminar esta solicitud?")) return;
+    const success = await api.deleteMentorshipRequest(id);
+    if (success) {
+      loadRequests();
+    } else {
+      alert("Error al eliminar.");
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'confirmed': return 'bg-blue-100 text-blue-800';
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  return (
+    <div className="animate-fade-in">
+      <Header title="Solicitudes de Mentoría" subtitle="Revisa y gestiona las solicitudes de mentoría 1:1 de los agentes." />
+
+      <div className="bg-white border border-neutral shadow-sm overflow-hidden">
+        <table className="w-full text-left">
+          <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
+            <tr>
+              <th className="px-8 py-5">Agente</th>
+              <th className="px-8 py-5">Tema</th>
+              <th className="px-8 py-5">Fecha Tentativa</th>
+              <th className="px-8 py-5">Estado</th>
+              <th className="px-8 py-5 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral">
+            {loading ? (
+              <tr className="animate-pulse h-16"><td colSpan={5}></td></tr>
+            ) : requests.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-8 py-12 text-center text-secondary italic">No hay solicitudes registradas.</td>
+              </tr>
+            ) : requests.map(r => (
+              <tr key={r.id} className="hover:bg-background/30">
+                <td className="px-8 py-6">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-primary">{r.name}</span>
+                    <span className="text-[10px] text-secondary">{r.email}</span>
+                  </div>
+                </td>
+                <td className="px-8 py-6">
+                  <span className="text-xs text-primary capitalize">{r.topic}</span>
+                </td>
+                <td className="px-8 py-6">
+                  <span className="text-xs text-primary">{new Date(r.tentative_date).toLocaleString('es-ES')}</span>
+                </td>
+                <td className="px-8 py-6">
+                  <select 
+                    value={r.status} 
+                    onChange={(e) => handleStatusChange(r.id!, e.target.value as any)}
+                    className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest outline-none border-none cursor-pointer ${getStatusColor(r.status)}`}
+                  >
+                    <option value="pending">Pendiente</option>
+                    <option value="confirmed">Confirmado</option>
+                    <option value="completed">Completado</option>
+                    <option value="cancelled">Cancelado</option>
+                  </select>
+                </td>
+                <td className="px-8 py-6 text-right">
+                  <div className="flex justify-end gap-2">
+                    <button 
+                      onClick={() => { setSelectedRequest(r); setIsModalOpen(true); }}
+                      className="text-secondary hover:text-brand px-3" 
+                      title="Ver detalles"
+                    >
+                      <i className="fa-solid fa-eye"></i>
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(r.id!)}
+                      className="text-secondary hover:text-red-600 px-3" 
+                      title="Eliminar"
+                    >
+                      <i className="fa-solid fa-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Modal de Detalles */}
+      {isModalOpen && selectedRequest && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg p-8 shadow-2xl animate-fade-in">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <span className="text-accent text-[10px] font-bold uppercase tracking-[3px] mb-1 block">Detalles de Mentoría</span>
+                <h3 className="text-2xl font-serif text-primary">{selectedRequest.name}</h3>
+              </div>
+              <button onClick={() => setIsModalOpen(false)} className="text-secondary hover:text-primary">
+                <i className="fa-solid fa-xmark text-xl"></i>
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[10px] font-bold uppercase text-secondary tracking-widest mb-1">Tema</p>
+                  <p className="text-sm text-primary capitalize">{selectedRequest.topic}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase text-secondary tracking-widest mb-1">Fecha Propuesta</p>
+                  <p className="text-sm text-primary">{new Date(selectedRequest.tentative_date).toLocaleString('es-ES')}</p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-bold uppercase text-secondary tracking-widest mb-1">Comentarios del Agente</p>
+                <div className="bg-background p-4 border border-neutral italic text-sm text-secondary leading-relaxed">
+                  {selectedRequest.comments || "Sin comentarios adicionales."}
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-neutral flex justify-end">
+                <button 
+                  onClick={() => setIsModalOpen(false)}
+                  className="bg-brand text-white px-8 py-3 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* --- SUB-COMPONENT: SELLERS MANAGEMENT --- */
+const AdminSellers = ({ Header }: any) => {
+  const [sellers, setSellers] = useState<Seller[]>([]);
+  const [associates, setAssociates] = useState<Associate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingAssociates, setLoadingAssociates] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+
+  const emptyForm: Partial<Seller> = { 
+    name: '', 
+    avatar: '', 
+    ranking: 1 
+  };
+  const [formData, setFormData] = useState<Partial<Seller>>(emptyForm);
+  const [selectedAssociateId, setSelectedAssociateId] = useState<string>('');
+
+  useEffect(() => { 
+    loadSellers();
+    loadAssociates();
+  }, []);
+
+  const loadSellers = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getTopSellers();
+      setSellers(data || []);
+    } catch (err) {
+      console.error("Admin Sellers Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAssociates = async () => {
+    setLoadingAssociates(true);
+    try {
+        const data = await api.getAssociates();
+        setAssociates(data || []);
+    } finally {
+        setLoadingAssociates(false);
+    }
+  };
+
+  const handleAssociateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = e.target.value;
+    setSelectedAssociateId(id);
+    const assoc = associates.find(a => a.id?.toString() === id);
+    if (assoc) {
+        setFormData({
+            ...formData,
+            name: `${assoc.name} ${assoc.last_name || ''}`.trim(),
+            avatar: assoc.image
+        });
+    } else {
+        setFormData({ ...formData, name: '', avatar: '' });
+    }
+  };
+
+  const handleEdit = (seller: Seller) => {
+    setEditingId(seller.id || null);
+    setFormData({ ...seller });
+    // Try to find if this seller exists in associates by name to pre-select
+    const matchingAssoc = associates.find(a => `${a.name} ${a.last_name || ''}`.trim() === seller.name);
+    setSelectedAssociateId(matchingAssoc?.id?.toString() || '');
+    setIsFormOpen(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('¿Seguro que deseas eliminar a este vendedor del ranking?')) return;
+    try {
+      await api.deleteSeller(id);
+      loadSellers();
+    } catch (err) {
+      console.error(err);
+      alert('Error al eliminar vendedor.');
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name || !formData.avatar) {
+        alert("Por favor selecciona una asociada del directorio.");
+        return;
+    }
+    setSaving(true);
+    try {
+      await api.upsertSeller(formData);
+      setIsFormOpen(false);
+      setEditingId(null);
+      setFormData(emptyForm);
+      setSelectedAssociateId('');
+      loadSellers();
+    } catch (err) {
+      console.error(err);
+      alert('Error al guardar vendedor.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="animate-fade-in relative">
+      <Header 
+        title="Top Producers" 
+        subtitle="Administra el ranking de ventas vinculando asociadas del directorio." 
+        actionLabel={isFormOpen ? "Cancelar" : "Nuevo Vendedor"} 
+        onAction={() => { setIsFormOpen(!isFormOpen); setEditingId(null); setFormData(emptyForm); setSelectedAssociateId(''); }} 
+      />
+
+      {isFormOpen && (
+        <div className="mb-12 bg-white border border-accent/20 p-10 shadow-2xl animate-slide-down">
+          <h3 className="font-serif text-2xl text-primary mb-6">{editingId ? 'Editar Vendedor' : 'Agregar Vendedor al Ranking'}</h3>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="md:col-span-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Seleccionar Travel Advisor del Directorio</label>
+                <div className="relative">
+                    <select 
+                        required 
+                        value={selectedAssociateId}
+                        onChange={handleAssociateChange}
+                        disabled={loadingAssociates}
+                        className="w-full p-4 pl-12 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none appearance-none transition-colors"
+                    >
+                        <option value="">-- Selecciona una asociada --</option>
+                        {associates.map(assoc => (
+                            <option key={assoc.id} value={assoc.id}>
+                                {assoc.name} {assoc.last_name} ({assoc.position || 'Agente'})
+                            </option>
+                        ))}
+                    </select>
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary">
+                        {loadingAssociates ? <i className="fa-solid fa-circle-notch fa-spin"></i> : <i className="fa-solid fa-user-tie"></i>}
+                    </div>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-secondary">
+                        <i className="fa-solid fa-chevron-down text-xs"></i>
+                    </div>
+                </div>
+              </div>
+              
+              <div className="md:col-span-2 flex items-center gap-6 p-6 bg-background border border-dashed border-neutral">
+                {formData.avatar ? (
+                    <img src={formData.avatar} className="w-20 h-20 rounded-full object-cover ring-2 ring-accent" alt="Preview" />
+                ) : (
+                    <div className="w-20 h-20 rounded-full bg-neutral/20 flex items-center justify-center text-secondary">
+                        <i className="fa-solid fa-image text-2xl"></i>
+                    </div>
+                )}
+                <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-1">Vista Previa de Vínculo</p>
+                    <h4 className="text-xl font-serif text-primary">{formData.name || 'Sin selección'}</h4>
+                    <p className="text-xs text-secondary mt-1">{formData.avatar ? 'Datos sincronizados con directorio' : 'Selecciona una asociada arriba'}</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Posición en Ranking (Número)</label>
+                <input 
+                    type="number" 
+                    min="1"
+                    required 
+                    className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none" 
+                    value={formData.ranking}
+                    onChange={(e) => setFormData({...formData, ranking: parseInt(e.target.value)})}
+                />
+              </div>
+            </div>
+            <button type="submit" disabled={saving || loadingAssociates} className="bg-brand text-white px-12 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all shadow-xl disabled:opacity-50">
+              {saving ? 'Guardando...' : 'Guardar Productor'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      <div className="bg-white border border-neutral overflow-hidden shadow-sm">
+        <table className="w-full text-left">
+          <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
+            <tr>
+              <th className="px-8 py-5">Ranking</th>
+              <th className="px-8 py-5">Vendedor</th>
+              <th className="px-8 py-5 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral">
+            {sellers.sort((a,b) => a.ranking - b.ranking).map((seller) => (
+              <tr key={seller.id} className="hover:bg-background/30 group">
+                <td className="px-8 py-6">
+                  <span className={`text-xl font-serif font-bold ${seller.ranking === 1 ? 'text-accent' : 'text-secondary'}`}>#{seller.ranking}</span>
+                </td>
+                <td className="px-8 py-6">
+                   <div className="flex items-center gap-4">
+                      <img src={seller.avatar} alt={seller.name} className="w-12 h-12 rounded-full object-cover border border-neutral ring-1 ring-neutral/20 group-hover:ring-accent transition-all" />
+                      <p className="font-bold text-primary group-hover:text-brand transition-colors">{seller.name}</p>
+                   </div>
+                </td>
+                <td className="px-8 py-6 text-right">
+                   <button onClick={() => handleEdit(seller)} className="text-secondary hover:text-brand px-3"><i className="fa-solid fa-pen"></i></button>
+                   <button onClick={() => seller.id && handleDelete(seller.id)} className="text-secondary hover:text-red-600 px-3"><i className="fa-solid fa-trash"></i></button>
+                </td>
+              </tr>
+            ))}
+            {!loading && sellers.length === 0 && (
+                <tr>
+                    <td colSpan={3} className="px-8 py-20 text-center text-secondary italic font-serif">No hay productores registrados aún.</td>
+                </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -365,39 +752,72 @@ const AdminUsers = ({ Header }: any) => {
 
 /* --- SUB-COMPONENT: DOCUMENTS MANAGEMENT --- */
 const AdminDocuments = ({ Header }: any) => {
-  const [documents, setDocuments] = useState<DocItem[]>([]);
+  const [categories, setCategories] = useState<DocumentCategory[]>([]);
+  const [documents, setDocuments] = useState<DocType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentFolderId, setCurrentFolderId] = useState<number | null>(null);
-  const [history, setHistory] = useState<{id: number | null, name: string}[]>([{ id: null, name: 'Inicio' }]);
+  const [currentCategory, setCurrentCategory] = useState<DocumentCategory | null>(null);
 
-  useEffect(() => { loadDocs(); }, [currentFolderId]);
+  useEffect(() => { 
+    if (currentCategory) {
+      loadDocs(currentCategory.id);
+    } else {
+      loadCategories();
+    }
+  }, [currentCategory]);
 
-  const loadDocs = async () => {
+  const loadCategories = async () => {
     setLoading(true);
     try {
-      const data = await api.getDocuments(currentFolderId);
+      const data = await api.getDocumentCategories();
+      setCategories(data);
+    } catch (error) {
+      console.error("Error loading categories:", error);
+    } finally { setLoading(false); }
+  };
+
+  const loadDocs = async (catId: number) => {
+    setLoading(true);
+    try {
+      const data = await api.getDocumentsByCategory(catId);
       setDocuments(data);
     } catch (error) {
       console.error("Error loading docs:", error);
     } finally { setLoading(false); }
   };
 
-  const handleFolderClick = (f: DocItem) => {
-    setCurrentFolderId(f.id);
-    setHistory([...history, { id: f.id, name: f.name }]);
+  const getBreadcrumbs = () => {
+    const crumbs: DocumentCategory[] = [];
+    let temp = currentCategory;
+    while (temp) {
+      crumbs.unshift(temp);
+      const parent = categories.find(c => c.id === temp?.parent_id);
+      temp = parent || null;
+    }
+    return crumbs;
   };
 
-  const goToBreadcrumb = (idx: number) => {
-    const newHistory = history.slice(0, idx + 1);
-    setHistory(newHistory);
-    setCurrentFolderId(newHistory[newHistory.length - 1].id);
+  const handleCategoryClick = (cat: DocumentCategory) => {
+    setCurrentCategory(cat);
   };
 
-  const handleDelete = async (doc: DocItem) => {
+  const handleBackToInicio = () => {
+    setCurrentCategory(null);
+  };
+
+  const handleDeleteDoc = async (doc: DocType) => {
     if (confirm(`¿Eliminar "${doc.name}"?`)) {
-      const success = await api.deleteDocument(doc);
-      if (success) loadDocs();
-      else alert("Error al eliminar");
+      const success = await api.deleteDocument(doc.id, doc.storage_path);
+      if (success && currentCategory) loadDocs(currentCategory.id);
+      else if (!success) alert("Error al eliminar");
+    }
+  };
+
+  const handleDeleteCategory = async (e: React.MouseEvent, cat: DocumentCategory) => {
+    e.stopPropagation();
+    if (confirm(`¿Eliminar categoría "${cat.name}"?`)) {
+      const success = await api.deleteCategory(cat.id);
+      if (success) loadCategories();
+      else alert("Error al eliminar categoría");
     }
   };
 
@@ -405,61 +825,109 @@ const AdminDocuments = ({ Header }: any) => {
     <div className="animate-fade-in">
       <Header 
         title="Gestión de Documentos" 
-        subtitle="Organiza y elimina archivos o carpetas de la biblioteca corporativa." 
+        subtitle="Organiza y elimina archivos o categorías de la biblioteca corporativa." 
       />
 
       <div className="flex items-center gap-2 mb-8 text-[10px] font-bold uppercase tracking-widest overflow-x-auto pb-2 border-b border-neutral">
-        {history.map((item, index) => (
-          <React.Fragment key={index}>
-            <button 
-                onClick={() => goToBreadcrumb(index)}
-                className={index === history.length - 1 ? 'text-brand cursor-default' : 'text-secondary hover:text-accent'}
-            >
-                {item.name}
-            </button>
-            {index < history.length - 1 && <span className="text-gray-300 mx-1">/</span>}
-          </React.Fragment>
+        <button 
+            onClick={handleBackToInicio}
+            className={!currentCategory ? 'text-brand cursor-default' : 'text-secondary hover:text-accent'}
+        >
+            Inicio
+        </button>
+        {getBreadcrumbs().map((crumb, index) => (
+            <React.Fragment key={crumb.id}>
+                <span className="text-gray-300 mx-1">/</span>
+                <button 
+                    onClick={() => handleCategoryClick(crumb)}
+                    disabled={index === getBreadcrumbs().length - 1}
+                    className={index === getBreadcrumbs().length - 1 ? 'text-brand cursor-default' : 'text-secondary hover:text-accent'}
+                >
+                    {crumb.name}
+                </button>
+            </React.Fragment>
         ))}
       </div>
 
       <div className="bg-white border border-neutral shadow-sm overflow-hidden">
+        {/* Subcategories Section */}
         <table className="w-full text-left">
           <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
             <tr>
-              <th className="px-8 py-5">Nombre</th>
-              <th className="px-8 py-5">Tipo</th>
-              <th className="px-8 py-5">Fecha</th>
+              <th className="px-8 py-5">{currentCategory ? 'Subcategorías' : 'Categorías Raíz'}</th>
+              <th className="px-8 py-5">Descripción</th>
               <th className="px-8 py-5 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral">
-            {loading ? (
-              <tr className="animate-pulse h-16"><td colSpan={4}></td></tr>
-            ) : documents.length === 0 ? (
-              <tr><td colSpan={4} className="px-8 py-12 text-center text-secondary italic text-sm">Carpeta vacía</td></tr>
-            ) : documents.map(doc => (
-              <tr key={doc.id} className="hover:bg-background/30 transition-colors">
+            {loading && !currentCategory ? (
+              <tr className="animate-pulse h-16"><td colSpan={3}></td></tr>
+            ) : categories.filter(cat => {
+                if (currentCategory) return cat.parent_id === currentCategory.id;
+                return !cat.parent_id || cat.parent_id === 0;
+            }).length === 0 ? (
+              <tr><td colSpan={3} className="px-8 py-8 text-center text-secondary italic text-xs">No hay {currentCategory ? 'subcategorías' : 'categorías'}</td></tr>
+            ) : categories.filter(cat => {
+                if (currentCategory) return cat.parent_id === currentCategory.id;
+                return !cat.parent_id || cat.parent_id === 0;
+            }).map(cat => (
+              <tr key={cat.id} className="hover:bg-background/30 transition-colors group">
                 <td className="px-8 py-6">
                   <div className="flex items-center gap-4">
-                    <i className={`fa-solid ${doc.type === 'folder' ? 'fa-folder text-brand' : 'fa-file text-secondary'} text-lg`}></i>
-                    {doc.type === 'folder' ? (
-                      <button onClick={() => handleFolderClick(doc)} className="text-sm font-bold text-primary hover:text-brand transition-colors text-left">{doc.name}</button>
-                    ) : (
-                      <span className="text-sm text-primary">{doc.name}</span>
-                    )}
+                    <i className="fa-solid fa-folder text-brand text-lg"></i>
+                    <button onClick={() => handleCategoryClick(cat)} className="text-sm font-bold text-primary hover:text-brand transition-colors text-left">{cat.name}</button>
                   </div>
                 </td>
-                <td className="px-8 py-6">
-                   <span className="text-[10px] font-bold uppercase tracking-widest text-secondary">{doc.type}</span>
-                </td>
-                <td className="px-8 py-6 text-xs text-secondary">{doc.created_at}</td>
+                <td className="px-8 py-6 text-xs text-secondary">Carpeta de recursos corporativos</td>
                 <td className="px-8 py-6 text-right">
-                   <button onClick={() => handleDelete(doc)} className="text-secondary hover:text-red-600 px-3"><i className="fa-solid fa-trash"></i></button>
+                   <button onClick={(e) => handleDeleteCategory(e, cat)} className="text-secondary hover:text-red-600 px-3"><i className="fa-solid fa-trash"></i></button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+
+        {/* Documents Section (Only if category selected) */}
+        {currentCategory && (
+          <div className="border-t border-neutral">
+            <div className="bg-background/50 px-8 py-4 border-b border-neutral">
+                <h4 className="text-[10px] font-bold uppercase tracking-widest text-secondary">Documentos en esta carpeta</h4>
+            </div>
+            <table className="w-full text-left">
+              <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
+                <tr>
+                  <th className="px-8 py-5">Archivo</th>
+                  <th className="px-8 py-5">Tipo</th>
+                  <th className="px-8 py-5">Fecha</th>
+                  <th className="px-8 py-5 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral">
+                {loading ? (
+                  <tr className="animate-pulse h-16"><td colSpan={4}></td></tr>
+                ) : documents.length === 0 ? (
+                  <tr><td colSpan={4} className="px-8 py-12 text-center text-secondary italic text-sm">No hay documentos en esta carpeta</td></tr>
+                ) : documents.map(doc => (
+                  <tr key={doc.id} className="hover:bg-background/30 transition-colors">
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-4">
+                        <i className="fa-solid fa-file text-secondary text-lg"></i>
+                        <span className="text-sm text-primary">{doc.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6">
+                       <span className="text-[10px] font-bold uppercase tracking-widest text-secondary">{doc.type}</span>
+                    </td>
+                    <td className="px-8 py-6 text-xs text-secondary">{doc.created_at}</td>
+                    <td className="px-8 py-6 text-right">
+                       <button onClick={() => handleDeleteDoc(doc)} className="text-secondary hover:text-red-600 px-3"><i className="fa-solid fa-trash"></i></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -586,6 +1054,7 @@ const AdminDirectory = ({ Header }: any) => {
           <thead className="bg-background border-b border-neutral">
             <tr>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary">Nombre y Perfil</th>
+              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary">Sucursal</th>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary">Posición / Cargo</th>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary text-right">Acciones</th>
             </tr>
@@ -608,6 +1077,7 @@ const AdminDirectory = ({ Header }: any) => {
                       </div>
                     </div>
                   </td>
+                  <td className="px-6 py-6 text-xs font-bold text-brand uppercase tracking-widest">{assoc.branch || '-'}</td>
                   <td className="px-6 py-6 text-xs text-secondary italic font-serif">{assoc.position}</td>
                   <td className="px-6 py-6 text-right">
                     <button className="text-secondary hover:text-brand px-2 transition-colors"><i className="fa-solid fa-pen"></i></button>
@@ -622,165 +1092,13 @@ const AdminDirectory = ({ Header }: any) => {
   );
 };
 
-/* --- SUB-COMPONENT: SELLERS MANAGEMENT --- */
-const AdminSellers = ({ Header }: any) => {
-  const [sellers, setSellers] = useState<Seller[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-
-  const emptyForm: Partial<Seller> = { 
-    name: '', 
-    avatar: '', 
-    ranking: 1 
-  };
-  const [formData, setFormData] = useState<Partial<Seller>>(emptyForm);
-
-  useEffect(() => { loadSellers(); }, []);
-
-  const loadSellers = async () => {
-    setLoading(true);
-    try {
-      const data = await api.getTopSellers();
-      setSellers(data || []);
-    } catch (err) {
-      console.error("Admin Sellers Error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEdit = (seller: Seller) => {
-    setEditingId(seller.id || null);
-    setFormData({ ...seller });
-    setIsFormOpen(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('¿Seguro que deseas eliminar a este vendedor del ranking?')) return;
-    try {
-      await api.deleteSeller(id);
-      loadSellers();
-    } catch (err) {
-      console.error(err);
-      alert('Error al eliminar vendedor.');
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await api.upsertSeller(formData);
-      setIsFormOpen(false);
-      setEditingId(null);
-      setFormData(emptyForm);
-      loadSellers();
-    } catch (err) {
-      console.error(err);
-      alert('Error al guardar vendedor.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="animate-fade-in relative">
-      <Header 
-        title="Top Producers" 
-        subtitle="Administra el ranking de ventas visible en el Dashboard." 
-        actionLabel={isFormOpen ? "Cancelar" : "Nuevo Vendedor"} 
-        onAction={() => { setIsFormOpen(!isFormOpen); setEditingId(null); setFormData(emptyForm); }} 
-      />
-
-      {isFormOpen && (
-        <div className="mb-12 bg-white border border-accent/20 p-10 shadow-2xl animate-slide-down">
-          <h3 className="font-serif text-2xl text-primary mb-6">{editingId ? 'Editar Vendedor' : 'Agregar Vendedor al Ranking'}</h3>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-2 block">Nombre Completo</label>
-                <input 
-                    type="text" 
-                    required 
-                    className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none" 
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-2 block">URL Avatar (Foto)</label>
-                <input 
-                    type="url" 
-                    required 
-                    placeholder="https://..."
-                    className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none" 
-                    value={formData.avatar}
-                    onChange={(e) => setFormData({...formData, avatar: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-2 block">Posición en Ranking (Número)</label>
-                <input 
-                    type="number" 
-                    min="1"
-                    required 
-                    className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none" 
-                    value={formData.ranking}
-                    onChange={(e) => setFormData({...formData, ranking: parseInt(e.target.value)})}
-                />
-              </div>
-            </div>
-            <button type="submit" className="bg-brand text-white px-10 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all shadow-xl">
-              {saving ? 'Guardando...' : 'Guardar Productor'}
-            </button>
-          </form>
-        </div>
-      )}
-
-      <div className="bg-white border border-neutral overflow-hidden shadow-sm">
-        <table className="w-full text-left">
-          <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
-            <tr>
-              <th className="px-8 py-5">Ranking</th>
-              <th className="px-8 py-5">Vendedor</th>
-              <th className="px-8 py-5 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral">
-            {sellers.map((seller) => (
-              <tr key={seller.id} className="hover:bg-background/30">
-                <td className="px-8 py-6">
-                  <span className={`text-xl font-serif font-bold ${seller.ranking === 1 ? 'text-accent' : 'text-secondary'}`}>#{seller.ranking}</span>
-                </td>
-                <td className="px-8 py-6">
-                   <div className="flex items-center gap-4">
-                      <img src={seller.avatar} alt={seller.name} className="w-12 h-12 rounded-full object-cover border border-neutral" />
-                      <p className="font-bold text-primary">{seller.name}</p>
-                   </div>
-                </td>
-                <td className="px-8 py-6 text-right">
-                   <button onClick={() => handleEdit(seller)} className="text-secondary hover:text-brand px-3"><i className="fa-solid fa-pen"></i></button>
-                   <button onClick={() => seller.id && handleDelete(seller.id)} className="text-secondary hover:text-red-600 px-3"><i className="fa-solid fa-trash"></i></button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
-
-
 /* --- SUB-COMPONENT: NOTICES MANAGEMENT --- */
 const AdminNotices = ({ Header }: any) => {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [formData, setFormData] = useState<Partial<Notice>>({
     title: '', content: '', priority: 'medium', category: 'General',
     date: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -796,6 +1114,21 @@ const AdminNotices = ({ Header }: any) => {
     } catch (err) {
       console.error("Admin Notices Error:", err);
     } finally { setLoading(false); }
+  };
+
+  const handleDelete = async (id: number) => {
+    setSaving(true);
+    try {
+      const success = await api.deleteNotice(id);
+      if (success) {
+        loadInitialData();
+        setConfirmDeleteId(null);
+      }
+    } catch (err) {
+      console.error("Error deleting notice:", err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -857,7 +1190,7 @@ const AdminNotices = ({ Header }: any) => {
                   type="text" 
                   required 
                   placeholder="Ej. Nueva Política de Reservas 2026"
-                  value={formData.title} 
+                  value={formData.title || ''} 
                   onChange={(e) => setFormData({...formData, title: e.target.value})} 
                   className="w-full p-4 border border-neutral focus:border-brand outline-none text-sm bg-[#F9FAFB]" 
                 />
@@ -869,7 +1202,7 @@ const AdminNotices = ({ Header }: any) => {
                   required 
                   rows={5} 
                   placeholder="Escribe el cuerpo del mensaje aquí..."
-                  value={formData.content} 
+                  value={formData.content || ''} 
                   onChange={(e) => setFormData({...formData, content: e.target.value})} 
                   className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-brand outline-none" 
                 />
@@ -909,12 +1242,29 @@ const AdminNotices = ({ Header }: any) => {
                   <p className="text-[10px] text-secondary mt-1 uppercase tracking-widest">{notice.date}</p>
                 </td>
                 <td className="px-8 py-8 text-right">
-                  <button 
-                    onClick={async () => { if(window.confirm('¿Estás seguro de que deseas eliminar este aviso?')) { await api.deleteNotice(notice.id); loadInitialData(); }}}
-                    className="text-secondary hover:text-red-600 transition-colors p-2"
-                  >
-                    <i className="fa-solid fa-trash"></i>
-                  </button>
+                  {confirmDeleteId === notice.id ? (
+                    <div className="flex items-center justify-end gap-2 animate-fade-in">
+                      <button 
+                        onClick={() => notice.id && handleDelete(notice.id)}
+                        className="bg-red-600 text-white text-[9px] px-2 py-1 uppercase font-bold hover:bg-red-700 transition-colors"
+                      >
+                        Confirmar
+                      </button>
+                      <button 
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="bg-neutral text-primary text-[9px] px-2 py-1 uppercase font-bold hover:bg-neutral/80 transition-colors"
+                      >
+                        No
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setConfirmDeleteId(notice.id || null)}
+                      className="text-secondary hover:text-red-600 transition-colors p-2"
+                    >
+                      <i className="fa-solid fa-trash"></i>
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -926,7 +1276,7 @@ const AdminNotices = ({ Header }: any) => {
 };
 
 /* --- SUB-COMPONENT: EVENTS MANAGEMENT --- */
-const AdminEvents = ({ Header }: any) => {
+const AdminEvents: React.FC<{ Header: any }> = ({ Header }) => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -934,6 +1284,7 @@ const AdminEvents = ({ Header }: any) => {
   const [selectedEventIdForRegs, setSelectedEventIdForRegs] = useState<number | null>(null);
   const [registrations, setRegistrations] = useState<EventRegistration[]>([]);
   const [loadingRegs, setLoadingRegs] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   // Nuevo estado para rastrear si estamos editando
   const [editingEventId, setEditingEventId] = useState<number | null>(null);
@@ -950,7 +1301,17 @@ const AdminEvents = ({ Header }: any) => {
   const [formData, setFormData] = useState<Partial<Event>>(emptyForm);
 
   useEffect(() => { loadEvents(); }, []);
-  const loadEvents = async () => { setLoading(true); try { const data = await api.getEvents(); setEvents(data); } finally { setLoading(false); } };
+  const loadEvents = async () => { 
+    setLoading(true); 
+    try { 
+      const data = await api.getEvents(); 
+      setEvents(data); 
+    } catch (err) {
+      console.error("Error loading events:", err);
+    } finally { 
+      setLoading(false); 
+    } 
+  };
 
   const handleShowRegistrations = async (eventId: number) => {
     if (selectedEventIdForRegs === eventId) {
@@ -972,11 +1333,11 @@ const AdminEvents = ({ Header }: any) => {
     setFormData({
       id: event.id,
       title: event.title,
-      description: event.description,
+      description: event.description || '',
       type: event.type,
       event_date: event.event_date,
       time: event.time,
-      link: event.link
+      link: event.link || ''
     });
     setIsFormOpen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -992,18 +1353,38 @@ const AdminEvents = ({ Header }: any) => {
     }
   };
 
+  const handleDelete = async (id: number) => {
+    setSaving(true);
+    try {
+      const success = await api.deleteEvent(id);
+      if (success) {
+        loadEvents();
+        setConfirmDeleteId(null);
+      }
+    } catch (err) {
+      console.error("Error deleting event:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try { 
-      await api.upsertEvent(formData); 
-      setIsFormOpen(false); 
-      setEditingEventId(null);
-      setFormData(emptyForm);
-      loadEvents(); 
+      console.log("Submitting event data:", formData);
+      const result = await api.upsertEvent(formData); 
+      if (result) {
+        setIsFormOpen(false); 
+        setEditingEventId(null);
+        setFormData(emptyForm);
+        loadEvents(); 
+      } else {
+        throw new Error("No se recibió respuesta del servidor");
+      }
     } catch (err: any) { 
-      console.error(err); 
-      alert("Error al guardar el evento");
+      console.error("Error submitting event:", err);
+      alert("Error al guardar el evento: " + (err.message || "Error desconocido"));
     } finally { 
       setSaving(false); 
     }
@@ -1035,7 +1416,7 @@ const AdminEvents = ({ Header }: any) => {
                             type="text" 
                             required 
                             placeholder="Ej. Webinar: Estrategias de Lujo 2026"
-                            value={formData.title} 
+                            value={formData.title || ''} 
                             onChange={(e) => setFormData({...formData, title: e.target.value})} 
                             className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none transition-colors" 
                         />
@@ -1046,7 +1427,7 @@ const AdminEvents = ({ Header }: any) => {
                         <textarea 
                             rows={4}
                             placeholder="Añade detalles sobre el itinerario, ponentes o requisitos..."
-                            value={formData.description} 
+                            value={formData.description || ''} 
                             onChange={(e) => setFormData({...formData, description: e.target.value})} 
                             className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none transition-colors" 
                         />
@@ -1057,7 +1438,7 @@ const AdminEvents = ({ Header }: any) => {
                         <input 
                             type="date" 
                             required 
-                            value={formData.event_date} 
+                            value={formData.event_date || ''} 
                             onChange={(e) => setFormData({...formData, event_date: e.target.value})} 
                             className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none transition-colors" 
                         />
@@ -1068,7 +1449,7 @@ const AdminEvents = ({ Header }: any) => {
                         <input 
                             type="time" 
                             required 
-                            value={formData.time} 
+                            value={formData.time || ''} 
                             onChange={(e) => setFormData({...formData, time: e.target.value})} 
                             className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none transition-colors" 
                         />
@@ -1104,7 +1485,8 @@ const AdminEvents = ({ Header }: any) => {
                 <div className="flex gap-4">
                     <button 
                         type="submit" 
-                        className="bg-brand text-white px-10 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all shadow-xl"
+                        disabled={saving}
+                        className="bg-brand text-white px-10 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all shadow-xl disabled:opacity-50"
                     >
                         {saving ? 'Procesando...' : editingEventId ? 'Actualizar Evento' : 'Guardar Evento'}
                     </button>
@@ -1165,13 +1547,30 @@ const AdminEvents = ({ Header }: any) => {
                         <i className="fa-solid fa-pen text-sm"></i>
                       </button>
 
-                      <button 
-                        onClick={async () => { if(event.id && window.confirm('¿Estás seguro de que deseas eliminar este evento? Esta acción no se puede deshacer.')) { await api.deleteEvent(event.id); loadEvents(); }}} 
-                        className="w-9 h-9 flex items-center justify-center text-secondary hover:bg-red-50 hover:text-red-600 transition-all"
-                        title="Eliminar Evento"
-                      >
-                        <i className="fa-solid fa-trash text-sm"></i>
-                      </button>
+                      {confirmDeleteId === event.id ? (
+                        <div className="flex items-center gap-1 animate-fade-in">
+                          <button 
+                            onClick={() => event.id && handleDelete(event.id)}
+                            className="bg-red-600 text-white text-[9px] px-2 py-1 uppercase font-bold hover:bg-red-700 transition-colors"
+                          >
+                            Confirmar
+                          </button>
+                          <button 
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="bg-neutral text-primary text-[9px] px-2 py-1 uppercase font-bold hover:bg-neutral/80 transition-colors"
+                          >
+                            No
+                          </button>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => setConfirmDeleteId(event.id || null)} 
+                          className="w-9 h-9 flex items-center justify-center text-secondary hover:bg-red-50 hover:text-red-600 transition-all"
+                          title="Eliminar Evento"
+                        >
+                          <i className="fa-solid fa-trash text-sm"></i>
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

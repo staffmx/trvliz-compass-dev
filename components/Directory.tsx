@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { api, Associate } from '../services/api';
+import { api } from '../services/api';
+import { Associate } from '../types';
 
 const ITEMS_PER_PAGE = 10;
 
