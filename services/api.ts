@@ -63,7 +63,8 @@ export interface BlogPost {
   content?: string;
   read_time: string;   
   author: string;
-  publish_date: string; 
+  publish_date: string;
+  vistas?: number;
 }
 
 export interface MentorshipRequest {
@@ -135,7 +136,18 @@ export const api = {
   upsertRecordedWebinar: async (webinar: Partial<RecordedWebinar>): Promise<boolean> => {
     if (!supabase) return false;
     try {
-      const { error } = await supabase.from('recorded_webinars').upsert(webinar);
+      let query;
+      if (webinar.id && webinar.id !== 0) {
+        // Explicit update
+        const { id, created_at, ...updateData } = webinar as any;
+        query = supabase.from('recorded_webinars').update(updateData).eq('id', id);
+      } else {
+        // Explicit insert
+        const { id, created_at, ...insertData } = webinar as any;
+        query = supabase.from('recorded_webinars').insert(insertData);
+      }
+      
+      const { error } = await query;
       if (error) throw error;
       return true;
     } catch (err) {
@@ -151,6 +163,29 @@ export const api = {
       return !error;
     } catch (err) {
       return false;
+    }
+  },
+
+  uploadWebinarCover: async (file: File): Promise<string | null> => {
+    if (!supabase) return null;
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `webinars/${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('images')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('images')
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (err) {
+      console.error("Error uploading webinar cover:", err);
+      return null;
     }
   },
 
@@ -613,6 +648,63 @@ export const api = {
       if (!error && data) return data;
     }
     return [];
+  },
+
+  upsertBlogPost: async (post: Partial<BlogPost>): Promise<BlogPost | null> => {
+    if (!supabase) return null;
+    try {
+      let query;
+      if (post.id && post.id !== 0) {
+        // Explicit update
+        const { id, ...updateData } = post as any;
+        query = supabase.from('blog_posts').update(updateData).eq('id', id);
+      } else {
+        // Explicit insert
+        const { id, ...insertData } = post as any;
+        query = supabase.from('blog_posts').insert(insertData);
+      }
+      
+      const { data, error } = await query.select().single();
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error("Error upserting blog post:", err);
+      return null;
+    }
+  },
+
+  deleteBlogPost: async (id: number): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase.from('blog_posts').delete().eq('id', id);
+      return !error;
+    } catch (err) {
+      console.error("Error deleting blog post:", err);
+      return false;
+    }
+  },
+
+  uploadBlogImage: async (file: File): Promise<string | null> => {
+    if (!supabase) return null;
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `blogs/${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('images')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('images')
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (err) {
+      console.error("Error uploading blog image:", err);
+      return null;
+    }
   },
 
   getTopSellers: async (): Promise<Seller[]> => {

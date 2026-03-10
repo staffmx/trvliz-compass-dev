@@ -143,7 +143,7 @@ const App: React.FC = () => {
           <EventsCalendar onEventClick={handleNavigateToEvent} />
         );
       case NavigationItem.ADMIN:
-        return <AdminPanel />;
+        return <AdminPanel user={user!} />;
       case NavigationItem.MY_PROFILE:
         return <MyProfile user={user!} onBack={() => setCurrentNav(NavigationItem.DASHBOARD)} onUserUpdate={setUser} />;
       case NavigationItem.SEARCH_RESULTS:

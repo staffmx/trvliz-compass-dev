@@ -1,11 +1,14 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { api, EventRegistration, Seller, RecordedWebinar, WEBINAR_CATEGORIES, MentorshipRequest } from '../services/api';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import JoditEditor from 'jodit-react';
+import { api, EventRegistration, Seller, RecordedWebinar, WEBINAR_CATEGORIES, MentorshipRequest, BlogPost } from '../services/api';
 import { Notice, UserProfile, Role, DocumentCategory, Document as DocType, Associate, Certification, Event, SearchLog } from '../types';
 
 type AdminSection = 'overview' | 'directory' | 'notices' | 'events' | 'blog' | 'sellers' | 'users' | 'documents' | 'recorded_webinars' | 'mentorships' | 'certifications' | 'search_logs';
 
-const AdminPanel: React.FC = () => {
+export const BLOG_CATEGORIES = ['Destinos', 'Tendencias', 'Tips de Viaje', 'Noticias', 'Gastronomía', 'Luxury Travel', 'Wellness'];
+
+const AdminPanel = ({ user }: any) => {
   const [activeSection, setActiveSection] = useState<AdminSection>('overview');
   const [dbStatus, setDbStatus] = useState<'connected' | 'error' | 'disconnected'>('disconnected');
 
@@ -88,6 +91,9 @@ const AdminPanel: React.FC = () => {
           <button onClick={() => setActiveSection('users')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'users' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
             <i className="fa-solid fa-users-gear w-5"></i> Usuarios
           </button>
+          <button onClick={() => setActiveSection('blog')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'blog' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+            <i className="fa-solid fa-newspaper w-5"></i> Blogs
+          </button>
           <button onClick={() => setActiveSection('search_logs')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'search_logs' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
             <i className="fa-solid fa-magnifying-glass w-5"></i> Búsquedas
           </button>
@@ -118,8 +124,227 @@ const AdminPanel: React.FC = () => {
         {activeSection === 'mentorships' && <AdminMentorships Header={SectionHeader} />}
         {activeSection === 'certifications' && <AdminCertifications Header={SectionHeader} />}
         {activeSection === 'search_logs' && <AdminSearchLogs Header={SectionHeader} />}
-        {activeSection === 'blog' && <div className="p-20 text-center"><i className="fa-solid fa-tools text-4xl mb-4 text-secondary opacity-30"></i><p className="text-secondary italic">Módulo de Blog en desarrollo...</p></div>}
+        {activeSection === 'blog' && <AdminBlog Header={SectionHeader} currentUser={user} />}
       </main>
+    </div>
+  );
+};
+
+/* --- SUB-COMPONENT: BLOG MANAGEMENT --- */
+const AdminBlog = ({ Header, currentUser }: any) => {
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const editorRef = useRef(null);
+  
+  const emptyForm: Partial<BlogPost> = {
+    title: '', category: BLOG_CATEGORIES[0], image: '', excerpt: '', content: '', read_time: '', author: '', publish_date: ''
+  };
+  const [formData, setFormData] = useState<Partial<BlogPost>>(emptyForm);
+
+  const editorConfig = useMemo(() => ({
+      readonly: false, 
+      toolbarAdaptive: false,
+      placeholder: 'Escribe el contenido del blog aquí...',
+      buttons: ['bold', 'italic', 'underline', 'strikethrough', 'ul', 'ol', 'outdent', 'indent', 'link', 'align', 'undo', 'redo', 'hr']
+  }), []);
+
+  useEffect(() => { loadPosts(); }, []);
+
+  const loadPosts = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getBlogPosts();
+      setPosts(data);
+    } finally { setLoading(false); }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    try {
+      const url = await api.uploadBlogImage(file);
+      if (url) {
+        setFormData({ ...formData, image: url });
+      } else {
+        alert("Error al subir la imagen. Por favor, intenta de nuevo.");
+      }
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.image) {
+      alert("Por favor sube una imagen para el artículo.");
+      return;
+    }
+    setSaving(true);
+    try {
+      // Auto-assign today's date and author ONLY if it is a new post (no ID)
+      const postData = { ...formData };
+      if (!postData.id) {
+        const today = new Date();
+        postData.publish_date = today.toISOString().split('T')[0];
+        postData.author = currentUser?.name || 'Admin';
+      }
+
+      await api.upsertBlogPost(postData);
+      setIsFormOpen(false);
+      setFormData(emptyForm);
+      loadPosts();
+    } finally { setSaving(false); }
+  };
+
+  const handleEdit = (post: BlogPost) => {
+    setFormData({ ...post });
+    setIsFormOpen(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm('¿Seguro que deseas eliminar este artículo del blog?')) {
+      await api.deleteBlogPost(id);
+      loadPosts();
+    }
+  };
+
+  return (
+    <div className="animate-fade-in relative">
+      <Header 
+        title="Gestión de Blog" 
+        subtitle="Administra los artículos y contenido publicado en el Blog." 
+        actionLabel={isFormOpen ? "Cancelar" : "Nuevo Artículo"} 
+        onAction={() => {
+          if (isFormOpen) {
+             setIsFormOpen(false);
+          } else {
+             setFormData(emptyForm);
+             setIsFormOpen(true);
+          }
+        }} 
+      />
+
+      {isFormOpen && (
+        <div className="mb-12 bg-white border border-accent/20 p-10 shadow-2xl animate-slide-down">
+          <h3 className="font-serif text-2xl text-primary mb-8 border-b border-neutral pb-4">
+            {formData.id ? 'Editar Artículo' : 'Nuevo Artículo'}
+          </h3>
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="md:col-span-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Título del Artículo</label>
+                <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" placeholder="Ej. 5 Destinos que no te puedes perder este año" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Categoría</label>
+                <select required value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent text-secondary">
+                  {BLOG_CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Tiempo de Lectura</label>
+                <input required type="text" value={formData.read_time} onChange={e => setFormData({...formData, read_time: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" placeholder="Ej. 5 Min" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Imagen Principal</label>
+                <div className="flex items-center gap-4">
+                  {formData.image && (
+                    <img src={formData.image} className="w-24 h-16 object-cover border border-neutral rounded" alt="Preview" />
+                  )}
+                  <div className="flex-1 relative">
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleImageUpload} 
+                      disabled={uploadingImage}
+                      className="w-full p-3 border border-neutral text-sm bg-background outline-none focus:border-accent file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-brand/10 file:text-brand file:font-semibold hover:file:bg-brand/20 cursor-pointer text-secondary" 
+                    />
+                    {uploadingImage && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-brand text-xs">
+                        <i className="fa-solid fa-spinner fa-spin mr-2"></i> Subiendo...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Extracto Corto (Resumen)</label>
+                <textarea required rows={2} value={formData.excerpt} onChange={e => setFormData({...formData, excerpt: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" placeholder="Breve descripción para la tarjeta..." />
+              </div>
+              <div className="md:col-span-2 max-w-full overflow-hidden">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-2 block flex justify-between">
+                  <span>Contenido Completo (Rich Text)</span>
+                  {formData.content?.trim() === '' && <span className="text-red-500 font-normal">Requerido</span>}
+                </label>
+                <div className="border border-neutral bg-white [&_.jodit-container]:!border-none [&_.jodit-toolbar__box]:!bg-background [&_.jodit-toolbar__box]:!border-b [&_.jodit-toolbar__box]:!border-neutral [&_.jodit-workplace]:!min-h-[300px]">
+                  <JoditEditor
+                    ref={editorRef}
+                    value={formData.content || ''}
+                    config={editorConfig}
+                    onBlur={newContent => setFormData({...formData, content: newContent})}
+                  />
+                </div>
+              </div>
+            </div>
+            <button type="submit" disabled={saving || uploadingImage || !formData.content?.trim()} className="bg-brand text-white px-12 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all shadow-xl disabled:opacity-50 inline-block mt-8">
+              {saving ? 'Guardando...' : formData.id ? 'Actualizar Artículo' : 'Publicar Artículo'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      <div className="bg-white border border-neutral shadow-sm overflow-hidden">
+        <table className="w-full text-left">
+          <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
+            <tr>
+              <th className="px-8 py-5">Artículo</th>
+              <th className="px-8 py-5">Autor</th>
+              <th className="px-8 py-5">Vistas</th>
+              <th className="px-8 py-5">Publicación</th>
+              <th className="px-8 py-5 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral">
+             {loading ? (
+                <tr><td colSpan={5} className="py-12 text-center text-secondary"><i className="fa-solid fa-spinner fa-spin mr-2"></i> Cargando artículos...</td></tr>
+             ) : posts.length === 0 ? (
+                <tr><td colSpan={5} className="py-12 text-center text-secondary italic">No hay artículos publicados.</td></tr>
+             ) : posts.map(post => (
+              <tr key={post.id} className="hover:bg-background/30">
+                <td className="px-8 py-6">
+                  <div className="flex items-center gap-4">
+                    <img src={post.image} className="w-16 h-10 object-cover border border-neutral rounded" alt={post.title} />
+                    <div>
+                      <span className="text-sm font-medium text-primary block">{post.title}</span>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-brand">{post.category}</span>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-8 py-6 text-sm text-secondary">{post.author}</td>
+                <td className="px-8 py-6 text-xs font-bold text-accent">
+                   <div className="flex items-center gap-2">
+                       <i className="fa-regular fa-eye text-secondary"></i>
+                       {post.vistas || 0}
+                   </div>
+                </td>
+                <td className="px-8 py-6 text-xs text-secondary">{post.publish_date}</td>
+                <td className="px-8 py-6 text-right">
+                  <button onClick={() => handleEdit(post)} className="text-secondary hover:text-brand px-3" title="Editar"><i className="fa-solid fa-pen"></i></button>
+                  <button onClick={() => handleDelete(post.id!)} className="text-secondary hover:text-red-600 px-3" title="Eliminar"><i className="fa-solid fa-trash"></i></button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
@@ -130,6 +355,7 @@ const AdminRecordedWebinars = ({ Header }: any) => {
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [formData, setFormData] = useState<Partial<RecordedWebinar>>({
     name: '', category: WEBINAR_CATEGORIES[0], cover_image: '', access_link: '', access_code: ''
   });
@@ -144,6 +370,23 @@ const AdminRecordedWebinars = ({ Header }: any) => {
     } finally { setLoading(false); }
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    try {
+      const url = await api.uploadWebinarCover(file);
+      if (url) {
+        setFormData({ ...formData, cover_image: url });
+      } else {
+        alert("Error al subir la imagen. Por favor, intenta de nuevo.");
+      }
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -155,13 +398,33 @@ const AdminRecordedWebinars = ({ Header }: any) => {
     } finally { setSaving(false); }
   };
 
+  const handleEdit = (webinar: RecordedWebinar) => {
+    setFormData({ ...webinar });
+    setIsFormOpen(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="animate-fade-in">
-      <Header title="Biblioteca de Webinars" subtitle="Gestiona las grabaciones de capacitaciones por categorías." actionLabel={isFormOpen ? "Cancelar" : "Nuevo Webinar"} onAction={() => setIsFormOpen(!isFormOpen)} />
+      <Header 
+        title="Biblioteca de Webinars" 
+        subtitle="Gestiona las grabaciones de capacitaciones por categorías." 
+        actionLabel={isFormOpen ? "Cancelar" : "Nuevo Webinar"} 
+        onAction={() => {
+          if (isFormOpen) {
+             setIsFormOpen(false);
+          } else {
+             setFormData({ name: '', category: WEBINAR_CATEGORIES[0], cover_image: '', access_link: '', access_code: '' });
+             setIsFormOpen(true);
+          }
+        }} 
+      />
 
       {isFormOpen && (
         <div className="mb-12 bg-white border border-accent/20 p-10 shadow-2xl animate-slide-down">
-          <h3 className="font-serif text-2xl text-primary mb-8 border-b border-neutral pb-4">Detalles de la Capacitación</h3>
+          <h3 className="font-serif text-2xl text-primary mb-8 border-b border-neutral pb-4">
+            {formData.id ? 'Editar Capacitación' : 'Detalles de la Capacitación'}
+          </h3>
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="md:col-span-2">
@@ -175,8 +438,28 @@ const AdminRecordedWebinars = ({ Header }: any) => {
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Imagen de Portada (URL)</label>
-                <input required type="url" value={formData.cover_image} onChange={e => setFormData({...formData, cover_image: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" placeholder="https://traveliz.com/img.jpg" />
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Imagen de Portada</label>
+                <div className="flex items-center gap-4">
+                  {formData.cover_image && (
+                    <img src={formData.cover_image} className="w-16 h-16 object-cover border border-neutral rounded" alt="Preview" />
+                  )}
+                  <div className="flex-1 relative">
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleImageUpload} 
+                      disabled={uploadingImage}
+                      className="w-full p-3 border border-neutral text-sm bg-background outline-none focus:border-accent file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-brand/10 file:text-brand file:font-semibold hover:file:bg-brand/20 cursor-pointer text-secondary" 
+                    />
+                    {uploadingImage && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-brand text-xs">
+                        <i className="fa-solid fa-spinner fa-spin mr-2"></i> Subiendo...
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {/* Fallback hidden input required attribute */}
+                <input type="hidden" value={formData.cover_image || ''} required />
               </div>
               <div>
                 <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Link de Acceso (Zoom/Video)</label>
@@ -188,7 +471,7 @@ const AdminRecordedWebinars = ({ Header }: any) => {
               </div>
             </div>
             <button type="submit" disabled={saving} className="bg-brand text-white px-12 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all shadow-xl">
-              {saving ? 'Guardando...' : 'Guardar en Biblioteca'}
+              {saving ? 'Guardando...' : formData.id ? 'Actualizar Capacitación' : 'Guardar en Biblioteca'}
             </button>
           </form>
         </div>
@@ -216,6 +499,7 @@ const AdminRecordedWebinars = ({ Header }: any) => {
                 </td>
                 <td className="px-8 py-6 text-[9px] font-bold uppercase tracking-widest text-brand">{w.category}</td>
                 <td className="px-8 py-6 text-right">
+                  <button onClick={() => handleEdit(w)} className="text-secondary hover:text-brand px-3"><i className="fa-solid fa-pen"></i></button>
                   <button onClick={async () => { if(confirm('¿Eliminar de la biblioteca?')) { await api.deleteRecordedWebinar(w.id!); loadWebinars(); }}} className="text-secondary hover:text-red-600 px-3"><i className="fa-solid fa-trash"></i></button>
                 </td>
               </tr>
