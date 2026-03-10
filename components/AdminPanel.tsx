@@ -805,7 +805,9 @@ const AdminUsers = ({ Header }: any) => {
                       {u.avatar_url ? <img src={u.avatar_url} className="w-full h-full object-cover" /> : u.name[0]}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-primary leading-tight">{u.name} {u.last_name}</p>
+                      <p className="text-sm font-bold text-primary leading-tight">
+                        {u.name} {u.last_name || ''}
+                      </p>
                       <p className="text-[10px] text-secondary">{u.email}</p>
                     </div>
                   </div>

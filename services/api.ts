@@ -195,17 +195,27 @@ export const api = {
             .map((ur: any) => ur.roles)
             .filter(Boolean);
           
+          // Fallback if last_name column is missing in DB
+          const [firstName, ...lastNameParts] = (profile.name || '').split(' ');
+          
           return {
             ...profile,
+            name: profile.last_name === undefined ? firstName : profile.name,
+            last_name: profile.last_name === undefined ? lastNameParts.join(' ') : profile.last_name,
             roles
           };
         });
       }
       
-      return (data || []).map(profile => ({
-        ...profile,
-        roles: profile.user_roles?.map((ur: any) => ur.roles) || []
-      }));
+      return (data || []).map(profile => {
+        const [firstName, ...lastNameParts] = (profile.name || '').split(' ');
+        return {
+          ...profile,
+          name: profile.last_name === undefined ? firstName : profile.name,
+          last_name: profile.last_name === undefined ? lastNameParts.join(' ') : profile.last_name,
+          roles: profile.user_roles?.map((ur: any) => ur.roles) || []
+        };
+      });
     } catch (err) {
       console.error("Error fetching users:", err);
       return [];
@@ -219,8 +229,7 @@ export const api = {
         .from('profiles')
         .upsert({
           id: userData.id || undefined,
-          name: userData.name,
-          last_name: userData.last_name,
+          name: `${userData.name || ''} ${userData.last_name || ''}`.trim(),
           email: userData.email,
           position: userData.position,
           avatar_url: userData.avatar_url
@@ -302,8 +311,7 @@ export const api = {
       const { error } = await supabase
         .from('profiles')
         .update({
-          name: profileData.name,
-          last_name: profileData.last_name,
+          name: `${profileData.name || ''} ${profileData.last_name || ''}`.trim(),
           position: profileData.position,
           avatar_url: profileData.avatar_url
         })
