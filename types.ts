@@ -144,3 +144,24 @@ export interface SearchLog {
   results_count: number;
   created_at: string;
 }
+
+export interface ProviderService {
+  display_value: string;
+  ID: string;
+}
+
+export interface Provider {
+  ID: string;
+  proProveedor: string;
+  proTipoProveMulti: string[];
+  provServicios: ProviderService[];
+  ddlPlataforma: string | string[];
+  ddlEstatus: string;
+  Added_User?: string;
+  Added_Time?: string;
+}
+
+export interface ProvidersResponse {
+  code: number;
+  data: Provider[];
+}

@@ -11,7 +11,8 @@ import EventsCalendar from './components/EventsCalendar';
 import EventDetail from './components/EventDetail';
 import AdminPanel from './components/AdminPanel';
 import Documentation from './components/Documentation';
-import Suppliers from './components/Suppliers';
+import ProvidersList from './components/ProvidersList';
+import ProviderDetail from './components/ProviderDetail';
 import NoticeDetail from './components/NoticeDetail';
 import NoticesList from './components/NoticesList';
 import MyProfile from './components/MyProfile';
@@ -39,6 +40,7 @@ const App: React.FC = () => {
   const [searchResults, setSearchResults] = useState<SearchResultsType | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('traveliz_user');
@@ -119,7 +121,14 @@ const App: React.FC = () => {
       case NavigationItem.DOCUMENTACION:
         return <Documentation user={user!} />;
       case NavigationItem.PROVEEDORES:
-        return <Suppliers />;
+        return selectedProvider ? (
+          <ProviderDetail 
+            provider={selectedProvider} 
+            onBack={() => setSelectedProvider(null)} 
+          />
+        ) : (
+          <ProvidersList onSelectProvider={setSelectedProvider} />
+        );
       case NavigationItem.BLOG:
         return <Inspiration onNavigate={setCurrentNav} />;
       case NavigationItem.DIRECTORIO:
