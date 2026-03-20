@@ -750,6 +750,7 @@ export const api = {
             id: parseInt(c.id, 10),
             name: c.name || c.nombre || 'Sin nombre',
             parent_id: parseInt(c.parent_id !== undefined ? c.parent_id : (c.categoria_padre_id || 0), 10) || 0,
+            description: c.descripcion || c.description || '',
             created_at: c.created_at
           }));
           // Sort manually in JS to be safe
@@ -800,10 +801,10 @@ export const api = {
           id: parseInt(d.id, 10),
           name: d.name || d.nombre || 'Sin nombre',
           type: d.type || d.tipo || 'other',
-          size: d.size || d.tamaño || d.tamano || '0 KB',
+          size: d.size || d.tamano || d.tamaño || '0 KB',
           storage_path: storagePath,
           cat_id: parseInt(d.cat_id !== undefined ? d.cat_id : d.categoria_id, 10) || 0,
-          description: d.description || d.descripcion || '',
+          description: d.descripcion || d.description || '',
           created_at: new Date(d.created_at).toLocaleDateString('es-ES'),
           url: finalUrl
         };
@@ -850,10 +851,10 @@ export const api = {
               id: parseInt(d.id, 10),
               name: d.name || d.nombre || 'Sin nombre',
               type: d.type || d.tipo || 'other',
-              size: d.size || d.tamaño || d.tamano || '0 KB',
+              size: d.size || d.tamano || d.tamaño || '0 KB',
               storage_path: storagePath,
               cat_id: parseInt(d.cat_id !== undefined ? d.cat_id : d.categoria_id, 10) || 0,
-              description: d.description || d.descripcion || '',
+              description: d.descripcion || d.description || '',
               created_at: new Date(d.created_at).toLocaleDateString('es-ES'),
               url: finalUrl
             };
@@ -868,19 +869,64 @@ export const api = {
     return { data: [], error: 'Could not find documents table' };
   },
 
-  createCategory: async (name: string, parentId: number = 0): Promise<DocumentCategory | null> => {
+  createCategory: async (name: string, parentId: number = 0, description: string = ''): Promise<DocumentCategory | null> => {
     if (!supabase) return null;
-    const { data, error } = await supabase
-      .from('documents_categoria')
-      .insert({ name, parent_id: parentId })
-      .select()
-      .single();
+    const tableNames = ['documents_categoria', 'documents_categorias', 'document_categories'];
+    const dbParentId = parentId;
     
-    if (error) {
-      console.error("Error creating category:", error);
-      return null;
+    for (const tableName of tableNames) {
+      try {
+        console.log(`Attempting to create category in '${tableName}'...`);
+        // First attempt with correct Spanish names (nombre, descripcion)
+        let response = await supabase
+          .from(tableName)
+          .insert({ 
+            nombre: name, 
+            parent_id: dbParentId, 
+            descripcion: description 
+          })
+          .select()
+          .single();
+        
+        if (response.error) {
+          console.warn(`Failed with 'nombre' in '${tableName}':`, response.error.message);
+          // Second attempt with English names (name, description)
+          response = await supabase
+            .from(tableName)
+            .insert({ 
+              name: name, 
+              parent_id: dbParentId, 
+              description: description 
+            })
+            .select()
+            .single();
+        }
+
+        if (response.error) {
+           console.warn(`Failed with 'name' in '${tableName}':`, response.error.message);
+           // Third attempt: Minimal (no description)
+           response = await supabase
+            .from(tableName)
+            .insert({ 
+              nombre: name, 
+              parent_id: dbParentId 
+            })
+            .select()
+            .single();
+        }
+
+        if (!response.error && response.data) {
+          console.log(`Successfully created category in '${tableName}'`);
+          return response.data;
+        }
+        if (response.error) {
+          console.error(`Error creating category in '${tableName}':`, response.error);
+        }
+      } catch (err) {
+        console.error(`Exception creating category in '${tableName}':`, err);
+      }
     }
-    return data;
+    return null;
   },
 
   uploadDocument: async (file: File, catId: number, description?: string): Promise<DocType | null> => {
@@ -900,30 +946,159 @@ export const api = {
       const sizeMB = file.size / (1024 * 1024);
       const sizeStr = sizeMB < 1 ? `${(file.size / 1024).toFixed(0)} KB` : `${sizeMB.toFixed(1)} MB`;
 
-      const { data, error: dbError } = await supabase.from('documents').insert({
-        name: file.name,
-        type: fileExt || 'other',
-        size: sizeStr,
-        cat_id: catId,
-        storage_path: filePath,
-        description: description || ''
-      }).select().single();
+      const tableNames = ['documents', 'documentos', 'document'];
+      let lastError = null;
 
-      if (dbError) throw dbError;
+      for (const tableName of tableNames) {
+        try {
+          console.log(`Attempting to insert document into '${tableName}'...`);
+          // Primary attempt: Based on user's confirmed "hybrid" schema
+          let response = await supabase.from(tableName)
+            .insert({
+              name: file.name,
+              type: fileExt || 'other',
+              size: sizeStr,
+              cat_id: catId,
+              storage_path: filePath,
+              descripcion: description || '',
+              is_private: false
+            })
+            .select()
+            .single();
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('documentation')
-        .getPublicUrl(data.storage_path);
+          if (response.error) {
+            console.warn(`Failed with hybrid schema in '${tableName}':`, response.error.message);
+            lastError = response.error;
+            // Attempt 2: All Spanish fields
+            response = await supabase.from(tableName).insert({
+              nombre: file.name,
+              tipo: fileExt || 'other',
+              tamano: sizeStr,
+              categoria_id: catId,
+              ruta: filePath,
+              descripcion: description || ''
+            }).select().single();
+          }
 
-      return {
-        ...data,
-        url: publicUrl,
-        created_at: new Date(data.created_at).toLocaleDateString('es-ES')
-      };
+          if (response.error) {
+            console.warn(`Failed with Spanish schema in '${tableName}':`, response.error.message);
+            lastError = response.error;
+          }
 
-    } catch (err) {
+          if (!response.error && response.data) {
+            console.log(`Successfully created record in '${tableName}'`);
+            const { data: { publicUrl } } = supabase.storage
+              .from('documentation')
+              .getPublicUrl(response.data.storage_path || response.data.ruta);
+
+            return {
+              ...response.data,
+              id: parseInt(response.data.id, 10),
+              name: response.data.nombre || response.data.name,
+              url: publicUrl,
+              created_at: new Date(response.data.created_at).toLocaleDateString('es-ES')
+            };
+          }
+        } catch (e) {
+          // Continue
+        }
+      }
+      throw new Error(lastError?.message || "No se pudo insertar el registro en la base de datos.");
+
+    } catch (err: any) {
       console.error("Error uploading document:", err);
-      return null;
+      throw err;
+    }
+  },
+
+  updateDocument: async (docId: number, name: string, description: string): Promise<boolean> => {
+    if (!supabase) return false;
+    const tableNames = ['documents', 'documentos', 'document'];
+    
+    for (const tableName of tableNames) {
+      try {
+        // Try confirmed schema first: name, descripcion
+        let { error } = await supabase.from(tableName).update({
+          name: name,
+          descripcion: description
+        }).eq('id', docId);
+        
+        if (error) {
+          // Fallback if schema is different
+          ({ error } = await supabase.from(tableName).update({
+            nombre: name,
+            description: description
+          }).eq('id', docId));
+        }
+
+        if (!error) return true;
+      } catch (err) {
+        // Continue
+      }
+    }
+    return false;
+  },
+
+  updateCategory: async (catId: number, name: string, description: string): Promise<boolean> => {
+    if (!supabase) return false;
+    const tableNames = ['documents_categoria', 'documents_categorias', 'document_categories'];
+    
+    for (const tableName of tableNames) {
+      try {
+        // Try confirmed schema first: nombre, descripcion
+        let { error } = await supabase.from(tableName).update({
+          nombre: name,
+          descripcion: description
+        }).eq('id', catId);
+
+        if (error) {
+           // Fallback if schema is different
+           ({ error } = await supabase.from(tableName).update({
+            name: name,
+            description: description
+          }).eq('id', catId));
+        }
+        
+        if (!error) return true;
+      } catch (err) {
+        // Continue
+      }
+    }
+    return false;
+  },
+
+  deleteCategory: async (catId: number): Promise<boolean> => {
+    if (!supabase) return false;
+
+    try {
+      // 1. Fetch children documents to clean up storage
+      const childDocs = await api.getDocumentsByCategory(catId);
+      if (childDocs && childDocs.length > 0) {
+        for (const doc of childDocs) {
+          await api.deleteDocument(doc.id, doc.storage_path);
+        }
+      }
+
+      // 2. Delete subcategories (recursive)
+      const tableNames = ['documents_categoria', 'documents_categorias', 'document_categories'];
+      let mainTable = 'documents_categoria';
+      
+      // Find which table works
+      const catsList = await api.getDocumentCategories();
+      const subCats = (catsList || []).filter(c => c.parent_id === catId);
+      for (const sub of subCats) {
+        await api.deleteCategory(sub.id);
+      }
+
+      // 3. Finally delete the category row
+      for (const tableName of tableNames) {
+        const { error } = await supabase.from(tableName).delete().eq('id', catId);
+        if (!error) return true;
+      }
+      return false;
+    } catch (err) {
+      console.error("Error in deleteCategory recursive:", err);
+      return false;
     }
   },
 
@@ -936,27 +1111,18 @@ export const api = {
       
       if (storageError) console.warn("Could not delete file from bucket", storageError);
 
-      const { error } = await supabase.from('documents').delete().eq('id', docId);
-      if (error) throw error;
-      
-      return true;
+      const tableNames = ['documents', 'documentos'];
+      for (const tableName of tableNames) {
+        const { error } = await supabase.from(tableName).delete().eq('id', docId);
+        if (!error) return true;
+      }
+      return false;
     } catch (err) {
       console.error("Error deleting document:", err);
       return false;
     }
   },
 
-  deleteCategory: async (catId: number): Promise<boolean> => {
-    if (!supabase) return false;
-    try {
-      const { error } = await supabase.from('documents_categoria').delete().eq('id', catId);
-      if (error) throw error;
-      return true;
-    } catch (err) {
-      console.error("Error deleting category:", err);
-      return false;
-    }
-  },
 
   // --- MENTORSHIP ---
   createMentorshipRequest: async (request: Partial<MentorshipRequest>): Promise<{ success: boolean; error?: string }> => {

@@ -61,33 +61,33 @@ const ProvidersList: React.FC<ProvidersListProps> = ({ onSelectProvider }) => {
 
   // Safe Data Extractions
     const allServiceTypes: string[] = Array.from(new Set(providers.flatMap(p => {
-      const services = p.provServicios;
-      return Array.isArray(services) ? services.map(s => s?.display_value) : [];
+      const services = p.servicios;
+      return Array.isArray(services) ? services : [];
     }))).filter(t => t).sort() as string[];
 
     const allProviderTypes: string[] = Array.from(new Set(providers.flatMap(p => {
-      const types = p.proTipoProveMulti;
+      const types = p.tipoProveedor;
       return Array.isArray(types) ? types : [];
     }))).filter(t => t).sort() as string[];
 
     const allPlatforms: string[] = Array.from(new Set(providers.flatMap(p => {
-      const platforms = p.ddlPlataforma;
+      const platforms = p.plataforma;
       if (Array.isArray(platforms)) return platforms;
       return platforms ? [String(platforms)] : [];
     }))).map(plat => String(plat)).filter(p => p && p !== "null" && p !== "undefined").sort() as string[];
 
     const filteredProviders = providers.filter(p => {
-      const nameMatch = (p.proProveedor || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const nameMatch = (p.nombre || '').toLowerCase().includes(searchTerm.toLowerCase());
       
-      const services = p.provServicios;
+      const services = p.servicios;
       const serviceMatch = selectedServiceTypes.length === 0 || 
-        (Array.isArray(services) && services.some(s => s && selectedServiceTypes.includes(s.display_value)));
+        (Array.isArray(services) && services.some(s => s && selectedServiceTypes.includes(s)));
       
-      const pTypes = p.proTipoProveMulti;
+      const pTypes = p.tipoProveedor;
       const typeMatch = selectedProviderTypes.length === 0 || 
         (Array.isArray(pTypes) && pTypes.some(t => selectedProviderTypes.includes(t)));
       
-      const rawPlatforms = p.ddlPlataforma;
+      const rawPlatforms = p.plataforma;
       const platforms = Array.isArray(rawPlatforms) ? rawPlatforms : (rawPlatforms ? [rawPlatforms] : []);
       const platformMatch = selectedPlatforms.length === 0 || platforms.some(plat => plat && selectedPlatforms.includes(String(plat)));
 
@@ -186,17 +186,17 @@ const ProvidersList: React.FC<ProvidersListProps> = ({ onSelectProvider }) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {filteredProviders.map(provider => (
-                <div key={provider.ID} onClick={() => onSelectProvider(provider)} className="bg-surface border border-neutral hover:shadow-xl hover:border-accent/30 transition-all duration-300 group cursor-pointer flex flex-col overflow-hidden">
+                <div key={provider.id} onClick={() => onSelectProvider(provider)} className="bg-surface border border-neutral hover:shadow-xl hover:border-accent/30 transition-all duration-300 group cursor-pointer flex flex-col overflow-hidden">
                   <div className="p-8 border-b border-background bg-white/50 group-hover:bg-white transition-colors">
                     <div className="flex flex-wrap gap-1 mb-3">
-                      {(Array.isArray(provider.proTipoProveMulti) ? provider.proTipoProveMulti : []).map(tag => (
+                      {(Array.isArray(provider.tipoProveedor) ? provider.tipoProveedor : []).map(tag => (
                         <span key={tag} className="px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider border border-brand/20 bg-brand/5 text-brand">{tag}</span>
                       ))}
                     </div>
-                    <h3 className="font-serif text-2xl text-primary group-hover:text-brand transition-colors mb-2">{provider.proProveedor || 'Sin nombre'}</h3>
+                    <h3 className="font-serif text-2xl text-primary group-hover:text-brand transition-colors mb-2">{provider.nombre || 'Sin nombre'}</h3>
                     <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${provider.ddlEstatus === 'Activo' ? 'bg-green-500' : 'bg-gray-300'}`}></span>
-                      <span className="text-[10px] text-secondary uppercase tracking-widest">{provider.ddlEstatus || 'Estatus desconocido'}</span>
+                      <span className={`w-2 h-2 rounded-full ${provider.estatus === 'Activo' ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                      <span className="text-[10px] text-secondary uppercase tracking-widest">{provider.estatus || 'Estatus desconocido'}</span>
                     </div>
                   </div>
 
@@ -205,12 +205,12 @@ const ProvidersList: React.FC<ProvidersListProps> = ({ onSelectProvider }) => {
                       <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Servicios</p>
                       <div className="flex flex-wrap gap-2">
                         {(() => {
-                           const services = provider.provServicios;
+                           const services = provider.servicios;
                            const servicesArray = Array.isArray(services) ? services : [];
                            return (
                              <>
-                               {servicesArray.slice(0, 4).map(s => (
-                                 <span key={s?.ID} className="text-[10px] text-secondary bg-neutral/30 px-2 py-1">{s?.display_value}</span>
+                               {servicesArray.slice(0, 4).map((s, idx) => (
+                                 <span key={idx} className="text-[10px] text-secondary bg-neutral/30 px-2 py-1">{s}</span>
                                ))}
                                {servicesArray.length > 4 && (
                                  <span className="text-[10px] text-brand font-bold py-1">+{servicesArray.length - 4} más</span>

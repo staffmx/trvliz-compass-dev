@@ -60,6 +60,7 @@ export interface DocumentCategory {
   id: number;
   name: string;
   parent_id?: number | null;
+  description?: string;
   created_at?: string;
 }
 
@@ -145,23 +146,55 @@ export interface SearchLog {
   created_at: string;
 }
 
-export interface ProviderService {
-  display_value: string;
-  ID: string;
+export interface ProviderCommission {
+  Plataforma: string;
+  Clasifica: string;
+  Moneda: string;
+  Region: string;
+  Continente: string;
+  Pais: string;
+  Cabina: string;
+  Servicio: string;
+  Porcentaje: string;
+  Monto: string;
+}
+
+export interface ProviderLocation {
+  Continente: string;
+  Pais: string;
+  Ciudad: string;
+  Categoria: string;
+  Serendipians: string;
+}
+
+export interface ProviderContact {
+  Nombre: string;
+  Correo: string;
+  CorreoSec: string;
+  Telefono: string;
 }
 
 export interface Provider {
-  ID: string;
-  proProveedor: string;
-  proTipoProveMulti: string[];
-  provServicios: ProviderService[];
-  ddlPlataforma: string | string[];
-  ddlEstatus: string;
-  Added_User?: string;
-  Added_Time?: string;
+  id: string;
+  nombre: string;
+  tipoProveedor: string[];
+  servicios: string[];
+  plataforma: string[];
+  tipoIngreso: string;
+  contactoGeneral: string;
+  paginaWeb: string;
+  comoCotizo: string;
+  formaPago: string;
+  correo: string;
+  telefono: string;
+  bandera: string;
+  descripcion: string;
+  estatus: string;
+  comisiones: ProviderCommission[];
+  ubicaciones: ProviderLocation[];
+  contactos: ProviderContact[];
 }
 
 export interface ProvidersResponse {
-  code: number;
-  data: Provider[];
+  ListProveedoresAPI: any[]; // Raw objects from Zoho API
 }

@@ -1138,6 +1138,16 @@ const AdminDocuments = ({ Header }: any) => {
   const [documents, setDocuments] = useState<DocType[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentCategory, setCurrentCategory] = useState<DocumentCategory | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isCategoryFormOpen, setIsCategoryFormOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryDescription, setNewCategoryDescription] = useState('');
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [editingDoc, setEditingDoc] = useState<DocType | null>(null);
+  const [editingCat, setEditingCat] = useState<DocumentCategory | null>(null);
+  const [docFormData, setDocFormData] = useState({ name: '', description: '' });
+  const [isDocFormOpen, setIsDocFormOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { 
     if (currentCategory) {
@@ -1186,6 +1196,100 @@ const AdminDocuments = ({ Header }: any) => {
     setCurrentCategory(null);
   };
 
+  const handleCreateCategory = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newCategoryName.trim()) return;
+
+    setSavingCategory(true);
+    try {
+        const parentId = currentCategory ? currentCategory.id : 0;
+        const newCat = await api.createCategory(newCategoryName, parentId, newCategoryDescription);
+        if (newCat) {
+            setNewCategoryName('');
+            setNewCategoryDescription('');
+            setIsCategoryFormOpen(false);
+            loadCategories();
+        } else {
+            alert("Error al crear categoría.");
+        }
+    } finally {
+        setSavingCategory(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentCategory) return;
+
+    setIsUploading(true);
+    try {
+      const newDoc = await api.uploadDocument(file, currentCategory.id);
+      if (newDoc) {
+        loadDocs(currentCategory.id);
+      } else {
+        alert("Error al subir el archivo.");
+      }
+    } catch (err: any) {
+      console.error("Error in upload:", err);
+      alert(`Error al subir el archivo: ${err.message || err.toString()}`);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleEditDoc = (doc: DocType) => {
+    setEditingDoc(doc);
+    setDocFormData({ name: doc.name, description: doc.description || '' });
+    setIsDocFormOpen(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleUpdateDoc = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDoc) return;
+    try {
+      const ok = await api.updateDocument(editingDoc.id, docFormData.name, docFormData.description);
+      if (ok) {
+        setIsDocFormOpen(false);
+        setEditingDoc(null);
+        loadDocs(currentCategory!.id);
+      } else {
+        alert("Error al actualizar documento.");
+      }
+    } catch (err) {
+      console.error("Error updating doc:", err);
+    }
+  };
+
+  const handleEditCategory = (cat: DocumentCategory) => {
+    setEditingCat(cat);
+    setNewCategoryName(cat.name);
+    setNewCategoryDescription(cat.description || '');
+    setIsCategoryFormOpen(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleUpdateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCat) return;
+    setSavingCategory(true);
+    try {
+      const ok = await api.updateCategory(editingCat.id, newCategoryName, newCategoryDescription);
+      if (ok) {
+        setIsCategoryFormOpen(false);
+        setEditingCat(null);
+        setNewCategoryName('');
+        setNewCategoryDescription('');
+        loadCategories();
+      } else {
+        alert("Error al actualizar categoría.");
+      }
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
   const handleDeleteDoc = async (doc: DocType) => {
     if (confirm(`¿Eliminar "${doc.name}"?`)) {
       const success = await api.deleteDocument(doc.id, doc.storage_path);
@@ -1208,7 +1312,113 @@ const AdminDocuments = ({ Header }: any) => {
       <Header 
         title="Gestión de Documentos" 
         subtitle="Organiza y elimina archivos o categorías de la biblioteca corporativa." 
+        actionLabel={currentCategory ? (isUploading ? "Subiendo..." : "Subir Documento") : undefined}
+        onAction={() => fileInputRef.current?.click()}
+        secondActionLabel={isCategoryFormOpen ? "Cancelar" : "Nueva Categoría"}
+        onSecondAction={() => setIsCategoryFormOpen(!isCategoryFormOpen)}
       />
+
+      <input 
+          type="file" 
+          ref={fileInputRef} 
+          className="hidden" 
+          onChange={handleFileUpload} 
+      />
+
+      {isCategoryFormOpen && (
+        <div className="mb-12 bg-white border border-accent/20 p-8 shadow-2xl animate-slide-down">
+          <h3 className="font-serif text-xl text-primary mb-6 border-b border-neutral pb-3">
+            {editingCat ? 'Editar Categoría' : 'Detalles de la Nueva Categoría'}
+          </h3>
+          <form onSubmit={editingCat ? handleUpdateCategory : handleCreateCategory} className="flex flex-col md:flex-row gap-6 items-end">
+            <div className="flex-1 w-full">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Nombre del Folder / Categoría</label>
+              <input 
+                  required 
+                  type="text" 
+                  autoFocus
+                  placeholder="Ej. Guías Técnicas, Contratos..."
+                  value={newCategoryName} 
+                  onChange={e => setNewCategoryName(e.target.value)} 
+                  className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" 
+              />
+            </div>
+            <div className="flex-1 w-full">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Descripción (Opcional)</label>
+              <input 
+                  type="text" 
+                  placeholder="Ej. Instrucciones y manuales"
+                  value={newCategoryDescription} 
+                  onChange={e => setNewCategoryDescription(e.target.value)} 
+                  className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" 
+              />
+            </div>
+            <div className="w-full md:w-auto">
+                <button 
+                  type="submit" 
+                  disabled={savingCategory || !newCategoryName.trim()} 
+                  className="w-full md:w-auto bg-brand text-white px-10 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all shadow-xl disabled:opacity-50"
+                >
+                  {savingCategory ? (editingCat ? 'Actualizando...' : 'Creando...') : (editingCat ? 'Actualizar Categoría' : 'Crear Categoría')}
+                </button>
+                {editingCat && (
+                  <button 
+                    type="button" 
+                    onClick={() => { setEditingCat(null); setIsCategoryFormOpen(false); setNewCategoryName(''); setNewCategoryDescription(''); }}
+                    className="ml-4 text-[10px] font-bold uppercase tracking-widest text-secondary hover:text-primary"
+                  >
+                    Cancelar
+                  </button>
+                )}
+            </div>
+          </form>
+        </div>
+      )}
+
+      {isDocFormOpen && (
+        <div className="mb-12 bg-white border border-accent/20 p-8 shadow-2xl animate-slide-down">
+          <h3 className="font-serif text-xl text-primary mb-6 border-b border-neutral pb-3">
+            Editar Detalles del Archivo
+          </h3>
+          <form onSubmit={handleUpdateDoc} className="flex flex-col md:flex-row gap-6 items-end">
+            <div className="flex-[2] w-full">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Nombre del Archivo</label>
+              <input 
+                  required 
+                  type="text" 
+                  value={docFormData.name} 
+                  onChange={e => setDocFormData({ ...docFormData, name: e.target.value })} 
+                  className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" 
+              />
+            </div>
+            <div className="flex-[3] w-full">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Descripción</label>
+              <input 
+                  type="text" 
+                  placeholder="Ej. Guía rápida para el manual"
+                  value={docFormData.description} 
+                  onChange={e => setDocFormData({ ...docFormData, description: e.target.value })} 
+                  className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" 
+              />
+            </div>
+            <div className="w-full md:w-auto">
+                <button 
+                  type="submit" 
+                  className="w-full md:w-auto bg-brand text-white px-10 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all shadow-xl"
+                >
+                  Guardar Cambios
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => { setIsDocFormOpen(false); setEditingDoc(null); }}
+                  className="ml-4 text-[10px] font-bold uppercase tracking-widest text-secondary hover:text-primary"
+                >
+                  Cancelar
+                </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <div className="flex items-center gap-2 mb-8 text-[10px] font-bold uppercase tracking-widest overflow-x-auto pb-2 border-b border-neutral">
         <button 
@@ -1260,8 +1470,9 @@ const AdminDocuments = ({ Header }: any) => {
                     <button onClick={() => handleCategoryClick(cat)} className="text-sm font-bold text-primary hover:text-brand transition-colors text-left">{cat.name}</button>
                   </div>
                 </td>
-                <td className="px-8 py-6 text-xs text-secondary">Carpeta de recursos corporativos</td>
+                <td className="px-8 py-6 text-xs text-secondary">{cat.description || 'Carpeta de recursos corporativos'}</td>
                 <td className="px-8 py-6 text-right">
+                   <button onClick={() => handleEditCategory(cat)} className="text-secondary hover:text-brand px-3"><i className="fa-solid fa-pencil"></i></button>
                    <button onClick={(e) => handleDeleteCategory(e, cat)} className="text-secondary hover:text-red-600 px-3"><i className="fa-solid fa-trash"></i></button>
                 </td>
               </tr>
@@ -1300,8 +1511,18 @@ const AdminDocuments = ({ Header }: any) => {
                     <td className="px-8 py-6">
                        <span className="text-[10px] font-bold uppercase tracking-widest text-secondary">{doc.type}</span>
                     </td>
-                    <td className="px-8 py-6 text-xs text-secondary">{doc.created_at}</td>
+                    <td className="px-8 py-6 text-xs text-secondary">{doc.description || 'Sin descripción'}</td>
+                    <td className="px-8 py-6 text-[10px] font-bold text-secondary uppercase tracking-widest">{doc.created_at}</td>
                     <td className="px-8 py-6 text-right">
+                       <a 
+                          href={doc.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-secondary hover:text-brand px-3 inline-block"
+                        >
+                          <i className="fa-solid fa-eye"></i>
+                       </a>
+                       <button onClick={() => handleEditDoc(doc)} className="text-secondary hover:text-brand px-3"><i className="fa-solid fa-pencil"></i></button>
                        <button onClick={() => handleDeleteDoc(doc)} className="text-secondary hover:text-red-600 px-3"><i className="fa-solid fa-trash"></i></button>
                     </td>
                   </tr>

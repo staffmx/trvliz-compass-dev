@@ -186,36 +186,7 @@ const Documentation: React.FC<DocumentationProps> = ({ user }) => {
                 </span>
             </div>
             
-            {isAdmin && (
-                <div className="flex gap-2 w-full md:w-auto">
-                    {!currentCategory ? (
-                        <button 
-                            onClick={handleCreateCategory}
-                            className="flex-1 md:flex-none px-4 py-3 bg-white border border-brand text-brand text-[10px] font-bold uppercase tracking-widest hover:bg-brand hover:text-white transition-colors"
-                        >
-                            <i className="fa-solid fa-folder-plus mr-2"></i> Nueva Categoría
-                        </button>
-                    ) : (
-                        <button 
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={isUploading}
-                            className="flex-1 md:flex-none px-4 py-3 bg-brand text-white text-[10px] font-bold uppercase tracking-widest hover:bg-accent transition-colors shadow-md disabled:opacity-50"
-                        >
-                            {isUploading ? (
-                                <><i className="fa-solid fa-circle-notch fa-spin mr-2"></i> Subiendo...</>
-                            ) : (
-                                <><i className="fa-solid fa-cloud-arrow-up mr-2"></i> Subir Documento</>
-                            )}
-                        </button>
-                    )}
-                    <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        className="hidden" 
-                        onChange={handleFileUpload} 
-                    />
-                </div>
-            )}
+            {/* Admin actions removed - manage via Admin Panel */}
         </div>
       </div>
 
@@ -251,17 +222,13 @@ const Documentation: React.FC<DocumentationProps> = ({ user }) => {
         ) : (
             <>
                 {/* Categories Grid (Folders) */}
-                {!currentCategory && (
-                    <div className="p-8 border-b border-neutral/50">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-secondary">Carpetas / Categorías</h3>
-                            {!loading && categories.length === 0 && (
-                                <span className="text-[10px] text-amber-600 font-bold uppercase tracking-widest">
-                                    <i className="fa-solid fa-circle-info mr-1"></i> No hay categorías creadas
-                                </span>
-                            )}
-                        </div>
-                        {filteredCategories.length > 0 ? (
+                <div className={`p-8 ${filteredCategories.length > 0 ? 'border-b border-neutral/50' : 'hidden'}`}>
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-secondary">
+                            {currentCategory ? `Subcategorías de ${currentCategory.name}` : 'Carpetas / Categorías'}
+                        </h3>
+                    </div>
+                    {filteredCategories.length > 0 && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                                 {filteredCategories.map(cat => (
                                     <div key={cat.id} className="relative group">
@@ -274,27 +241,14 @@ const Documentation: React.FC<DocumentationProps> = ({ user }) => {
                                             </div>
                                             <div className="truncate">
                                                 <p className="font-serif font-medium text-primary text-base leading-tight group-hover:text-brand truncate">{cat.name}</p>
-                                                <p className="text-[9px] text-secondary mt-1">Recursos corporativos</p>
+                                                <p className="text-[9px] text-secondary mt-1">{cat.description || 'Recursos corporativos'}</p>
                                             </div>
                                         </button>
-                                        {isAdmin && (
-                                            <button 
-                                                onClick={(e) => handleDeleteCategory(e, cat)}
-                                                className="absolute top-2 right-2 text-secondary hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-2"
-                                            >
-                                                <i className="fa-solid fa-trash text-xs"></i>
-                                            </button>
-                                        )}
                                     </div>
                                 ))}
                             </div>
-                        ) : (
-                            <div className="py-10 text-center text-secondary border border-dashed border-neutral">
-                                <p className="font-serif italic text-sm">Organiza tus archivos creando categorías.</p>
-                            </div>
-                        )}
-                    </div>
-                )}
+                    )}
+                </div>
 
                 {/* Documents List */}
                 {currentCategory && (
@@ -352,15 +306,6 @@ const Documentation: React.FC<DocumentationProps> = ({ user }) => {
                                             >
                                                 <i className="fa-solid fa-external-link"></i> Ver
                                             </a>
-                                            {isAdmin && (
-                                                <button 
-                                                    onClick={() => handleDeleteDoc(doc)}
-                                                    className="text-secondary hover:text-red-500 transition-colors px-2 py-1" 
-                                                    title="Eliminar"
-                                                >
-                                                    <i className="fa-solid fa-trash"></i>
-                                                </button>
-                                            )}
                                         </td>
                                     </tr>
                                 ))}
@@ -370,11 +315,6 @@ const Documentation: React.FC<DocumentationProps> = ({ user }) => {
                         <div className="py-20 text-center text-secondary">
                             <i className="fa-regular fa-folder-open text-4xl mb-4 opacity-30"></i>
                             <p className="font-serif italic">No se encontraron archivos en esta vista.</p>
-                            {isAdmin && currentCategory && (
-                                <div className="mt-4">
-                                    <button onClick={() => fileInputRef.current?.click()} className="text-xs font-bold text-brand hover:underline">Subir el primer documento a esta categoría</button>
-                                </div>
-                            )}
                         </div>
                     )}
                 </div>
