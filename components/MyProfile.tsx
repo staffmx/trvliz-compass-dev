@@ -41,11 +41,14 @@ const MyProfile: React.FC<MyProfileProps> = ({ user, onBack, onUserUpdate }) => 
             image: user.avatar || '',
             whatsapp: '',
             position: '',
-            associate_type: 'Travel Consultant',
+            tipo: 'Associate',
+            Branch: 'ROBLE',
             content: '',
             instagram: '',
             facebook: '',
-            tiktok: ''
+            tik_tok: '',
+            linkedIn: '',
+            especialidades: ''
           });
         }
       } catch (error) {
@@ -223,12 +226,36 @@ const MyProfile: React.FC<MyProfileProps> = ({ user, onBack, onUserUpdate }) => 
                                 <span className="absolute left-3 top-2.5 text-secondary"><i className="fa-brands fa-tiktok"></i></span>
                                 <input 
                                     type="text"
-                                    name="tiktok"
-                                    value={associate?.tiktok || ''}
+                                    name="tik_tok"
+                                    value={associate?.tik_tok || ''}
                                     onChange={handleAssociateChange}
                                     className="w-full pl-10 pr-4 py-2 bg-background border border-neutral text-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none transition-all"
                                 />
                             </div>
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-2">LinkedIn (URL)</label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-2.5 text-secondary"><i className="fa-brands fa-linkedin-in"></i></span>
+                                <input 
+                                    type="text"
+                                    name="linkedIn"
+                                    value={associate?.linkedIn || ''}
+                                    onChange={handleAssociateChange}
+                                    className="w-full pl-10 pr-4 py-2 bg-background border border-neutral text-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none transition-all"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-2">Especialidades</label>
+                            <input 
+                                type="text"
+                                name="especialidades"
+                                value={associate?.especialidades || ''}
+                                onChange={handleAssociateChange}
+                                placeholder="Ej: Viajes de Lujo, Cruceros, Europa..."
+                                className="w-full px-4 py-2 bg-background border border-neutral text-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none transition-all"
+                            />
                         </div>
                     </div>
                 </div>
@@ -308,31 +335,35 @@ const MyProfile: React.FC<MyProfileProps> = ({ user, onBack, onUserUpdate }) => 
                             />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-2">Tipo de Asociada</label>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-2">TIER</label>
                             <select 
-                                name="associate_type"
-                                value={associate?.associate_type || ''}
+                                name="tipo"
+                                value={associate?.tipo || ''}
                                 onChange={handleAssociateChange}
                                 className="w-full px-4 py-2 bg-background border border-neutral text-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none transition-all appearance-none"
                             >
-                                <option value="Travel Consultant">Travel Consultant</option>
-                                <option value="Elite Agent">Elite Agent</option>
-                                <option value="Partner">Partner</option>
-                                <option value="Admin">Admin</option>
+                                <option value="">Seleccionar TIER</option>
+                                <option value="SENIOR PARTNER">SENIOR PARTNER</option>
+                                <option value="JUNIOR PARTNER">JUNIOR PARTNER</option>
+                                <option value="ASSOCIATE">ASSOCIATE</option>
+                                <option value="NO APLICA">NO APLICA</option>
                             </select>
                         </div>
                         <div>
                             <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-2">Sucursal</label>
                             <select 
-                                name="branch"
-                                value={associate?.branch || ''}
+                                name="Branch"
+                                value={associate?.Branch || ''}
                                 onChange={handleAssociateChange}
                                 className="w-full px-4 py-2 bg-background border border-neutral text-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none transition-all appearance-none"
                             >
                                 <option value="">Seleccionar Sucursal</option>
                                 <option value="ROBLE">ROBLE</option>
-                                <option value="BAJA">BAJA</option>
                                 <option value="CDMX">CDMX</option>
+                                <option value="SALTILLO">SALTILLO</option>
+                                <option value="BAJA">BAJA</option>
+                                <option value="IC">IC</option>
+                                <option value="ASSOCIATE">ASSOCIATE</option>
                             </select>
                         </div>
                     </div>

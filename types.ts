@@ -16,6 +16,7 @@ export interface User {
   name: string;
   email: string;
   role: 'admin' | 'employee';
+  roles?: Role[];
   avatar?: string;
 }
 
@@ -85,12 +86,14 @@ export interface Associate {
   image: string;
   whatsapp?: string;
   position?: string;
-  associate_type?: string;
+  tipo?: string;           // DB column: tipo
   content?: string;
   instagram?: string;
   facebook?: string;
-  tiktok?: string;
-  branch?: string;
+  tik_tok?: string;        // DB column: tik_tok
+  linkedIn?: string;       // DB column: linkedIn
+  especialidades?: string; // DB column: especialidades
+  Branch?: string;         // DB column: Branch
   created_at?: string;
 }
 

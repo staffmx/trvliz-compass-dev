@@ -16,6 +16,12 @@ const AdminPanel = ({ user }: any) => {
     setDbStatus(api.isSupabaseConnected() ? 'connected' : 'error');
   }, []);
 
+  const hasRole = (roleName: string) => {
+    if (user?.role === 'admin') return true;
+    const roles = (user?.roles || []) as Role[];
+    return roles.some(r => r.name.toLowerCase() === roleName.toLowerCase());
+  };
+
   const SectionHeader = ({ title, subtitle, actionLabel, onAction, secondActionLabel, onSecondAction }: { title: string, subtitle: string, actionLabel?: string, onAction?: () => void, secondActionLabel?: string, onSecondAction?: () => void }) => (
     <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-6">
       <div>
@@ -56,47 +62,76 @@ const AdminPanel = ({ user }: any) => {
           <button onClick={() => setActiveSection('overview')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'overview' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
             <i className="fa-solid fa-chart-line w-5"></i> Dashboard
           </button>
-          <button onClick={() => setActiveSection('notices')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'notices' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-            <i className="fa-solid fa-bullhorn w-5"></i> Avisos
-          </button>
+
+          {hasRole('editor_avisos') && (
+            <button onClick={() => setActiveSection('notices')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'notices' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+              <i className="fa-solid fa-bullhorn w-5"></i> Avisos
+            </button>
+          )}
+
           <button onClick={() => setActiveSection('directory')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'directory' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
             <i className="fa-solid fa-address-book w-5"></i> Directorio
           </button>
-          <button onClick={() => setActiveSection('sellers')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'sellers' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-            <i className="fa-solid fa-trophy w-5"></i> Top Producers
-          </button>
-          <button onClick={() => setActiveSection('events')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'events' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-            <i className="fa-solid fa-calendar-days w-5"></i> Eventos
-          </button>
-          <button onClick={() => setActiveSection('documents')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'documents' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-            <i className="fa-solid fa-folder-tree w-5"></i> Documentos
-          </button>
+
+          {hasRole('editor_vendedores') && (
+            <button onClick={() => setActiveSection('sellers')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'sellers' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+              <i className="fa-solid fa-trophy w-5"></i> Top Producers
+            </button>
+          )}
+
+          {hasRole('editor_eventos') && (
+            <button onClick={() => setActiveSection('events')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'events' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+              <i className="fa-solid fa-calendar-days w-5"></i> Eventos
+            </button>
+          )}
+
+          {hasRole('editor_documentos') && (
+            <button onClick={() => setActiveSection('documents')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'documents' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+              <i className="fa-solid fa-folder-tree w-5"></i> Documentos
+            </button>
+          )}
 
           <div className="px-8 py-4 mt-4 mb-2">
             <p className="text-[10px] font-bold uppercase tracking-[3px] text-accent/60">Capacitación</p>
           </div>
 
-          <button onClick={() => setActiveSection('recorded_webinars')} className={`w-full flex items-center gap-4 px-10 py-3 text-[11px] font-bold uppercase tracking-widest transition-all ${activeSection === 'recorded_webinars' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-            <i className="fa-solid fa-play w-4"></i> Webinars Grabados
-          </button>
-          <button onClick={() => setActiveSection('certifications')} className={`w-full flex items-center gap-4 px-10 py-3 text-[11px] font-bold uppercase tracking-widest transition-all ${activeSection === 'certifications' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-            <i className="fa-solid fa-award w-4"></i> Certificaciones
-          </button>
-          <button onClick={() => setActiveSection('mentorships')} className={`w-full flex items-center gap-4 px-10 py-3 text-[11px] font-bold uppercase tracking-widest transition-all ${activeSection === 'mentorships' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-            <i className="fa-solid fa-graduation-cap w-4"></i> Mentoría 1:1
-          </button>
+          {(hasRole('editor_webinars') || hasRole('editor_eventos')) && (
+            <button onClick={() => setActiveSection('recorded_webinars')} className={`w-full flex items-center gap-4 px-10 py-3 text-[11px] font-bold uppercase tracking-widest transition-all ${activeSection === 'recorded_webinars' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+              <i className="fa-solid fa-play w-4"></i> Webinars Grabados
+            </button>
+          )}
+          
+          {(hasRole('editor_certificaciones') || hasRole('editor_eventos')) && (
+            <button onClick={() => setActiveSection('certifications')} className={`w-full flex items-center gap-4 px-10 py-3 text-[11px] font-bold uppercase tracking-widest transition-all ${activeSection === 'certifications' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+              <i className="fa-solid fa-award w-4"></i> Certificaciones
+            </button>
+          )}
+          
+          {(hasRole('editor_mentorias') || hasRole('editor_eventos')) && (
+            <button onClick={() => setActiveSection('mentorships')} className={`w-full flex items-center gap-4 px-10 py-3 text-[11px] font-bold uppercase tracking-widest transition-all ${activeSection === 'mentorships' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+              <i className="fa-solid fa-graduation-cap w-4"></i> Mentoría 1:1
+            </button>
+          )}
 
           <div className="my-4 border-t border-white/5 mx-8"></div>
 
-          <button onClick={() => setActiveSection('users')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'users' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-            <i className="fa-solid fa-users-gear w-5"></i> Usuarios
-          </button>
-          <button onClick={() => setActiveSection('blog')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'blog' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-            <i className="fa-solid fa-newspaper w-5"></i> Blogs
-          </button>
-          <button onClick={() => setActiveSection('search_logs')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'search_logs' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-            <i className="fa-solid fa-magnifying-glass w-5"></i> Búsquedas
-          </button>
+          {user?.role === 'admin' && (
+            <button onClick={() => setActiveSection('users')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'users' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+              <i className="fa-solid fa-users-gear w-5"></i> Usuarios
+            </button>
+          )}
+          
+          {hasRole('editor_blogs') && (
+            <button onClick={() => setActiveSection('blog')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'blog' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+              <i className="fa-solid fa-newspaper w-5"></i> Blogs
+            </button>
+          )}
+
+          {user?.role === 'admin' && (
+            <button onClick={() => setActiveSection('search_logs')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'search_logs' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
+              <i className="fa-solid fa-magnifying-glass w-5"></i> Búsquedas
+            </button>
+          )}
         </nav>
 
         <div className="p-8 border-t border-white/5">
@@ -983,15 +1018,15 @@ const AdminUsers = ({ Header }: any) => {
     e.preventDefault();
     setSaving(true);
     try {
-      const success = await api.createUserProfile(formData, selectedRoleIds);
-      if (success) {
+      const result = await api.createUserProfile(formData, selectedRoleIds);
+      if (result.success) {
         setIsFormOpen(false);
         setEditingId(null);
         setFormData({ name: '', last_name: '', email: '', position: '', avatar_url: '' });
         setSelectedRoleIds([]);
         loadData();
       } else {
-        alert("Error al guardar el usuario.");
+        alert("Error al guardar el usuario: " + (result.error || "Causa desconocida"));
       }
     } finally { setSaving(false); }
   };
@@ -1014,9 +1049,17 @@ const AdminUsers = ({ Header }: any) => {
 
       {isFormOpen && (
         <div className="mb-12 bg-white border border-accent/20 p-10 shadow-2xl animate-slide-down">
-          <h3 className="font-serif text-2xl text-primary mb-8 border-b border-neutral pb-4">
+          <h3 className="font-serif text-2xl text-primary mb-4 border-b border-neutral pb-4">
             {editingId ? 'Editar Usuario' : 'Detalles del Nuevo Usuario'}
           </h3>
+          {!editingId && (
+            <div className="mb-8 p-4 bg-accent/5 border border-accent/20 rounded-sm">
+              <p className="text-xs text-accent font-medium leading-relaxed">
+                <i className="fa-solid fa-circle-info mr-2"></i>
+                <strong>Nota:</strong> Al crear el perfil aquí, asignas sus permisos y roles. Recuerda que el usuario también debe estar registrado en <strong>Supabase Auth</strong> con el mismo correo para poder iniciar sesión. El sistema vinculará ambas partes automáticamente en su primer ingreso.
+              </p>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
@@ -1712,19 +1755,33 @@ const AdminDirectory = ({ Header }: any) => {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   
+  const editorConfig = React.useMemo(() => ({
+    readonly: false,
+    toolbarAdaptive: false,
+    placeholder: 'Escribe la biografía o trayectoria profesional aquí...',
+    minHeight: 300
+  }), []);
+  
   const emptyForm: Associate = {
     name: '',
     last_name: '',
     email: '',
     position: '',
-    branch: '',
+    Branch: '',
+    tipo: '',
     image: '',
     content: '',
     whatsapp: '',
+    instagram: '',
+    facebook: '',
+    tik_tok: '',
+    linkedIn: '',
+    especialidades: '',
     user_id: ''
   };
   
   const [formData, setFormData] = useState<Associate>(emptyForm);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -1756,13 +1813,13 @@ const AdminDirectory = ({ Header }: any) => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm("¿Estás seguro de que deseas eliminar este perfil de asociada?")) return;
     try {
         await api.deleteAssociate(id);
         loadData();
-    } catch (err) {
+        setConfirmDeleteId(null);
+    } catch (err: any) {
         console.error("Error deleting associate:", err);
-        alert("Error al eliminar.");
+        alert(`Error al eliminar: ${err.message || 'Error desconocido'}`);
     }
   };
 
@@ -1826,8 +1883,34 @@ const AdminDirectory = ({ Header }: any) => {
                 <input required type="text" value={formData.position} onChange={e => setFormData({...formData, position: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" />
               </div>
               <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">TIER</label>
+                <select 
+                  value={formData.tipo || ''} 
+                  onChange={e => setFormData({...formData, tipo: e.target.value})} 
+                  className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent"
+                >
+                  <option value="">Seleccionar TIER</option>
+                  <option value="SENIOR PARTNER">SENIOR PARTNER</option>
+                  <option value="JUNIOR PARTNER">JUNIOR PARTNER</option>
+                  <option value="ASSOCIATE">ASSOCIATE</option>
+                  <option value="NO APLICA">NO APLICA</option>
+                </select>
+              </div>
+              <div>
                 <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Sucursal</label>
-                <input type="text" value={formData.branch} onChange={e => setFormData({...formData, branch: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" placeholder="Ej. ROBLE" />
+                <select 
+                  value={formData.Branch || ''} 
+                  onChange={e => setFormData({...formData, Branch: e.target.value})} 
+                  className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent"
+                >
+                  <option value="">Seleccionar Sucursal</option>
+                  <option value="ROBLE">ROBLE</option>
+                  <option value="CDMX">CDMX</option>
+                  <option value="SALTILLO">SALTILLO</option>
+                  <option value="BAJA">BAJA</option>
+                  <option value="IC">IC</option>
+                  <option value="ASSOCIATE">ASSOCIATE</option>
+                </select>
               </div>
               <div>
                 <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">WhatsApp</label>
@@ -1847,12 +1930,85 @@ const AdminDirectory = ({ Header }: any) => {
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Imagen de Perfil (URL)</label>
-                <input type="url" value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" placeholder="https://..." />
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Imagen de Perfil</label>
+                <div className="flex items-center gap-6">
+                  {formData.image && (
+                    <img src={formData.image} alt="Perfil" className="w-24 h-24 object-cover rounded-full border-2 border-neutral shadow-sm" />
+                  )}
+                  <div className="flex-1">
+                    <input 
+                      type="file" 
+                      accept="image/png, image/webp, image/jpeg"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        
+                        const validTypes = ['image/png', 'image/webp', 'image/jpeg'];
+                        if (!validTypes.includes(file.type)) {
+                          alert('Formato no válido. Solo se permiten archivos PNG, WEBP o JPG.');
+                          return;
+                        }
+
+                        if (file.size > 1024 * 1024) {
+                          alert('El archivo es demasiado grande. El peso máximo permitido es de 1 MB.');
+                          return;
+                        }
+
+                        setSaving(true);
+                        try {
+                          const url = await api.uploadAssociateImage(file);
+                          if (url) {
+                            setFormData(prev => ({...prev, image: url}));
+                          } else {
+                            alert('No se pudo subir la imagen. Inténtalo de nuevo.');
+                          }
+                        } catch (err) {
+                          console.error(err);
+                          alert('Error al subir la imagen.');
+                        } finally {
+                          setSaving(false);
+                        }
+                      }}
+                      className="w-full p-2 border border-neutral text-sm bg-background file:mr-4 file:py-2 file:px-4 file:rounded-none file:border-0 file:text-xs file:font-semibold file:bg-neutral file:text-primary hover:file:bg-neutral/80 outline-none" 
+                    />
+                    <p className="text-[10px] text-secondary mt-1">Formatos permitidos: PNG, WEBP, JPG. Peso máximo: 1 MB.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Redes Sociales</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6 bg-background/50 border border-neutral">
+                  <div>
+                    <label className="text-[9px] font-bold uppercase tracking-widest text-secondary mb-2 block">Instagram (URL)</label>
+                    <input type="text" value={formData.instagram || ''} onChange={e => setFormData({...formData, instagram: e.target.value})} className="w-full p-3 border border-neutral text-sm bg-white outline-none focus:border-accent" placeholder="https://instagram.com/..." />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold uppercase tracking-widest text-secondary mb-2 block">Facebook (URL)</label>
+                    <input type="text" value={formData.facebook || ''} onChange={e => setFormData({...formData, facebook: e.target.value})} className="w-full p-3 border border-neutral text-sm bg-white outline-none focus:border-accent" placeholder="https://facebook.com/..." />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold uppercase tracking-widest text-secondary mb-2 block">TikTok (URL)</label>
+                    <input type="text" value={formData.tik_tok || ''} onChange={e => setFormData({...formData, tik_tok: e.target.value})} className="w-full p-3 border border-neutral text-sm bg-white outline-none focus:border-accent" placeholder="https://tiktok.com/@..." />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold uppercase tracking-widest text-secondary mb-2 block">LinkedIn (URL)</label>
+                    <input type="text" value={formData.linkedIn || ''} onChange={e => setFormData({...formData, linkedIn: e.target.value})} className="w-full p-3 border border-neutral text-sm bg-white outline-none focus:border-accent" placeholder="https://linkedin.com/in/..." />
+                  </div>
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Especialidades</label>
+                <input type="text" value={formData.especialidades || ''} onChange={e => setFormData({...formData, especialidades: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" placeholder="Ej: Viajes de Lujo, Cruceros, Europa (separadas por coma)" />
               </div>
               <div className="md:col-span-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Biografía / Resumen</label>
-                <textarea rows={4} value={formData.content || ''} onChange={e => setFormData({...formData, content: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent resize-none"></textarea>
+                <div className="border border-neutral bg-white [&_.jodit-container]:!border-none [&_.jodit-toolbar__box]:!bg-background [&_.jodit-toolbar__box]:!border-b [&_.jodit-toolbar__box]:!border-neutral [&_.jodit-workplace]:!min-h-[300px]">
+                  <JoditEditor
+                    value={formData.content || ''}
+                    config={editorConfig}
+                    onBlur={newContent => setFormData({...formData, content: newContent})}
+                  />
+                </div>
               </div>
             </div>
             <button type="submit" disabled={saving} className="bg-brand text-white px-12 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all shadow-xl disabled:opacity-50">
@@ -1869,6 +2025,7 @@ const AdminDirectory = ({ Header }: any) => {
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary">Nombre y Perfil</th>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary">Sucursal</th>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary">Posición / Cargo</th>
+              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary">Nivel</th>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary text-right">Acciones</th>
             </tr>
           </thead>
@@ -1890,12 +2047,38 @@ const AdminDirectory = ({ Header }: any) => {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-6 text-xs font-bold text-brand uppercase tracking-widest">{assoc.branch || '-'}</td>
+                  <td className="px-6 py-6 text-xs font-bold text-brand uppercase tracking-widest">{assoc.Branch || '-'}</td>
                   <td className="px-6 py-6 text-xs text-secondary italic font-serif">{assoc.position}</td>
-                  <td className="px-6 py-6 text-right">
-                    <button onClick={() => handleEdit(assoc)} className="text-secondary hover:text-brand px-2 transition-colors"><i className="fa-solid fa-pen"></i></button>
-                    <button onClick={() => assoc.id && handleDelete(assoc.id)} className="text-secondary hover:text-red-600 px-2 transition-colors"><i className="fa-solid fa-trash"></i></button>
-                  </td>
+                  <td className="px-6 py-6 text-[10px] font-bold text-secondary uppercase tracking-widest">{assoc.tipo || '-'}</td>
+                  <td className="px-6 py-6 text-right whitespace-nowrap">
+                     <div className="flex items-center justify-end">
+                       <button onClick={() => handleEdit(assoc)} className="w-9 h-9 flex items-center justify-center text-secondary hover:bg-background hover:text-brand transition-all" title="Editar Perfil"><i className="fa-solid fa-pen text-sm"></i></button>
+                       {confirmDeleteId === assoc.id ? (
+                         <div className="flex items-center gap-1 animate-fade-in bg-white border border-neutral p-1 shadow-sm">
+                           <button 
+                             onClick={() => assoc.id && handleDelete(assoc.id)}
+                             className="bg-red-600 text-white text-[9px] px-2 py-1 uppercase font-bold hover:bg-red-700 transition-colors"
+                           >
+                             Sí
+                           </button>
+                           <button 
+                             onClick={() => setConfirmDeleteId(null)}
+                             className="bg-neutral text-primary text-[9px] px-2 py-1 uppercase font-bold hover:bg-neutral/80 transition-colors"
+                           >
+                             No
+                           </button>
+                         </div>
+                       ) : (
+                         <button 
+                           onClick={() => setConfirmDeleteId(assoc.id || null)} 
+                           className="w-9 h-9 flex items-center justify-center text-secondary hover:bg-red-50 hover:text-red-600 transition-all"
+                           title="Eliminar Asociada"
+                         >
+                           <i className="fa-solid fa-trash text-sm"></i>
+                         </button>
+                       )}
+                     </div>
+                   </td>
                 </tr>
             ))}
           </tbody>

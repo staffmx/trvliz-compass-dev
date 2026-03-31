@@ -43,23 +43,75 @@ const App: React.FC = () => {
   const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('traveliz_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-      setIsAuthenticated(true);
-    }
+    // 1. Verificar sesión inicial
+    api.getCurrentSession().then(session => {
+      if (session) {
+        handleProfileSync(session.user.id, session.user.email);
+      }
+    });
+
+    // 2. Escuchar cambios de autenticación
+    const subscription = api.subscribeToAuth((session) => {
+      if (session) {
+        handleProfileSync(session.user.id, session.user.email);
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    });
+
+    return () => {
+      if (subscription) subscription.unsubscribe();
+    };
   }, []);
 
-  const handleLogin = (userData: User) => {
-    setUser(userData);
-    setIsAuthenticated(true);
-    localStorage.setItem('traveliz_user', JSON.stringify(userData));
+  const handleProfileSync = async (userId: string, email?: string) => {
+    try {
+      const profile = await api.getUserProfile(userId, email);
+      
+      if (profile) {
+        // Mapear UserProfile a User
+        const userData: User = {
+          id: profile.id,
+          name: profile.name,
+          email: profile.email,
+          role: (profile.roles?.some(r => r && r.name && (r.name.toLowerCase().includes('admin') || r.name.toLowerCase().includes('administrador'))) || profile.email === 'yibrant@internationalcruises.mx') ? 'admin' : 'employee',
+          roles: profile.roles || [],
+          avatar: profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'U')}&background=random`
+        };
+        setUser(userData);
+        setIsAuthenticated(true);
+      } else {
+        // FALLBACK: El usuario existe en Auth pero no en la tabla Profiles todavía
+        // Esto pasa si el trigger no se ejecutó o hay retraso.
+        const fallbackUser: User = {
+          id: userId,
+          name: email?.split('@')[0] || 'Usuario',
+          email: email || '',
+          role: (email === 'yibrant@internationalcruises.mx') ? 'admin' : 'employee',
+          roles: [],
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(email || 'U')}&background=random`
+        };
+        setUser(fallbackUser);
+        setIsAuthenticated(true);
+      }
+    } catch (err) {
+      console.error("Error syncing profile:", err);
+      setIsAuthenticated(false);
+    }
   };
 
-  const handleLogout = () => {
+  const handleLogin = (userData: User) => {
+    // Esta función ahora será llamada indirectamente por el listener o tras el signIn
+    setUser(userData);
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = async () => {
+    await api.signOut();
     setUser(null);
     setIsAuthenticated(false);
-    localStorage.removeItem('traveliz_user');
+    localStorage.removeItem('traveliz_user'); // Limpiar por si acaso había basura
     setCurrentNav(NavigationItem.DASHBOARD);
   };
 

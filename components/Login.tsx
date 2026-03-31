@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { api } from '../services/api';
 
 interface LoginProps {
   onLogin: (user: any) => void;
@@ -11,37 +12,36 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    // Mock authentication delay
-    setTimeout(() => {
-      setIsLoading(false);
-      // Hardcoded Andrea as Admin for demonstration purposes
-      if (email === 'empleado@traveliz.com' && password === 'admin') {
-        onLogin({
-          id: '1',
-          name: 'Andrea Martínez',
-          email: email,
-          role: 'admin', // CHANGED TO ADMIN TO TEST THE PANEL
-          avatar: 'https://picsum.photos/id/64/200/200'
-        });
-      } else {
-        if (email && password) {
-             onLogin({
-                id: '2',
-                name: 'Usuario Demo',
-                email: email,
-                role: 'employee',
-                avatar: 'https://picsum.photos/id/177/200/200'
-              });
+    try {
+      const { data, error: signInError } = await api.signIn(email, password);
+
+      if (signInError) {
+        if (signInError.message.includes("Invalid login credentials")) {
+          setError("Credenciales inválidas. Por favor verifica tu correo y contraseña.");
+        } else if (signInError.message.includes("Email not confirmed")) {
+          setError("Por favor confirma tu correo electrónico antes de entrar.");
         } else {
-            setError('Por favor ingresa usuario y contraseña.');
+          setError(signInError.message);
         }
+        setIsLoading(false);
+        return;
       }
-    }, 1500);
+
+      // Si el login es exitoso, App.tsx detectará el cambio mediante el listener
+      // y hará el handleProfileSync. No necesitamos llamar a onLogin aquí directamente
+      // a menos que queramos pasar datos inmediatos.
+      // Pero por seguridad y consistencia, dejaremos que App.tsx maneje el estado global.
+      
+    } catch (err: any) {
+      console.error("Login catch:", err);
+      setError("Error de conexión. Intenta de nuevo.");
+      setIsLoading(false);
+    }
   };
 
   return (

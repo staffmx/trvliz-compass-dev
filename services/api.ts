@@ -105,8 +105,97 @@ export interface DocItem {
 export const api = {
   isSupabaseConnected: () => {
     if (!supabase) return false;
-    // Simple verification
     return true;
+  },
+
+  // --- AUTH & SESSION ---
+  signIn: async (email: string, password: string) => {
+    if (!supabase) throw new Error("Supabase no configurado");
+    return await supabase.auth.signInWithPassword({ email, password });
+  },
+
+  signOut: async () => {
+    if (!supabase) return;
+    return await supabase.auth.signOut();
+  },
+
+  getCurrentSession: async () => {
+    if (!supabase) return null;
+    const { data: { session } } = await supabase.auth.getSession();
+    return session;
+  },
+
+  subscribeToAuth: (callback: (session: any) => void) => {
+    if (!supabase) return { unsubscribe: () => {} };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      callback(session);
+    });
+    return subscription;
+  },
+
+  getUserProfile: async (userId: string, email?: string): Promise<UserProfile | null> => {
+    if (!supabase) return null;
+    try {
+      // Intentar por ID con join (estrucutra original pero con maybeSingle)
+      let { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          user_roles (
+            roles (
+              id,
+              name,
+              color
+            )
+          )
+        `)
+        .eq('id', userId)
+        .maybeSingle();
+      
+      // Fallback por email si el ID falla
+      if (!data && email) {
+        const { data: dataByEmail, error: errorByEmail } = await supabase
+          .from('profiles')
+          .select(`
+            *,
+            user_roles (
+              roles (
+                id,
+                name,
+                color
+              )
+            )
+          `)
+          .eq('email', email)
+          .maybeSingle();
+        
+        if (dataByEmail) {
+          data = dataByEmail;
+          // AUTO-LINKING: Si lo encontramos por email pero el ID es diferente, lo vinculamos al nuevo Auth ID
+          if (dataByEmail.id !== userId) {
+            console.log("Auto-linking profile found by email to new Auth ID:", userId);
+            const linked = await api.linkProfileToAuth(dataByEmail.id, userId);
+            if (linked) {
+              data.id = userId; // Actualizar localmente para devolver el ID correcto
+            }
+          }
+        }
+      }
+
+      if (error || !data) {
+        console.warn("Profile not found:", error);
+        return null;
+      }
+      
+      return {
+        ...data,
+        name: data.full_name || data.name || '',
+        roles: data.user_roles?.map((ur: any) => ur.roles).filter(Boolean) || []
+      };
+    } catch (err) {
+      console.error("Error fetching user profile:", err);
+      return null;
+    }
   },
 
   // --- RECORDED WEBINARS ---
@@ -189,6 +278,29 @@ export const api = {
     }
   },
 
+  uploadAssociateImage: async (file: File): Promise<string | null> => {
+    if (!supabase) return null;
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('travel_advisors')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('travel_advisors')
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (err) {
+      console.error("Error uploading associate image:", err);
+      return null;
+    }
+  },
+
   // --- USERS & ROLES ---
   getRoles: async (): Promise<Role[]> => {
     if (!supabase) return [];
@@ -243,10 +355,11 @@ export const api = {
       }
       
       return (data || []).map(profile => {
-        const [firstName, ...lastNameParts] = (profile.name || '').split(' ');
+        const nameToSplit = profile.full_name || profile.name || '';
+        const [firstName, ...lastNameParts] = nameToSplit.split(' ');
         return {
           ...profile,
-          name: profile.last_name === undefined ? firstName : profile.name,
+          name: profile.last_name === undefined ? firstName : (profile.full_name || profile.name),
           last_name: profile.last_name === undefined ? lastNameParts.join(' ') : profile.last_name,
           roles: profile.user_roles?.map((ur: any) => ur.roles) || []
         };
@@ -257,33 +370,90 @@ export const api = {
     }
   },
 
-  createUserProfile: async (userData: Partial<UserProfile>, roleIds: number[]): Promise<boolean> => {
-    if (!supabase) return false;
+  createUserProfile: async (userData: Partial<UserProfile>, roleIds: number[]): Promise<{ success: boolean; error?: string }> => {
+    if (!supabase) return { success: false, error: "No connection" };
     try {
+      // 1. Verificar si ya existe un perfil con ese email para evitar conflictos de UNIQUE
+      let existingId = userData.id;
+      
+      if (!existingId && userData.email) {
+        const { data: existing } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', userData.email)
+          .maybeSingle();
+        if (existing) existingId = existing.id;
+      }
+
+      // 2. Preparar datos
+      // Si no existe, generamos un UUID para evitar que tome el del Admin por defecto en el DB
+      const finalId = existingId || (window.crypto ? window.crypto.randomUUID() : Math.random().toString(36).substring(2));
+      
+      const profileToSave = {
+        id: finalId,
+        full_name: `${userData.name || ''} ${userData.last_name || ''}`.trim(),
+        email: userData.email,
+        position: userData.position,
+        avatar_url: userData.avatar_url
+      };
+
       const { data: profile, error: pError } = await supabase
         .from('profiles')
-        .upsert({
-          id: userData.id || undefined,
-          name: `${userData.name || ''} ${userData.last_name || ''}`.trim(),
-          email: userData.email,
-          position: userData.position,
-          avatar_url: userData.avatar_url
-        })
+        .upsert(profileToSave)
         .select()
         .single();
       
       if (pError) throw pError;
 
+      // 3. Actualizar roles
+      await supabase.from('user_roles').delete().eq('user_id', profile.id);
       if (roleIds.length > 0) {
-        await supabase.from('user_roles').delete().eq('user_id', profile.id);
         const rolePayload = roleIds.map(rid => ({ user_id: profile.id, role_id: rid }));
         const { error: rError } = await supabase.from('user_roles').insert(rolePayload);
         if (rError) throw rError;
       }
 
+      return { success: true };
+    } catch (err: any) {
+      console.error("Error creating/updating user profile:", err);
+      return { success: false, error: err.message || "Error desconocido" };
+    }
+  },
+
+  linkProfileToAuth: async (oldProfileId: string, newAuthId: string): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      // 1. Actualizar el ID en la tabla profiles
+      // Nota: Esto puede fallar si hay RLS estricto o si el ID es PK y tiene FKs.
+      // Si falla, creamos uno nuevo y movemos los roles.
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ id: newAuthId })
+        .eq('id', oldProfileId);
+
+      if (updateError) {
+        console.warn("Could not direct update ID, trying copy strategy:", updateError.message);
+        
+        // Estrategia B: Obtener datos, insertar nuevo, mover roles, borrar viejo
+        const { data: oldProfile } = await supabase.from('profiles').select('*').eq('id', oldProfileId).single();
+        if (!oldProfile) return false;
+
+        const { error: insertError } = await supabase.from('profiles').insert({
+          ...oldProfile,
+          id: newAuthId
+        });
+        if (insertError) throw insertError;
+
+        // Mover roles
+        await supabase.from('user_roles').update({ user_id: newAuthId }).eq('user_id', oldProfileId);
+        
+        // Borrar viejo
+        await supabase.from('profiles').delete().eq('id', oldProfileId);
+      }
+      
       return true;
     } catch (err) {
-      console.error("Error upserting user:", err);
+      console.error("Error linking profile to auth ID:", err);
       return false;
     }
   },
@@ -346,7 +516,7 @@ export const api = {
       const { error } = await supabase
         .from('profiles')
         .update({
-          name: `${profileData.name || ''} ${profileData.last_name || ''}`.trim(),
+          full_name: `${profileData.name || ''} ${profileData.last_name || ''}`.trim(),
           position: profileData.position,
           avatar_url: profileData.avatar_url
         })
@@ -362,15 +532,58 @@ export const api = {
 
   upsertAssociate: async (associate: Associate): Promise<Associate | null> => {
     if (!supabase) return null;
-    const { data, error } = await supabase.from('associates').upsert(associate).select().single();
-    if (error) throw error;
+    
+    // Explicitly define the payload to avoid sending legacy fields like 'associate_type' 
+    // or 'tiktok' which may exist in the object but are not in the database schema.
+    const payload = {
+      id: associate.id,
+      user_id: associate.user_id === '' ? null : associate.user_id,
+      name: associate.name,
+      last_name: associate.last_name,
+      email: associate.email,
+      image: associate.image,
+      whatsapp: associate.whatsapp,
+      position: associate.position,
+      tipo: associate.tipo,
+      content: associate.content,
+      instagram: associate.instagram,
+      facebook: associate.facebook,
+      tik_tok: associate.tik_tok,
+      linkedIn: associate.linkedIn,
+      especialidades: associate.especialidades,
+      Branch: associate.Branch
+    };
+
+    // Remove undefined fields so they don't overwrite with null unless intended
+    Object.keys(payload).forEach(key => 
+      (payload as any)[key] === undefined && delete (payload as any)[key]
+    );
+
+      let query;
+      if (payload.id && payload.id !== 0) {
+        const { id, ...updateData } = payload;
+        query = supabase.from('associates').update(updateData).eq('id', id);
+      } else {
+        const { id, ...insertData } = payload;
+        query = supabase.from('associates').insert(insertData);
+      }
+
+      const { data, error } = await query.select().single();
+    if (error) {
+      console.error("Supabase upsertAssociate error:", error);
+      throw error;
+    }
     return data;
   },
 
   deleteAssociate: async (id: number): Promise<boolean> => {
     if (!supabase) return false;
     const { error } = await supabase.from('associates').delete().eq('id', id);
-    return !error;
+    if (error) {
+      console.error("Supabase deleteAssociate error:", error);
+      throw error;
+    }
+    return true;
   },
 
   getNotices: async (): Promise<Notice[]> => {

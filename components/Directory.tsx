@@ -2,7 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Associate } from '../types';
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 20;
+const BLANK_USER = 'https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/travel_advisors/blank-user.png';
+
+const toTitleCase = (str: string) => {
+  if (!str) return '';
+  return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
+
+const BRANCHES = ['TODOS', 'ROBLE', 'CDMX', 'SALTILLO', 'BAJA', 'IC', 'ASSOCIATE'];
 
 interface DirectoryProps {
     onViewProfile?: (id: number) => void;
@@ -13,6 +21,7 @@ const Directory: React.FC<DirectoryProps> = ({ onViewProfile }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedBranch, setSelectedBranch] = useState('TODOS');
   const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch data on mount
@@ -33,9 +42,15 @@ const Directory: React.FC<DirectoryProps> = ({ onViewProfile }) => {
     fetchData();
   }, []);
 
-  // Filter Logic - Null safe search including last_name
+  // Filter Logic - Null safe search including last_name and branch
   const filteredAssociates = (associates || []).filter(associate => {
     if (!associate) return false;
+    
+    // Branch filter
+    if (selectedBranch !== 'TODOS' && associate.Branch !== selectedBranch) {
+        return false;
+    }
+
     const name = (associate.name || "").toLowerCase();
     const lastName = (associate.last_name || "").toLowerCase();
     const email = (associate.email || "").toLowerCase();
@@ -50,10 +65,10 @@ const Directory: React.FC<DirectoryProps> = ({ onViewProfile }) => {
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const currentAssociates = filteredAssociates.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
-  // Reset to page 1 when search changes
+  // Reset to page 1 when search or branch changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, selectedBranch]);
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -67,9 +82,6 @@ const Directory: React.FC<DirectoryProps> = ({ onViewProfile }) => {
       
       {/* Header & Search */}
       <div className="text-center mb-16">
-          <span className="text-brand text-xs font-bold uppercase tracking-[4px] mb-4 block">
-            Nuestro Equipo
-          </span>
           <h1 className="text-4xl md:text-5xl font-serif font-medium text-primary mb-12">
             Directorio de Asociadas
           </h1>
@@ -89,8 +101,25 @@ const Directory: React.FC<DirectoryProps> = ({ onViewProfile }) => {
             </div>
           </div>
           
+          {/* Branch Filter Tabs */}
+          <div className="flex flex-wrap justify-center gap-2 md:gap-4 mb-5 mt-10">
+            {BRANCHES.map(branch => (
+                <button
+                    key={branch}
+                    onClick={() => setSelectedBranch(branch)}
+                    className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest border transition-all duration-300 ${
+                        selectedBranch === branch 
+                        ? 'bg-primary border-primary text-white shadow-lg' 
+                        : 'bg-transparent border-black/10 text-secondary hover:border-accent hover:text-accent'
+                    }`}
+                >
+                    {branch}
+                </button>
+            ))}
+          </div>
+          
           {associates.length > 0 && (
-            <p className="text-[10px] text-secondary mt-4 uppercase tracking-widest font-bold">
+            <p className="text-[10px] text-secondary mt-1 uppercase tracking-widest font-bold">
               Mostrando {filteredAssociates.length} de {associates.length} asociadas encontradas
             </p>
           )}
@@ -136,19 +165,22 @@ const Directory: React.FC<DirectoryProps> = ({ onViewProfile }) => {
                     key={associate.id || `assoc-${idx}`} 
                     className="group flex flex-col bg-white border border-black/5 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] transition-all duration-500"
                 >
-                    <div className="w-full aspect-square overflow-hidden bg-[#F5F1E8]">
+                    <div 
+                        className="w-full aspect-square overflow-hidden bg-[#F5F1E8] cursor-pointer"
+                        onClick={() => associate.id && onViewProfile && onViewProfile(associate.id)}
+                    >
                     <img 
-                        src={associate.image || 'https://via.placeholder.com/400x400?text=No+Photo'} 
+                        src={associate.image || BLANK_USER} 
                         alt={`${associate.name} ${associate.last_name || ''}`} 
                         className="w-full h-full object-cover transition-all duration-[600ms] ease-out group-hover:scale-[1.05] grayscale group-hover:grayscale-0"
-                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x400?text=No+Photo' }}
+                        onError={(e) => { (e.target as HTMLImageElement).src = BLANK_USER }}
                     />
                     </div>
 
                     <div className="p-5 text-center flex-1 flex flex-col justify-between">
                     <div>
                         <h3 className="font-serif text-lg font-medium mb-0.5 text-primary truncate">
-                            {associate.name} {associate.last_name}
+                            {toTitleCase(associate.name)} {toTitleCase(associate.last_name || "")}
                         </h3>
                         <p className="text-[10px] uppercase tracking-widest text-secondary mb-3 truncate">
                             {associate.position || 'Agente de Viajes'}

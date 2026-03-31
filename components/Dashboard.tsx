@@ -122,9 +122,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
                         className="w-full h-full object-cover"
                     />
                 </div>
-                {currentUserAssociate?.branch && (
+                {currentUserAssociate?.Branch && (
                     <div className="absolute -bottom-2 -right-2 bg-accent text-white px-3 py-1 text-[8px] font-bold uppercase tracking-widest shadow-lg">
-                        {currentUserAssociate.branch}
+                        {currentUserAssociate.Branch}
                     </div>
                 )}
             </div>

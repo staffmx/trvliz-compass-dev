@@ -7,6 +7,13 @@ interface AssociateProfileProps {
   onBack: () => void;
 }
 
+const toTitleCase = (str: string) => {
+  if (!str) return '';
+  return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
+
+const BLANK_USER = 'https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/travel_advisors/blank-user.png';
+
 const AssociateProfile: React.FC<AssociateProfileProps> = ({ associateId, onBack }) => {
   const [associate, setAssociate] = useState<Associate | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,8 +54,8 @@ const AssociateProfile: React.FC<AssociateProfileProps> = ({ associateId, onBack
     );
   }
 
-  // Concatenate full name
-  const fullName = `${associate.name} ${associate.last_name || ''}`;
+  // Concatenate full name with Title Case
+  const fullName = `${toTitleCase(associate.name)} ${toTitleCase(associate.last_name || '')}`;
 
   return (
     <div className="animate-fade-in">
@@ -68,14 +75,14 @@ const AssociateProfile: React.FC<AssociateProfileProps> = ({ associateId, onBack
           <div className="lg:col-span-5 space-y-10">
             <div className="relative group">
                <div className="absolute -inset-4 border border-accent/20 -z-10 group-hover:inset-0 transition-all duration-500"></div>
-               <div className="w-full aspect-[4/5] overflow-hidden bg-neutral shadow-2xl">
-                    <img 
-                        src={associate.image || 'https://via.placeholder.com/800x1000?text=Profile+Image'} 
-                        alt={fullName} 
-                        className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/800x1000?text=No+Photo' }}
-                    />
-               </div>
+                <div className="w-full aspect-[4/5] overflow-hidden bg-neutral shadow-2xl">
+                     <img 
+                         src={associate.image || BLANK_USER} 
+                         alt={fullName} 
+                         className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                         onError={(e) => { (e.target as HTMLImageElement).src = BLANK_USER }}
+                     />
+                </div>
             </div>
 
             {/* Social Media Block */}
@@ -87,17 +94,22 @@ const AssociateProfile: React.FC<AssociateProfileProps> = ({ associateId, onBack
                             <i className="fa-brands fa-instagram"></i>
                         </a>
                     )}
+                    {associate.linkedIn && (
+                        <a href={associate.linkedIn} target="_blank" rel="noopener noreferrer" className="text-xl text-primary hover:text-accent transition-all transform hover:-translate-y-1">
+                            <i className="fa-brands fa-linkedin"></i>
+                        </a>
+                    )}
                     {associate.facebook && (
                         <a href={associate.facebook} target="_blank" rel="noopener noreferrer" className="text-xl text-primary hover:text-accent transition-all transform hover:-translate-y-1">
                             <i className="fa-brands fa-facebook-f"></i>
                         </a>
                     )}
-                    {associate.tiktok && (
-                        <a href={associate.tiktok} target="_blank" rel="noopener noreferrer" className="text-xl text-primary hover:text-accent transition-all transform hover:-translate-y-1">
+                    {associate.tik_tok && (
+                        <a href={associate.tik_tok} target="_blank" rel="noopener noreferrer" className="text-xl text-primary hover:text-accent transition-all transform hover:-translate-y-1">
                             <i className="fa-brands fa-tiktok"></i>
                         </a>
                     )}
-                    {(!associate.instagram && !associate.facebook && !associate.tiktok) && (
+                    {(!associate.instagram && !associate.facebook && !associate.tik_tok && !associate.linkedIn) && (
                         <p className="text-[10px] italic text-secondary uppercase tracking-widest">No hay redes vinculadas</p>
                     )}
                 </div>
@@ -118,15 +130,15 @@ const AssociateProfile: React.FC<AssociateProfileProps> = ({ associateId, onBack
                 </h1>
                 <div className="flex flex-wrap items-center gap-4">
                     <span className="bg-brand text-white px-4 py-1.5 text-[9px] font-bold uppercase tracking-widest shadow-lg">
-                        {associate.associate_type || 'Travel Consultant'}
+                        {associate.tipo || 'Travel Consultant'}
                     </span>
                     <span className="text-secondary italic font-serif text-lg">
                         {associate.position || 'Agente Elite'}
                     </span>
-                    {associate.branch && (
+                    {associate.Branch && (
                         <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
                             <i className="fa-solid fa-location-dot text-accent"></i>
-                            {associate.branch}
+                            {associate.Branch}
                         </span>
                     )}
                 </div>
@@ -155,11 +167,13 @@ const AssociateProfile: React.FC<AssociateProfileProps> = ({ associateId, onBack
                 </h3>
                 <div className="text-xl text-primary leading-luxury font-light space-y-6">
                     {associate.content ? (
-                        <div className="associate-bio">
-                            <p className="first-letter:text-6xl first-letter:font-serif first-letter:text-brand first-letter:float-left first-letter:mr-4 first-letter:mt-1">
-                                {associate.content}
-                            </p>
-                        </div>
+                        <div 
+                            className="associate-bio prose prose-slate max-w-none 
+                                     [&_p]:mb-6 [&_strong]:text-primary [&_strong]:font-bold 
+                                     [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-6
+                                     [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:mb-6"
+                            dangerouslySetInnerHTML={{ __html: associate.content }}
+                        />
                     ) : (
                         <p className="italic text-secondary">Esta asociada aún no ha redactado su biografía profesional en la plataforma Compass.</p>
                     )}
@@ -170,8 +184,8 @@ const AssociateProfile: React.FC<AssociateProfileProps> = ({ associateId, onBack
             <div className="pt-10">
                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-6">Especialidades</h4>
                 <div className="flex flex-wrap gap-3">
-                    {['Viajes de Lujo', 'Cruceros', 'Exótico', 'Corporativo'].map(tag => (
-                        <span key={tag} className="px-5 py-2 bg-background border border-neutral text-[10px] font-bold uppercase tracking-widest text-primary hover:border-accent hover:text-accent transition-all cursor-default">
+                    {(associate.especialidades?.split(',').map(s => s.trim()).filter(Boolean) || []).map((tag, i) => (
+                        <span key={i} className="px-5 py-2 bg-background border border-neutral text-[10px] font-bold uppercase tracking-widest text-primary hover:border-accent hover:text-accent transition-all cursor-default">
                             {tag}
                         </span>
                     ))}
