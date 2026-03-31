@@ -133,6 +133,43 @@ export const api = {
     return subscription;
   },
 
+  createAuthUser: async (email: string, fullName: string): Promise<{ success: boolean; userId?: string; tempPassword?: string; error?: string }> => {
+    const tempSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const tempPassword = "Traveliz2026!"; 
+    
+    // Attempt signup via secondary client so we don't log out main session
+    const { data, error } = await tempSupabase.auth.signUp({
+      email,
+      password: tempPassword,
+      options: {
+        data: {
+          full_name: fullName,
+        }
+      }
+    });
+
+    if (error) {
+      console.error("Error creating Auth user:", error);
+      return { success: false, error: error.message };
+    }
+    
+    return { success: true, userId: data.user?.id, tempPassword };
+  },
+
+  updatePassword: async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
+    if (!supabase) return { success: false, error: "No connection" };
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      if (error) throw error;
+      return { success: true };
+    } catch (err: any) {
+      console.error("Error updating password:", err);
+      return { success: false, error: err.message || "Error desconocido" };
+    }
+  },
+
   getUserProfile: async (userId: string, email?: string): Promise<UserProfile | null> => {
     if (!supabase) return null;
     try {
@@ -370,11 +407,12 @@ export const api = {
     }
   },
 
-  createUserProfile: async (userData: Partial<UserProfile>, roleIds: number[]): Promise<{ success: boolean; error?: string }> => {
+  createUserProfile: async (userData: Partial<UserProfile>, roleIds: number[]): Promise<{ success: boolean; error?: string; tempPassword?: string }> => {
     if (!supabase) return { success: false, error: "No connection" };
     try {
       // 1. Verificar si ya existe un perfil con ese email para evitar conflictos de UNIQUE
       let existingId = userData.id;
+      let generatedPassword = undefined;
       
       if (!existingId && userData.email) {
         const { data: existing } = await supabase
@@ -386,8 +424,19 @@ export const api = {
       }
 
       // 2. Preparar datos
-      // Si no existe, generamos un UUID para evitar que tome el del Admin por defecto en el DB
-      const finalId = existingId || (window.crypto ? window.crypto.randomUUID() : Math.random().toString(36).substring(2));
+      // Si no existe, usamos createAuthUser para registrar el usuario directo en Supabase Auth y auto-vincular
+      let finalId = existingId;
+      if (!finalId) {
+        const fullName = `${userData.name || ''} ${userData.last_name || ''}`.trim();
+        if (!userData.email) throw new Error("Email es obligatorio.");
+        
+        const authResult = await api.createAuthUser(userData.email, fullName);
+        if (!authResult.success) {
+           return { success: false, error: "Error al crear usuario en Auth: " + authResult.error };
+        }
+        finalId = authResult.userId!;
+        generatedPassword = authResult.tempPassword;
+      }
       
       const profileToSave = {
         id: finalId,
@@ -413,7 +462,7 @@ export const api = {
         if (rError) throw rError;
       }
 
-      return { success: true };
+      return { success: true, tempPassword: generatedPassword };
     } catch (err: any) {
       console.error("Error creating/updating user profile:", err);
       return { success: false, error: err.message || "Error desconocido" };

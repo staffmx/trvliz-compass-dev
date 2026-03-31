@@ -15,6 +15,7 @@ const MyProfile: React.FC<MyProfileProps> = ({ user, onBack, onUserUpdate }) => 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [newPassword, setNewPassword] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -92,6 +93,18 @@ const MyProfile: React.FC<MyProfileProps> = ({ user, onBack, onUserUpdate }) => 
         const updatedAssociate = await api.upsertAssociate(associate);
         if (!updatedAssociate) throw new Error("Error al actualizar la información de asociada");
         setAssociate(updatedAssociate);
+      }
+
+      // 3. Update Password
+      if (newPassword) {
+        if (newPassword.length < 6) {
+          throw new Error("La nueva contraseña debe tener al menos 6 caracteres.");
+        }
+        const passResult = await api.updatePassword(newPassword);
+        if (!passResult.success) {
+          throw new Error("Error al actualizar contraseña: " + passResult.error);
+        }
+        setNewPassword(''); // Clear field on success
       }
 
       setMessage({ type: 'success', text: 'Perfil actualizado correctamente' });
@@ -378,6 +391,24 @@ const MyProfile: React.FC<MyProfileProps> = ({ user, onBack, onUserUpdate }) => 
                             className="w-full px-4 py-3 bg-background border border-neutral text-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none transition-all resize-none leading-relaxed"
                         ></textarea>
                         <p className="text-[10px] text-gray-400 mt-2 italic">Esta biografía aparecerá en tu perfil público del directorio.</p>
+                    </div>
+                </div>
+
+                {/* Security Section */}
+                <div className="bg-white border border-neutral p-8 shadow-sm">
+                    <h3 className="text-lg font-serif text-primary mb-6 border-b border-neutral pb-4">Seguridad de Acceso</h3>
+                    <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-2">Nueva Contraseña</label>
+                        <input 
+                            type="password"
+                            name="newPassword"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder="Dejar en blanco para conservar la actual"
+                            className="w-full px-4 py-2 bg-background border border-neutral text-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none transition-all"
+                            autoComplete="new-password"
+                        />
+                        <p className="text-[10px] text-gray-400 mt-2 italic">Mínimo 6 caracteres. Si es tu primer ingreso, te recomendamos cambiar la contraseña temporal proporcionada por el administrador.</p>
                     </div>
                 </div>
 

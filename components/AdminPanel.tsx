@@ -1025,6 +1025,11 @@ const AdminUsers = ({ Header }: any) => {
         setFormData({ name: '', last_name: '', email: '', position: '', avatar_url: '' });
         setSelectedRoleIds([]);
         loadData();
+        if (result.tempPassword) {
+          alert(`¡Usuario creado exitosamente!\n\nSe ha registrado automáticamente en Auth con la contraseña temporal:\n\n${result.tempPassword}\n\nPor favor, comparte esta contraseña con el usuario para que pueda iniciar sesión.`);
+        } else {
+          alert("Usuario guardado exitosamente.");
+        }
       } else {
         alert("Error al guardar el usuario: " + (result.error || "Causa desconocida"));
       }
@@ -1056,7 +1061,7 @@ const AdminUsers = ({ Header }: any) => {
             <div className="mb-8 p-4 bg-accent/5 border border-accent/20 rounded-sm">
               <p className="text-xs text-accent font-medium leading-relaxed">
                 <i className="fa-solid fa-circle-info mr-2"></i>
-                <strong>Nota:</strong> Al crear el perfil aquí, asignas sus permisos y roles. Recuerda que el usuario también debe estar registrado en <strong>Supabase Auth</strong> con el mismo correo para poder iniciar sesión. El sistema vinculará ambas partes automáticamente en su primer ingreso.
+                <strong>Proceso Automatizado:</strong> Al crear el perfil aquí, el sistema registrará automáticamente al usuario en <strong>Supabase Auth</strong> y le generará una contraseña temporal. Te la mostraremos al concluir para que la compartas con el usuario.
               </p>
             </div>
           )}
@@ -1074,10 +1079,7 @@ const AdminUsers = ({ Header }: any) => {
                 <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Email Corporativo</label>
                 <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" />
               </div>
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Cargo / Posición</label>
-                <input type="text" value={formData.position} onChange={e => setFormData({...formData, position: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" />
-              </div>
+              <div className="hidden md:block"></div> {/* Fill empty space in grid to push roles to next row */}
               <div className="md:col-span-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-4 block">Asignar Roles (Selección Múltiple)</label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -82,18 +82,29 @@ const App: React.FC = () => {
         setUser(userData);
         setIsAuthenticated(true);
       } else {
-        // FALLBACK: El usuario existe en Auth pero no en la tabla Profiles todavía
-        // Esto pasa si el trigger no se ejecutó o hay retraso.
-        const fallbackUser: User = {
-          id: userId,
-          name: email?.split('@')[0] || 'Usuario',
-          email: email || '',
-          role: (email === 'yibrant@internationalcruises.mx') ? 'admin' : 'employee',
-          roles: [],
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(email || 'U')}&background=random`
-        };
-        setUser(fallbackUser);
-        setIsAuthenticated(true);
+        // EXCEPCIÓN DE SEGURIDAD PARA ADMINISTRADOR MAESTRO
+        if (email === 'yibrant@internationalcruises.mx') {
+          const adminUser: User = {
+            id: userId,
+            name: 'Yibrant Medina',
+            email: email,
+            role: 'admin',
+            roles: [],
+            avatar: `https://ui-avatars.com/api/?name=Yibrant&background=random`
+          };
+          setUser(adminUser);
+          setIsAuthenticated(true);
+        } else {
+          // PERFIL NO ENCONTRADO (Posiblemente usuario eliminado o desactivado del sistema)
+          console.warn("No se encontró perfil asociado para este usuario de Auth. Acceso denegado.");
+          await api.signOut();
+          setUser(null);
+          setIsAuthenticated(false);
+          // Pequeño delay para asegurar que el signOut procesa en la UI antes de la alerta
+          setTimeout(() => {
+            alert("Tu cuenta no tiene un perfil asociado o ha sido desactivada del sistema.\n\nPor favor, contacta al administrador si consideras que esto es un error.");
+          }, 100);
+        }
       }
     } catch (err) {
       console.error("Error syncing profile:", err);
