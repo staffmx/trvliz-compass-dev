@@ -160,7 +160,10 @@ const NoticesList: React.FC<NoticesListProps> = ({ user, onNavigate, onEventClic
                   <p className="text-xs text-secondary italic">Sin eventos programados.</p>
                 </div>
               ) : (
-                events.slice(0, 6).map(event => (
+                events
+                  .filter(e => e.event_date && e.event_date >= new Date().toISOString().split('T')[0])
+                  .slice(0, 4)
+                  .map(event => (
                   <button 
                     key={event.id} 
                     onClick={() => event.id && onEventClick && onEventClick(event.id)}

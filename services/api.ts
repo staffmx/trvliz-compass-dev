@@ -1,4 +1,3 @@
-
 import { Notice, UserProfile, Role, DocumentCategory, Document as DocType, Associate, Certification, Event, SearchResults, SearchLog } from '../types';
 import { createClient } from '@supabase/supabase-js';
 
@@ -9,6 +8,30 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIs
 const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY) 
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
+
+// --- CONSTANTS ---
+export const WEBINAR_CATEGORIES: WebinarCategory[] = [
+  "ONBOARDING TRAVELIZ - SESIONES DE FAMILIARIZACIÓN",
+  "ONBOARDING TRAVELIZ - SESIONES DE REFUERZO (TERRESTRE)",
+  "TEMAS GENERALES",
+  "HOTELES",
+  "DMC´s Y OTROS PROVEEDORES",
+  "DESTINOS",
+  "CERTIFICADO TRAVELIZ SAFARIS",
+  "CRUCEROS",
+  "TRAVELIZ - LUXURY CRUISES - PLAYBOOK"
+];
+
+export const NOTICE_CATEGORIES = [
+  "OPERACIÓN / DESTINOS",
+  "PROMOCIONES",
+  "PAQUETES",
+  "CAPACITACIONES",
+  "ADMINISTRATIVO",
+  "MERCADOTECNIA",
+  "TECNOLOGÍA",
+  "GENERAL"
+];
 
 // --- INTERFACES ---
 
@@ -33,19 +56,6 @@ export interface RecordedWebinar {
   created_at?: string;
 }
 
-export const WEBINAR_CATEGORIES: WebinarCategory[] = [
-  "ONBOARDING TRAVELIZ - SESIONES DE FAMILIARIZACIÓN",
-  "ONBOARDING TRAVELIZ - SESIONES DE REFUERZO (TERRESTRE)",
-  "TEMAS GENERALES",
-  "HOTELES",
-  "DMC´s Y OTROS PROVEEDORES",
-  "DESTINOS",
-  "CERTIFICADO TRAVELIZ SAFARIS",
-  "CRUCEROS",
-  "TRAVELIZ - LUXURY CRUISES - PLAYBOOK"
-];
-
-
 export interface EventRegistration {
   id: number;
   event_id: number;
@@ -65,6 +75,20 @@ export interface BlogPost {
   author: string;
   publish_date: string;
   vistas?: number;
+  // Social features (populated dynamically)
+  likes_count?: number;
+  comments_count?: number;
+  has_liked?: boolean;
+  has_saved?: boolean;
+}
+
+export interface BlogComment {
+  id: number;
+  post_id: number;
+  user_id: string;
+  content: string;
+  created_at: string;
+  profiles?: { full_name: string; avatar_url: string; };
 }
 
 export interface MentorshipRequest {
@@ -173,7 +197,6 @@ export const api = {
   getUserProfile: async (userId: string, email?: string): Promise<UserProfile | null> => {
     if (!supabase) return null;
     try {
-      // Intentar por ID con join (estrucutra original pero con maybeSingle)
       let { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -189,9 +212,8 @@ export const api = {
         .eq('id', userId)
         .maybeSingle();
       
-      // Fallback por email si el ID falla
       if (!data && email) {
-        const { data: dataByEmail, error: errorByEmail } = await supabase
+        const { data: dataByEmail } = await supabase
           .from('profiles')
           .select(`
             *,
@@ -208,21 +230,14 @@ export const api = {
         
         if (dataByEmail) {
           data = dataByEmail;
-          // AUTO-LINKING: Si lo encontramos por email pero el ID es diferente, lo vinculamos al nuevo Auth ID
           if (dataByEmail.id !== userId) {
-            console.log("Auto-linking profile found by email to new Auth ID:", userId);
-            const linked = await api.linkProfileToAuth(dataByEmail.id, userId);
-            if (linked) {
-              data.id = userId; // Actualizar localmente para devolver el ID correcto
-            }
+            await api.linkProfileToAuth(dataByEmail.id, userId);
+            data.id = userId;
           }
         }
       }
 
-      if (error || !data) {
-        console.warn("Profile not found:", error);
-        return null;
-      }
+      if (error || !data) return null;
       
       return {
         ...data,
@@ -235,12 +250,8 @@ export const api = {
     }
   },
 
-  // --- RECORDED WEBINARS ---
   getRecordedWebinars: async (): Promise<RecordedWebinar[]> => {
-    if (!supabase) {
-        console.error("Supabase client is null");
-        return [];
-    }
+    if (!supabase) return [];
     try {
       const { data, error } = await supabase
         .from('recorded_webinars')
@@ -248,14 +259,11 @@ export const api = {
         .order('category', { ascending: true })
         .order('created_at', { ascending: false });
       
-      if (error) {
-          console.error("Supabase Query Error (recorded_webinars):", error.message, error.details);
-          throw error;
-      }
+      if (error) throw error;
       return data || [];
     } catch (err) {
-      console.error("Critical error in getRecordedWebinars:", err);
-      throw err;
+      console.error("Error getRecordedWebinars:", err);
+      return [];
     }
   },
 
@@ -264,15 +272,12 @@ export const api = {
     try {
       let query;
       if (webinar.id && webinar.id !== 0) {
-        // Explicit update
         const { id, created_at, ...updateData } = webinar as any;
         query = supabase.from('recorded_webinars').update(updateData).eq('id', id);
       } else {
-        // Explicit insert
         const { id, created_at, ...insertData } = webinar as any;
         query = supabase.from('recorded_webinars').insert(insertData);
       }
-      
       const { error } = await query;
       if (error) throw error;
       return true;
@@ -297,17 +302,9 @@ export const api = {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `webinars/${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('images')
-        .upload(fileName, file);
-
+      const { error: uploadError } = await supabase.storage.from('images').upload(fileName, file);
       if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('images')
-        .getPublicUrl(fileName);
-
+      const { data: { publicUrl } } = supabase.storage.from('images').getPublicUrl(fileName);
       return publicUrl;
     } catch (err) {
       console.error("Error uploading webinar cover:", err);
@@ -315,30 +312,6 @@ export const api = {
     }
   },
 
-  uploadAssociateImage: async (file: File): Promise<string | null> => {
-    if (!supabase) return null;
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('travel_advisors')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('travel_advisors')
-        .getPublicUrl(fileName);
-
-      return publicUrl;
-    } catch (err) {
-      console.error("Error uploading associate image:", err);
-      return null;
-    }
-  },
-
-  // --- USERS & ROLES ---
   getRoles: async (): Promise<Role[]> => {
     if (!supabase) return [];
     const { data, error } = await supabase.from('roles').select('*').order('name');
@@ -349,7 +322,6 @@ export const api = {
   getUsers: async (): Promise<UserProfile[]> => {
     if (!supabase) return [];
     try {
-      // Intentamos primero con el join (más eficiente)
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -365,23 +337,12 @@ export const api = {
         `);
       
       if (error) {
-        console.warn("Error fetching users with join, falling back to separate fetches:", error.message);
-        
-        // Fallback: Fetch profiles and roles separately if relationship is missing in schema cache
         const { data: profiles, error: pError } = await supabase.from('profiles').select('*');
         if (pError) throw pError;
-
-        const { data: userRoles, error: urError } = await supabase.from('user_roles').select('*, roles(*)');
-        
+        const { data: userRoles } = await supabase.from('user_roles').select('*, roles(*)');
         return (profiles || []).map(profile => {
-          const roles = (userRoles || [])
-            .filter((ur: any) => ur.user_id === profile.id)
-            .map((ur: any) => ur.roles)
-            .filter(Boolean);
-          
-          // Fallback if last_name column is missing in DB
+          const roles = (userRoles || []).filter((ur: any) => ur.user_id === profile.id).map((ur: any) => ur.roles).filter(Boolean);
           const [firstName, ...lastNameParts] = (profile.name || '').split(' ');
-          
           return {
             ...profile,
             name: profile.last_name === undefined ? firstName : profile.name,
@@ -410,30 +371,20 @@ export const api = {
   createUserProfile: async (userData: Partial<UserProfile>, roleIds: number[]): Promise<{ success: boolean; error?: string; tempPassword?: string }> => {
     if (!supabase) return { success: false, error: "No connection" };
     try {
-      // 1. Verificar si ya existe un perfil con ese email para evitar conflictos de UNIQUE
       let existingId = userData.id;
       let generatedPassword = undefined;
       
       if (!existingId && userData.email) {
-        const { data: existing } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('email', userData.email)
-          .maybeSingle();
+        const { data: existing } = await supabase.from('profiles').select('id').eq('email', userData.email).maybeSingle();
         if (existing) existingId = existing.id;
       }
 
-      // 2. Preparar datos
-      // Si no existe, usamos createAuthUser para registrar el usuario directo en Supabase Auth y auto-vincular
       let finalId = existingId;
       if (!finalId) {
         const fullName = `${userData.name || ''} ${userData.last_name || ''}`.trim();
         if (!userData.email) throw new Error("Email es obligatorio.");
-        
         const authResult = await api.createAuthUser(userData.email, fullName);
-        if (!authResult.success) {
-           return { success: false, error: "Error al crear usuario en Auth: " + authResult.error };
-        }
+        if (!authResult.success) return { success: false, error: "Error al crear usuario en Auth: " + authResult.error };
         finalId = authResult.userId!;
         generatedPassword = authResult.tempPassword;
       }
@@ -446,20 +397,13 @@ export const api = {
         avatar_url: userData.avatar_url
       };
 
-      const { data: profile, error: pError } = await supabase
-        .from('profiles')
-        .upsert(profileToSave)
-        .select()
-        .single();
-      
+      const { data: profile, error: pError } = await supabase.from('profiles').upsert(profileToSave).select().single();
       if (pError) throw pError;
 
-      // 3. Actualizar roles
       await supabase.from('user_roles').delete().eq('user_id', profile.id);
       if (roleIds.length > 0) {
         const rolePayload = roleIds.map(rid => ({ user_id: profile.id, role_id: rid }));
-        const { error: rError } = await supabase.from('user_roles').insert(rolePayload);
-        if (rError) throw rError;
+        await supabase.from('user_roles').insert(rolePayload);
       }
 
       return { success: true, tempPassword: generatedPassword };
@@ -472,34 +416,14 @@ export const api = {
   linkProfileToAuth: async (oldProfileId: string, newAuthId: string): Promise<boolean> => {
     if (!supabase) return false;
     try {
-      // 1. Actualizar el ID en la tabla profiles
-      // Nota: Esto puede fallar si hay RLS estricto o si el ID es PK y tiene FKs.
-      // Si falla, creamos uno nuevo y movemos los roles.
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ id: newAuthId })
-        .eq('id', oldProfileId);
-
+      const { error: updateError } = await supabase.from('profiles').update({ id: newAuthId }).eq('id', oldProfileId);
       if (updateError) {
-        console.warn("Could not direct update ID, trying copy strategy:", updateError.message);
-        
-        // Estrategia B: Obtener datos, insertar nuevo, mover roles, borrar viejo
         const { data: oldProfile } = await supabase.from('profiles').select('*').eq('id', oldProfileId).single();
         if (!oldProfile) return false;
-
-        const { error: insertError } = await supabase.from('profiles').insert({
-          ...oldProfile,
-          id: newAuthId
-        });
-        if (insertError) throw insertError;
-
-        // Mover roles
+        await supabase.from('profiles').insert({ ...oldProfile, id: newAuthId });
         await supabase.from('user_roles').update({ user_id: newAuthId }).eq('user_id', oldProfileId);
-        
-        // Borrar viejo
         await supabase.from('profiles').delete().eq('id', oldProfileId);
       }
-      
       return true;
     } catch (err) {
       console.error("Error linking profile to auth ID:", err);
@@ -510,9 +434,7 @@ export const api = {
   deleteUserProfile: async (userId: string): Promise<boolean> => {
     if (!supabase) return false;
     try {
-      // First delete roles
       await supabase.from('user_roles').delete().eq('user_id', userId);
-      // Then delete profile
       const { error } = await supabase.from('profiles').delete().eq('id', userId);
       if (error) throw error;
       return true;
@@ -522,7 +444,6 @@ export const api = {
     }
   },
 
-  // --- ASSOCIATES ---
   getAssociates: async (): Promise<Associate[]> => {
     if (!supabase) return [];
     try {
@@ -570,7 +491,6 @@ export const api = {
           avatar_url: profileData.avatar_url
         })
         .eq('id', profileData.id);
-      
       if (error) throw error;
       return true;
     } catch (err) {
@@ -581,9 +501,6 @@ export const api = {
 
   upsertAssociate: async (associate: Associate): Promise<Associate | null> => {
     if (!supabase) return null;
-    
-    // Explicitly define the payload to avoid sending legacy fields like 'associate_type' 
-    // or 'tiktok' which may exist in the object but are not in the database schema.
     const payload = {
       id: associate.id,
       user_id: associate.user_id === '' ? null : associate.user_id,
@@ -602,36 +519,24 @@ export const api = {
       especialidades: associate.especialidades,
       Branch: associate.Branch
     };
-
-    // Remove undefined fields so they don't overwrite with null unless intended
-    Object.keys(payload).forEach(key => 
-      (payload as any)[key] === undefined && delete (payload as any)[key]
-    );
-
-      let query;
-      if (payload.id && payload.id !== 0) {
-        const { id, ...updateData } = payload;
-        query = supabase.from('associates').update(updateData).eq('id', id);
-      } else {
-        const { id, ...insertData } = payload;
-        query = supabase.from('associates').insert(insertData);
-      }
-
-      const { data, error } = await query.select().single();
-    if (error) {
-      console.error("Supabase upsertAssociate error:", error);
-      throw error;
+    Object.keys(payload).forEach(key => (payload as any)[key] === undefined && delete (payload as any)[key]);
+    let query;
+    if (payload.id && payload.id !== 0) {
+      const { id, ...updateData } = payload;
+      query = supabase.from('associates').update(updateData).eq('id', id);
+    } else {
+      const { id, ...insertData } = payload;
+      query = supabase.from('associates').insert(insertData);
     }
+    const { data, error } = await query.select().single();
+    if (error) throw error;
     return data;
   },
 
   deleteAssociate: async (id: number): Promise<boolean> => {
     if (!supabase) return false;
     const { error } = await supabase.from('associates').delete().eq('id', id);
-    if (error) {
-      console.error("Supabase deleteAssociate error:", error);
-      throw error;
-    }
+    if (error) throw error;
     return true;
   },
 
@@ -659,25 +564,12 @@ export const api = {
     if (!supabase) return null;
     try {
       const { id, ...rest } = notice;
-      let query;
-      
-      if (id && id !== 'null' && id !== '') {
-        // Update
-        query = supabase.from('notices').update(rest).eq('id', id);
-      } else {
-        // Insert
-        // Ensure we don't send an empty ID or null ID for new records
-        query = supabase.from('notices').insert(rest);
-      }
-
+      let query = (id && id !== 'null' && id !== '') ? supabase.from('notices').update(rest).eq('id', id) : supabase.from('notices').insert(rest);
       const { data, error } = await query.select().single();
-      if (error) {
-        console.error("Supabase upsertNotice error:", error);
-        throw error;
-      }
+      if (error) throw error;
       return { ...data, id: data.id.toString() };
     } catch (err) {
-      console.error("Critical error in upsertNotice:", err);
+      console.error("Error in upsertNotice:", err);
       throw err;
     }
   },
@@ -685,18 +577,11 @@ export const api = {
   deleteNotice: async (id: string): Promise<boolean> => {
     if (!supabase) return false;
     try {
-      if (!id) {
-        console.error("Missing ID for deleteNotice");
-        return false;
-      }
       const { error } = await supabase.from('notices').delete().eq('id', id);
-      if (error) {
-        console.error("Supabase deleteNotice error:", error);
-        throw error;
-      }
+      if (error) throw error;
       return true;
     } catch (err) {
-      console.error("Critical error in deleteNotice:", err);
+      console.error("Error in deleteNotice:", err);
       return false;
     }
   },
@@ -723,11 +608,7 @@ export const api = {
       const { data, error } = await supabase.from('events').select('*').eq('id', id).single();
       if (!error && data) {
         const dateObj = new Date(data.event_date + 'T00:00:00');
-        return {
-          ...data,
-          day: dateObj.getDate().toString().padStart(2, '0'),
-          month: dateObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '')
-        };
+        return { ...data, day: dateObj.getDate().toString().padStart(2, '0'), month: dateObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '') };
       }
     }
     return null;
@@ -735,31 +616,13 @@ export const api = {
 
   upsertEvent: async (event: Partial<Event>): Promise<Event | null> => {
     if (!supabase) return null;
-    
-    // Limpiar el objeto de campos que no pertenecen a la tabla
     const { day, month, ...payload } = event as any;
-    
     try {
-      let query;
-      if (payload.id && payload.id !== 0) {
-        // Si hay un ID, realizamos un UPDATE explícito
-        const { id, ...updateData } = payload;
-        query = supabase.from('events').update(updateData).eq('id', id);
-      } else {
-        // Si no hay ID, realizamos un INSERT explícito y dejamos que la DB genere el ID
-        const { id, ...insertData } = payload;
-        query = supabase.from('events').insert(insertData);
-      }
-
+      let query = (payload.id && payload.id !== 0) ? supabase.from('events').update(payload).eq('id', payload.id) : supabase.from('events').insert(payload);
       const { data, error } = await query.select().single();
       if (error) throw error;
-      
       const dateObj = new Date(data.event_date + 'T00:00:00');
-      return {
-        ...data,
-        day: dateObj.getDate().toString().padStart(2, '0'),
-        month: dateObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '')
-      };
+      return { ...data, day: dateObj.getDate().toString().padStart(2, '0'), month: dateObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '') };
     } catch (err) {
       console.error("Error in upsertEvent:", err);
       throw err;
@@ -787,17 +650,7 @@ export const api = {
   upsertCertification: async (cert: Partial<Certification>): Promise<Certification | null> => {
     if (!supabase) return null;
     try {
-      let query;
-      if (cert.id && cert.id !== 0) {
-        // Si hay un ID, realizamos un UPDATE explícito
-        const { id, created_at, ...updateData } = cert as any;
-        query = supabase.from('certifications').update(updateData).eq('id', id);
-      } else {
-        // Si no hay ID, realizamos un INSERT explícito y dejamos que la DB genere el ID
-        const { id, created_at, ...insertData } = cert as any;
-        query = supabase.from('certifications').insert(insertData);
-      }
-
+      let query = (cert.id && cert.id !== 0) ? supabase.from('certifications').update(cert).eq('id', cert.id) : supabase.from('certifications').insert(cert);
       const { data, error } = await query.select().single();
       if (error) throw error;
       return data;
@@ -813,7 +666,6 @@ export const api = {
       const { error } = await supabase.from('certifications').delete().eq('id', id);
       return !error;
     } catch (err) {
-      console.error("Error deleting certification:", err);
       return false;
     }
   },
@@ -822,19 +674,10 @@ export const api = {
     if (!supabase) return null;
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-      const filePath = `flyers/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('certifications')
-        .upload(filePath, file);
-
+      const fileName = `flyers/${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('certifications').upload(fileName, file);
       if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('certifications')
-        .getPublicUrl(filePath);
-
+      const { data: { publicUrl } } = supabase.storage.from('certifications').getPublicUrl(fileName);
       return publicUrl;
     } catch (err) {
       console.error("Error uploading flyer:", err);
@@ -845,10 +688,7 @@ export const api = {
   registerForEvent: async (eventId: number, userEmail: string): Promise<boolean> => {
     if (!supabase) return false;
     try {
-      const { error } = await supabase.from('event_registrations').insert({
-        event_id: eventId,
-        user_email: userEmail
-      });
+      const { error } = await supabase.from('event_registrations').insert({ event_id: eventId, user_email: userEmail });
       if (error) throw error;
       return true;
     } catch (err) {
@@ -860,11 +700,7 @@ export const api = {
   checkEventRegistration: async (eventId: number, userEmail: string): Promise<boolean> => {
     if (!supabase) return false;
     try {
-      const { data, error } = await supabase
-        .from('event_registrations')
-        .select('*')
-        .eq('event_id', eventId)
-        .eq('user_email', userEmail);
+      const { data, error } = await supabase.from('event_registrations').select('*').eq('event_id', eventId).eq('user_email', userEmail);
       if (error) throw error;
       return data && data.length > 0;
     } catch (err) {
@@ -876,28 +712,15 @@ export const api = {
   getEventRegistrations: async (eventId: number): Promise<EventRegistration[]> => {
     if (!supabase) return [];
     try {
-      const { data: regs, error: regError } = await supabase
-        .from('event_registrations')
-        .select('*')
-        .eq('event_id', eventId);
-      
+      const { data: regs, error: regError } = await supabase.from('event_registrations').select('*').eq('event_id', eventId);
       if (regError) throw regError;
-      
-      const { data: associates, error: assocError } = await supabase
-        .from('associates')
-        .select('name, last_name, email');
-      
-      if (assocError) throw assocError;
-
+      const { data: associates } = await supabase.from('associates').select('name, last_name, email');
       return (regs || []).map(r => {
-        const assoc = associates.find(a => a.email === r.user_email);
-        return {
-          ...r,
-          associate_name: assoc ? `${assoc.name} ${assoc.last_name || ''}` : 'Usuario Externo'
-        };
+        const assoc = associates?.find(a => a.email === r.user_email);
+        return { ...r, associate_name: assoc ? `${assoc.name} ${assoc.last_name || ''}` : 'Usuario Externo' };
       });
     } catch (err) {
-      console.error("Error fetching event registrations:", err);
+      console.error("Error fetching registrations:", err);
       return [];
     }
   },
@@ -912,20 +735,118 @@ export const api = {
     return [];
   },
 
+  getFeedInteractions: async (postIds: number[], userId?: string) => {
+    if (!supabase || postIds.length === 0) return { likes: {}, saves: {}, comments: {} };
+    const { data: allLikes } = await supabase.from('blog_likes').select('post_id, user_id').in('post_id', postIds);
+    const { data: allSaves } = await supabase.from('blog_saves').select('post_id, user_id').in('post_id', postIds);
+    const { data: allComments } = await supabase.from('blog_comments').select('post_id, id').in('post_id', postIds);
+    const likes: Record<number, number> = {};
+    const comments: Record<number, number> = {};
+    const userLiked = new Set<number>();
+    const userSaved = new Set<number>();
+    postIds.forEach(id => { likes[id] = 0; comments[id] = 0; });
+    if (allLikes) allLikes.forEach(l => { likes[l.post_id]++; if (userId && l.user_id === userId) userLiked.add(l.post_id); });
+    if (allSaves) allSaves.forEach(s => { if (userId && s.user_id === userId) userSaved.add(s.post_id); });
+    if (allComments) allComments.forEach(c => { comments[c.post_id]++; });
+    return { likes, comments, userLiked, userSaved };
+  },
+
+  toggleLike: async (postId: number, userId: string, currentlyLiked: boolean): Promise<boolean> => {
+     if (!supabase) return false;
+     try {
+       if (currentlyLiked) {
+         await supabase.from('blog_likes').delete().match({ post_id: postId, user_id: userId });
+       } else {
+         await supabase.from('blog_likes').insert({ post_id: postId, user_id: userId });
+       }
+       return true;
+     } catch (err) {
+       console.error("Error toggleLike:", err);
+       return false;
+     }
+  },
+
+  toggleSave: async (postId: number, userId: string, currentlySaved: boolean): Promise<boolean> => {
+     if (!supabase) return false;
+     try {
+       if (currentlySaved) {
+         await supabase.from('blog_saves').delete().match({ post_id: postId, user_id: userId });
+       } else {
+         await supabase.from('blog_saves').insert({ post_id: postId, user_id: userId });
+       }
+       return true;
+     } catch (err) {
+       console.error("Error toggleSave:", err);
+       return false;
+     }
+  },
+
+  addComment: async (postId: number, userId: string, content: string): Promise<boolean> => {
+     if (!supabase) return false;
+     try {
+       await supabase.from('blog_comments').insert({ post_id: postId, user_id: userId, content });
+       return true;
+     } catch (err) {
+       console.error("Error addComment:", err);
+       return false;
+     }
+  },
+
+  getPostComments: async (postId: number): Promise<BlogComment[]> => {
+    if (!supabase) return [];
+    try {
+      const { data: comments, error } = await supabase
+        .from('blog_comments')
+        .select('*')
+        .eq('post_id', postId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      if (!comments || comments.length === 0) return [];
+
+      const userIds = [...new Set(comments.map(c => c.user_id))];
+      
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .in('id', userIds);
+
+      const profilesMap = (profilesData || []).reduce((acc, p) => {
+        acc[p.id] = { full_name: p.full_name, avatar_url: p.avatar_url };
+        return acc;
+      }, {} as Record<string, any>);
+
+      return comments.map(c => ({
+        ...c,
+        profiles: profilesMap[c.user_id] || { full_name: 'Usuario', avatar_url: '' }
+      }));
+    } catch (err) {
+      console.error("Error getPostComments:", err);
+      return [];
+    }
+  },
+
+  getUserActivityStats: async (userId: string, userName: string): Promise<{ blogsCount: number; commentsCount: number }> => {
+    if (!supabase) return { blogsCount: 0, commentsCount: 0 };
+    try {
+      const [blogs, comments] = await Promise.all([
+        supabase.from('blog_posts').select('id', { count: 'exact', head: true }).eq('author', userName),
+        supabase.from('blog_comments').select('id', { count: 'exact', head: true }).eq('user_id', userId)
+      ]);
+
+      return {
+        blogsCount: blogs.count || 0,
+        commentsCount: comments.count || 0
+      };
+    } catch (err) {
+      console.error("Error getUserActivityStats:", err);
+      return { blogsCount: 0, commentsCount: 0 };
+    }
+  },
+
   upsertBlogPost: async (post: Partial<BlogPost>): Promise<BlogPost | null> => {
     if (!supabase) return null;
     try {
-      let query;
-      if (post.id && post.id !== 0) {
-        // Explicit update
-        const { id, ...updateData } = post as any;
-        query = supabase.from('blog_posts').update(updateData).eq('id', id);
-      } else {
-        // Explicit insert
-        const { id, ...insertData } = post as any;
-        query = supabase.from('blog_posts').insert(insertData);
-      }
-      
+      let query = (post.id && post.id !== 0) ? supabase.from('blog_posts').update(post).eq('id', post.id) : supabase.from('blog_posts').insert(post);
       const { data, error } = await query.select().single();
       if (error) throw error;
       return data;
@@ -941,7 +862,6 @@ export const api = {
       const { error } = await supabase.from('blog_posts').delete().eq('id', id);
       return !error;
     } catch (err) {
-      console.error("Error deleting blog post:", err);
       return false;
     }
   },
@@ -951,17 +871,9 @@ export const api = {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `blogs/${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('images')
-        .upload(fileName, file);
-
+      const { error: uploadError } = await supabase.storage.from('images').upload(fileName, file);
       if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('images')
-        .getPublicUrl(fileName);
-
+      const { data: { publicUrl } } = supabase.storage.from('images').getPublicUrl(fileName);
       return publicUrl;
     } catch (err) {
       console.error("Error uploading blog image:", err);
@@ -990,38 +902,22 @@ export const api = {
     return !error;
   },
 
-  // --- DOCUMENTATION ---
   getDocumentCategories: async (): Promise<DocumentCategory[]> => {
     if (!supabase) return [];
     const tableNames = ['documents_categoria', 'documents_categorias', 'document_categories'];
-    
     for (const tableName of tableNames) {
       try {
-        console.log(`Attempting to fetch categories from '${tableName}'...`);
-        // First try to just get the data without ordering to avoid column name errors
-        const { data, error } = await supabase
-          .from(tableName)
-          .select('*');
-        
+        const { data, error } = await supabase.from(tableName).select('*');
         if (!error && data) {
-          console.log(`Successfully fetched ${data.length} categories from '${tableName}'`);
-          if (data.length > 0) {
-            console.log("Sample raw category data:", data[0]);
-          }
-          const mapped = data.map((c: any) => ({
+          return data.map((c: any) => ({
             id: parseInt(c.id, 10),
             name: c.name || c.nombre || 'Sin nombre',
             parent_id: parseInt(c.parent_id !== undefined ? c.parent_id : (c.categoria_padre_id || 0), 10) || 0,
             description: c.descripcion || c.description || '',
             created_at: c.created_at
-          }));
-          // Sort manually in JS to be safe
-          return mapped.sort((a, b) => a.name.localeCompare(b.name));
+          })).sort((a, b) => a.name.localeCompare(b.name));
         }
-        console.warn(`Failed to fetch from '${tableName}':`, error?.message);
-      } catch (err) {
-        console.error(`Error with table '${tableName}':`, err);
-      }
+      } catch (err) {}
     }
     return [];
   },
@@ -1029,337 +925,111 @@ export const api = {
   getDocumentsByCategory: async (catId: number): Promise<DocType[]> => {
     if (!supabase) return [];
     try {
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('cat_id', catId)
-        .order('name', { ascending: true });
-      
-      if (error) {
-        console.error("Error fetching documents by category:", error.message);
-        throw error;
-      }
-      
+      const { data, error } = await supabase.from('documents').select('*').eq('cat_id', catId).order('name', { ascending: true });
+      if (error) throw error;
       return (data || []).map((d: any) => {
-        const storagePath = d.storage_path || d.ruta_almacenamiento || d.ruta || '';
-        let finalUrl = '';
-
-        if (storagePath.startsWith('http')) {
-          finalUrl = storagePath;
-        } else {
-          // Si el path ya incluye el nombre del bucket al principio, lo removemos para getPublicUrl
-          let cleanPath = storagePath.startsWith('/') ? storagePath.substring(1) : storagePath;
-          if (cleanPath.startsWith('documentation/')) {
-            cleanPath = cleanPath.replace('documentation/', '');
-          }
-          
-          const { data: { publicUrl } } = supabase.storage
-            .from('documentation')
-            .getPublicUrl(cleanPath);
-          finalUrl = publicUrl;
-        }
-        
+        const path = d.storage_path || d.ruta_almacenamiento || d.ruta || '';
+        const { data: { publicUrl } } = supabase.storage.from('documentation').getPublicUrl(path.replace('documentation/', ''));
         return {
           id: parseInt(d.id, 10),
           name: d.name || d.nombre || 'Sin nombre',
           type: d.type || d.tipo || 'other',
-          size: d.size || d.tamano || d.tamaño || '0 KB',
-          storage_path: storagePath,
-          cat_id: parseInt(d.cat_id !== undefined ? d.cat_id : d.categoria_id, 10) || 0,
+          size: d.size || d.tamano || '0 KB',
+          storage_path: path,
+          cat_id: parseInt(d.cat_id || d.categoria_id, 10) || 0,
           description: d.descripcion || d.description || '',
           created_at: new Date(d.created_at).toLocaleDateString('es-ES'),
-          url: finalUrl
+          url: path.startsWith('http') ? path : publicUrl
         };
       });
     } catch (err) {
-      console.error("Error in getDocumentsByCategory:", err);
       return [];
     }
   },
 
   getAllDocuments: async (): Promise<{data: DocType[], error: any}> => {
     if (!supabase) return { data: [], error: 'No connection' };
-    const tableNames = ['documents', 'documentos'];
-    
-    for (const tableName of tableNames) {
-      try {
-        console.log(`Attempting to fetch documents from '${tableName}'...`);
-        const { data, error } = await supabase
-          .from(tableName)
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        if (!error && data) {
-          console.log(`Successfully fetched ${data.length} documents from '${tableName}'`);
-          const docs = data.map((d: any) => {
-            const storagePath = d.storage_path || d.ruta_almacenamiento || d.ruta || '';
-            let finalUrl = '';
-
-            if (storagePath.startsWith('http')) {
-              finalUrl = storagePath;
-            } else {
-              let cleanPath = storagePath.startsWith('/') ? storagePath.substring(1) : storagePath;
-              if (cleanPath.startsWith('documentation/')) {
-                cleanPath = cleanPath.replace('documentation/', '');
-              }
-
-              const { data: { publicUrl } } = supabase.storage
-                .from('documentation')
-                .getPublicUrl(cleanPath);
-              finalUrl = publicUrl;
-            }
-            
-            return {
-              id: parseInt(d.id, 10),
-              name: d.name || d.nombre || 'Sin nombre',
-              type: d.type || d.tipo || 'other',
-              size: d.size || d.tamano || d.tamaño || '0 KB',
-              storage_path: storagePath,
-              cat_id: parseInt(d.cat_id !== undefined ? d.cat_id : d.categoria_id, 10) || 0,
-              description: d.descripcion || d.description || '',
-              created_at: new Date(d.created_at).toLocaleDateString('es-ES'),
-              url: finalUrl
-            };
-          });
-          return { data: docs, error: null };
-        }
-        console.warn(`Failed to fetch from '${tableName}':`, error?.message);
-      } catch (err) {
-        console.error(`Error with table '${tableName}':`, err);
-      }
+    try {
+      const { data, error } = await supabase.from('documents').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      const docs = (data || []).map((d: any) => {
+        const path = d.storage_path || d.ruta_almacenamiento || d.ruta || '';
+        const { data: { publicUrl } } = supabase.storage.from('documentation').getPublicUrl(path.replace('documentation/', ''));
+        return {
+          id: parseInt(d.id, 10),
+          name: d.name || d.nombre || 'Sin nombre',
+          type: d.type || d.tipo || 'other',
+          size: d.size || d.tamano || '0 KB',
+          storage_path: path,
+          cat_id: parseInt(d.cat_id || d.categoria_id, 10) || 0,
+          description: d.descripcion || d.description || '',
+          created_at: new Date(d.created_at).toLocaleDateString('es-ES'),
+          url: path.startsWith('http') ? path : publicUrl
+        };
+      });
+      return { data: docs, error: null };
+    } catch (err) {
+      return { data: [], error: err };
     }
-    return { data: [], error: 'Could not find documents table' };
   },
 
   createCategory: async (name: string, parentId: number = 0, description: string = ''): Promise<DocumentCategory | null> => {
     if (!supabase) return null;
     const tableNames = ['documents_categoria', 'documents_categorias', 'document_categories'];
-    const dbParentId = parentId;
-    
     for (const tableName of tableNames) {
       try {
-        console.log(`Attempting to create category in '${tableName}'...`);
-        // First attempt with correct Spanish names (nombre, descripcion)
-        let response = await supabase
-          .from(tableName)
-          .insert({ 
-            nombre: name, 
-            parent_id: dbParentId, 
-            descripcion: description 
-          })
-          .select()
-          .single();
-        
-        if (response.error) {
-          console.warn(`Failed with 'nombre' in '${tableName}':`, response.error.message);
-          // Second attempt with English names (name, description)
-          response = await supabase
-            .from(tableName)
-            .insert({ 
-              name: name, 
-              parent_id: dbParentId, 
-              description: description 
-            })
-            .select()
-            .single();
-        }
-
-        if (response.error) {
-           console.warn(`Failed with 'name' in '${tableName}':`, response.error.message);
-           // Third attempt: Minimal (no description)
-           response = await supabase
-            .from(tableName)
-            .insert({ 
-              nombre: name, 
-              parent_id: dbParentId 
-            })
-            .select()
-            .single();
-        }
-
-        if (!response.error && response.data) {
-          console.log(`Successfully created category in '${tableName}'`);
-          return response.data;
-        }
-        if (response.error) {
-          console.error(`Error creating category in '${tableName}':`, response.error);
-        }
-      } catch (err) {
-        console.error(`Exception creating category in '${tableName}':`, err);
-      }
+        const { data, error } = await supabase.from(tableName).insert({ nombre: name, name: name, parent_id: parentId, descripcion: description, description: description }).select().single();
+        if (!error && data) return data;
+      } catch (err) {}
     }
     return null;
   },
 
   uploadDocument: async (file: File, catId: number, description?: string): Promise<DocType | null> => {
     if (!supabase) return null;
-
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${file.name.replace(/\s/g, '_')}`; 
+      const fileName = `${Date.now()}_${file.name.replace(/\s/g, '_')}`;
       const filePath = `uploads/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('documentation')
-        .upload(filePath, file);
-
+      const { error: uploadError } = await supabase.storage.from('documentation').upload(filePath, file);
       if (uploadError) throw uploadError;
-
-      const sizeMB = file.size / (1024 * 1024);
-      const sizeStr = sizeMB < 1 ? `${(file.size / 1024).toFixed(0)} KB` : `${sizeMB.toFixed(1)} MB`;
-
-      const tableNames = ['documents', 'documentos', 'document'];
-      let lastError = null;
-
-      for (const tableName of tableNames) {
-        try {
-          console.log(`Attempting to insert document into '${tableName}'...`);
-          // Primary attempt: Based on user's confirmed "hybrid" schema
-          let response = await supabase.from(tableName)
-            .insert({
-              name: file.name,
-              type: fileExt || 'other',
-              size: sizeStr,
-              cat_id: catId,
-              storage_path: filePath,
-              descripcion: description || '',
-              is_private: false
-            })
-            .select()
-            .single();
-
-          if (response.error) {
-            console.warn(`Failed with hybrid schema in '${tableName}':`, response.error.message);
-            lastError = response.error;
-            // Attempt 2: All Spanish fields
-            response = await supabase.from(tableName).insert({
-              nombre: file.name,
-              tipo: fileExt || 'other',
-              tamano: sizeStr,
-              categoria_id: catId,
-              ruta: filePath,
-              descripcion: description || ''
-            }).select().single();
-          }
-
-          if (response.error) {
-            console.warn(`Failed with Spanish schema in '${tableName}':`, response.error.message);
-            lastError = response.error;
-          }
-
-          if (!response.error && response.data) {
-            console.log(`Successfully created record in '${tableName}'`);
-            const { data: { publicUrl } } = supabase.storage
-              .from('documentation')
-              .getPublicUrl(response.data.storage_path || response.data.ruta);
-
-            return {
-              ...response.data,
-              id: parseInt(response.data.id, 10),
-              name: response.data.nombre || response.data.name,
-              url: publicUrl,
-              created_at: new Date(response.data.created_at).toLocaleDateString('es-ES')
-            };
-          }
-        } catch (e) {
-          // Continue
-        }
-      }
-      throw new Error(lastError?.message || "No se pudo insertar el registro en la base de datos.");
-
-    } catch (err: any) {
-      console.error("Error uploading document:", err);
-      throw err;
+      const sizeStr = file.size > 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : `${(file.size / 1024).toFixed(0)} KB`;
+      const { data, error } = await supabase.from('documents').insert({ name: file.name, type: file.name.split('.').pop() || 'other', size: sizeStr, cat_id: catId, storage_path: filePath, descripcion: description || '' }).select().single();
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from('documentation').getPublicUrl(filePath);
+      return { ...data, id: parseInt(data.id, 10), name: data.nombre || data.name, url: publicUrl, created_at: new Date(data.created_at).toLocaleDateString('es-ES') };
+    } catch (err) {
+      return null;
     }
   },
 
   updateDocument: async (docId: number, name: string, description: string): Promise<boolean> => {
     if (!supabase) return false;
-    const tableNames = ['documents', 'documentos', 'document'];
-    
-    for (const tableName of tableNames) {
-      try {
-        // Try confirmed schema first: name, descripcion
-        let { error } = await supabase.from(tableName).update({
-          name: name,
-          descripcion: description
-        }).eq('id', docId);
-        
-        if (error) {
-          // Fallback if schema is different
-          ({ error } = await supabase.from(tableName).update({
-            nombre: name,
-            description: description
-          }).eq('id', docId));
-        }
-
-        if (!error) return true;
-      } catch (err) {
-        // Continue
-      }
+    try {
+      const { error } = await supabase.from('documents').update({ name, descripcion: description }).eq('id', docId);
+      return !error;
+    } catch (err) {
+      return false;
     }
-    return false;
   },
 
   updateCategory: async (catId: number, name: string, description: string): Promise<boolean> => {
     if (!supabase) return false;
-    const tableNames = ['documents_categoria', 'documents_categorias', 'document_categories'];
-    
-    for (const tableName of tableNames) {
-      try {
-        // Try confirmed schema first: nombre, descripcion
-        let { error } = await supabase.from(tableName).update({
-          nombre: name,
-          descripcion: description
-        }).eq('id', catId);
-
-        if (error) {
-           // Fallback if schema is different
-           ({ error } = await supabase.from(tableName).update({
-            name: name,
-            description: description
-          }).eq('id', catId));
-        }
-        
-        if (!error) return true;
-      } catch (err) {
-        // Continue
-      }
+    try {
+      const { error } = await supabase.from('documents_categoria').update({ nombre: name, descripcion: description }).eq('id', catId);
+      return !error;
+    } catch (err) {
+      return false;
     }
-    return false;
   },
 
   deleteCategory: async (catId: number): Promise<boolean> => {
     if (!supabase) return false;
-
     try {
-      // 1. Fetch children documents to clean up storage
-      const childDocs = await api.getDocumentsByCategory(catId);
-      if (childDocs && childDocs.length > 0) {
-        for (const doc of childDocs) {
-          await api.deleteDocument(doc.id, doc.storage_path);
-        }
-      }
-
-      // 2. Delete subcategories (recursive)
-      const tableNames = ['documents_categoria', 'documents_categorias', 'document_categories'];
-      let mainTable = 'documents_categoria';
-      
-      // Find which table works
-      const catsList = await api.getDocumentCategories();
-      const subCats = (catsList || []).filter(c => c.parent_id === catId);
-      for (const sub of subCats) {
-        await api.deleteCategory(sub.id);
-      }
-
-      // 3. Finally delete the category row
-      for (const tableName of tableNames) {
-        const { error } = await supabase.from(tableName).delete().eq('id', catId);
-        if (!error) return true;
-      }
-      return false;
+      const docs = await api.getDocumentsByCategory(catId);
+      for (const doc of docs) await api.deleteDocument(doc.id, doc.storage_path);
+      const { error } = await supabase.from('documents_categoria').delete().eq('id', catId);
+      return !error;
     } catch (err) {
-      console.error("Error in deleteCategory recursive:", err);
       return false;
     }
   },
@@ -1367,38 +1037,36 @@ export const api = {
   deleteDocument: async (docId: number, storagePath: string): Promise<boolean> => {
     if (!supabase) return false;
     try {
-      const { error: storageError } = await supabase.storage
-        .from('documentation')
-        .remove([storagePath]);
-      
-      if (storageError) console.warn("Could not delete file from bucket", storageError);
-
-      const tableNames = ['documents', 'documentos'];
-      for (const tableName of tableNames) {
-        const { error } = await supabase.from(tableName).delete().eq('id', docId);
-        if (!error) return true;
-      }
-      return false;
+      await supabase.storage.from('documentation').remove([storagePath]);
+      const { error } = await supabase.from('documents').delete().eq('id', docId);
+      return !error;
     } catch (err) {
-      console.error("Error deleting document:", err);
       return false;
     }
   },
 
+  uploadAvatar: async (file: File, userId: string): Promise<string | null> => {
+    if (!supabase) return null;
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}-${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('travel_advisors').upload(fileName, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from('travel_advisors').getPublicUrl(fileName);
+      return publicUrl;
+    } catch (err) {
+      return null;
+    }
+  },
 
-  // --- MENTORSHIP ---
   createMentorshipRequest: async (request: Partial<MentorshipRequest>): Promise<{ success: boolean; error?: string }> => {
-    if (!supabase) return { success: false, error: "Supabase no está configurado." };
+    if (!supabase) return { success: false, error: "Supabase not configured" };
     try {
       const { error } = await supabase.from('mentorship_requests').insert(request);
       if (error) throw error;
       return { success: true };
     } catch (err: any) {
-      console.error("Error creating mentorship request:", err);
-      return { 
-        success: false, 
-        error: err.message || "Error desconocido al guardar en la base de datos." 
-      };
+      return { success: false, error: err.message };
     }
   },
 
@@ -1411,7 +1079,6 @@ export const api = {
       if (error) throw error;
       return data || [];
     } catch (err) {
-      console.error("Error fetching mentorship requests:", err);
       return [];
     }
   },
@@ -1419,14 +1086,9 @@ export const api = {
   updateMentorshipStatus: async (requestId: number, status: MentorshipRequest['status']): Promise<boolean> => {
     if (!supabase) return false;
     try {
-      const { error } = await supabase
-        .from('mentorship_requests')
-        .update({ status })
-        .eq('id', requestId);
-      if (error) throw error;
-      return true;
+      const { error } = await supabase.from('mentorship_requests').update({ status }).eq('id', requestId);
+      return !error;
     } catch (err) {
-      console.error("Error updating mentorship status:", err);
       return false;
     }
   },
@@ -1434,99 +1096,35 @@ export const api = {
   deleteMentorshipRequest: async (requestId: number): Promise<boolean> => {
     if (!supabase) return false;
     try {
-      const { error } = await supabase
-        .from('mentorship_requests')
-        .delete()
-        .eq('id', requestId);
-      if (error) throw error;
-      return true;
+      const { error } = await supabase.from('mentorship_requests').delete().eq('id', requestId);
+      return !error;
     } catch (err) {
-      console.error("Error deleting mentorship request:", err);
       return false;
     }
   },
 
   search: async (query: string, user?: { id: string, name: string }): Promise<SearchResults> => {
     if (!supabase) return { notices: [], events: [], certifications: [], associates: [], documents: [] };
-    
     const term = `%${query}%`;
-    
     try {
-      const [notices, events, certifications, associates, documents, myAssociate] = await Promise.all([
+      const [notices, events, certifications, associates, documents] = await Promise.all([
         supabase.from('notices').select('*').or(`title.ilike.${term},content.ilike.${term}`),
         supabase.from('events').select('*').or(`title.ilike.${term},description.ilike.${term}`),
         supabase.from('certifications').select('*').or(`name.ilike.${term},description.ilike.${term}`),
         supabase.from('associates').select('*').or(`name.ilike.${term},last_name.ilike.${term},position.ilike.${term},email.ilike.${term}`),
-        supabase.from('documents').select('*').or(`name.ilike.${term},description.ilike.${term}`),
-        user ? supabase.from('associates').select('id').eq('user_id', user.id).single() : Promise.resolve({ data: null })
+        supabase.from('documents').select('*').or(`name.ilike.${term},description.ilike.${term}`)
       ]);
-
-      let filteredNotices = (notices.data || []).map((d: any) => ({ ...d, id: d.id.toString() }));
-      
-      if (user && myAssociate.data) {
-        const myId = myAssociate.data.id.toString();
-        filteredNotices = filteredNotices.filter((notice: any) => {
-          if (!notice.recipient_ids || notice.recipient_ids.trim() === '') return true;
-          const ids = notice.recipient_ids.split(',').map((id: string) => id.trim());
-          return ids.includes(myId);
-        });
-      }
-
-      const results = {
-        notices: filteredNotices,
-        events: (events.data || []).map((e: any) => {
-          const dateObj = new Date(e.event_date + 'T00:00:00');
-          return {
-            ...e,
-            day: dateObj.getDate().toString().padStart(2, '0'),
-            month: dateObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '')
-          };
+      return {
+        notices: (notices.data || []).map(d => ({ ...d, id: d.id.toString() })),
+        events: (events.data || []).map(e => {
+          const d = new Date(e.event_date + 'T00:00:00');
+          return { ...e, day: d.getDate().toString().padStart(2, '0'), month: d.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase() };
         }),
         certifications: certifications.data || [],
         associates: associates.data || [],
-        documents: (documents.data || []).map((d: any) => {
-          const storagePath = d.storage_path || d.ruta_almacenamiento || d.ruta || '';
-          let finalUrl = '';
-
-          if (storagePath.startsWith('http')) {
-            finalUrl = storagePath;
-          } else {
-            let cleanPath = storagePath.startsWith('/') ? storagePath.substring(1) : storagePath;
-            if (cleanPath.startsWith('documentation/')) {
-              cleanPath = cleanPath.replace('documentation/', '');
-            }
-            const { data: { publicUrl } } = supabase.storage
-              .from('documentation')
-              .getPublicUrl(cleanPath);
-            finalUrl = publicUrl;
-          }
-          
-          return {
-            id: parseInt(d.id, 10),
-            name: d.name || d.nombre || 'Sin nombre',
-            type: d.type || d.tipo || 'other',
-            size: d.size || d.tamaño || d.tamano || '0 KB',
-            storage_path: storagePath,
-            cat_id: parseInt(d.cat_id !== undefined ? d.cat_id : d.categoria_id, 10) || 0,
-            description: d.description || d.descripcion || '',
-            created_at: new Date(d.created_at).toLocaleDateString('es-ES'),
-            url: finalUrl
-          };
-        })
+        documents: (documents.data || []).map(d => ({ ...d, id: parseInt(d.id, 10), url: d.storage_path }))
       };
-
-      // Log the search if user info is provided
-      if (user) {
-        const totalResults = results.notices.length + results.events.length + results.certifications.length + results.associates.length + results.documents.length;
-        console.log(`Logging search for ${user.name}: "${query}" with ${totalResults} results`);
-        api.logSearch(user.id, user.name, query, totalResults)
-          .then(success => console.log("Search log status:", success ? "Success" : "Failed"))
-          .catch(err => console.error("Failed to log search:", err));
-      }
-
-      return results;
     } catch (err) {
-      console.error("Search error:", err);
       return { notices: [], events: [], certifications: [], associates: [], documents: [] };
     }
   },
@@ -1534,16 +1132,9 @@ export const api = {
   logSearch: async (userId: string, userName: string, query: string, resultsCount: number): Promise<boolean> => {
     if (!supabase) return false;
     try {
-      const { error } = await supabase.from('search_logs').insert({
-        user_id: userId,
-        user_name: userName,
-        query: query,
-        results_count: resultsCount
-      });
-      if (error) throw error;
-      return true;
+      const { error } = await supabase.from('search_logs').insert({ user_id: userId, user_name: userName, query: query, results_count: resultsCount });
+      return !error;
     } catch (err) {
-      console.error("Error logging search:", err);
       return false;
     }
   },
@@ -1551,15 +1142,10 @@ export const api = {
   getSearchLogs: async (): Promise<SearchLog[]> => {
     if (!supabase) return [];
     try {
-      const { data, error } = await supabase
-        .from('search_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(500);
+      const { data, error } = await supabase.from('search_logs').select('*').order('created_at', { ascending: false }).limit(500);
       if (error) throw error;
       return data || [];
     } catch (err) {
-      console.error("Error getting search logs:", err);
       return [];
     }
   }

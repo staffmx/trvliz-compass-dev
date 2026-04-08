@@ -37,6 +37,7 @@ const App: React.FC = () => {
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [selectedAssociateId, setSelectedAssociateId] = useState<number | null>(null);
   const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
+  const [selectedBlogId, setSelectedBlogId] = useState<number | null>(null);
   const [searchResults, setSearchResults] = useState<SearchResultsType | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -158,6 +159,11 @@ const App: React.FC = () => {
     setCurrentNav(NavigationItem.ASSOCIATE_DETAIL);
   };
 
+  const handleNavigateToBlog = (postId: number) => {
+    setSelectedBlogId(postId);
+    setCurrentNav(NavigationItem.BLOG);
+  };
+
   const renderContent = () => {
     switch (currentNav) {
       case NavigationItem.DASHBOARD:
@@ -166,6 +172,7 @@ const App: React.FC = () => {
             onNavigate={setCurrentNav} 
             onEventClick={handleNavigateToEvent}
             onNoticeClick={handleNavigateToNotice}
+            onBlogClick={handleNavigateToBlog}
         />;
       case NavigationItem.AVISOS:
         return <NoticesList 
@@ -193,7 +200,12 @@ const App: React.FC = () => {
           <ProvidersList onSelectProvider={setSelectedProvider} />
         );
       case NavigationItem.BLOG:
-        return <Inspiration onNavigate={setCurrentNav} />;
+        return <Inspiration 
+            user={user!} 
+            onNavigate={setCurrentNav} 
+            initialPostId={selectedBlogId}
+            onClearInitialPost={() => setSelectedBlogId(null)}
+        />;
       case NavigationItem.DIRECTORIO:
         return <Directory onViewProfile={handleViewAssociate} />;
       case NavigationItem.ASSOCIATE_DETAIL:
