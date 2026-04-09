@@ -199,36 +199,58 @@ export const api = {
     try {
       let { data, error } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          user_roles (
-            roles (
-              id,
-              name,
-              color
-            )
-          )
-        `)
+        .select('*')
         .eq('id', userId)
         .maybeSingle();
+
+      if (error && error.message.includes("schema cache")) {
+         console.warn("Schema cache error ignored for base profile fetch.");
+      }
+
+      // Fetch roles independently to bypass schema cache foreign key issues
+      if (data) {
+        const { data: uRolesRaw, error: urErr } = await supabase
+          .from('user_roles')
+          .select('*')
+          .eq('user_id', data.id);
+        
+        if (uRolesRaw && uRolesRaw.length > 0) {
+          const roleIds = uRolesRaw.map((r: any) => r.role_id);
+          const { data: rolesData, error: rolesErr } = await supabase
+            .from('roles')
+            .select('id, name')
+            .in('id', roleIds);
+            
+          data.user_roles = rolesData ? rolesData.map((r: any) => ({ roles: r })) : [];
+        } else {
+          data.user_roles = [];
+        }
+      }
       
       if (!data && email) {
         const { data: dataByEmail } = await supabase
           .from('profiles')
-          .select(`
-            *,
-            user_roles (
-              roles (
-                id,
-                name,
-                color
-              )
-            )
-          `)
+          .select('*')
           .eq('email', email)
           .maybeSingle();
         
         if (dataByEmail) {
+          const { data: uRolesRaw } = await supabase
+            .from('user_roles')
+            .select('role_id')
+            .eq('user_id', dataByEmail.id);
+            
+          if (uRolesRaw && uRolesRaw.length > 0) {
+            const roleIds = uRolesRaw.map((r: any) => r.role_id);
+            const { data: rolesData } = await supabase
+              .from('roles')
+              .select('id, name')
+              .in('id', roleIds);
+            dataByEmail.user_roles = rolesData ? rolesData.map((r: any) => ({ roles: r })) : [];
+          } else {
+            dataByEmail.user_roles = [];
+          }
+
           data = dataByEmail;
           if (dataByEmail.id !== userId) {
             await api.linkProfileToAuth(dataByEmail.id, userId);
@@ -330,8 +352,7 @@ export const api = {
             role_id,
             roles (
               id,
-              name,
-              color
+              name
             )
           )
         `);
