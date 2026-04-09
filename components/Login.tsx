@@ -18,7 +18,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError('');
 
     try {
-      const { data, error: signInError } = await api.signIn(email, password);
+      const { data, error: signInError } = await api.signIn(email.trim(), password.trim());
 
       if (signInError) {
         if (signInError.message.includes("Invalid login credentials")) {
