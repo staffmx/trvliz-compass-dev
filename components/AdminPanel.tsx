@@ -6,7 +6,7 @@ import { Notice, UserProfile, Role, DocumentCategory, Document as DocType, Assoc
 
 type AdminSection = 'overview' | 'directory' | 'notices' | 'events' | 'blog' | 'sellers' | 'users' | 'documents' | 'recorded_webinars' | 'mentorships' | 'certifications' | 'search_logs';
 
-export const BLOG_CATEGORIES = ['Destinos', 'Tendencias', 'Tips de Viaje', 'Noticias', 'Gastronomía', 'Luxury Travel', 'Wellness'];
+export const BLOG_CATEGORIES = ['Destinos', 'Tendencias', 'Tips de Viaje', 'Noticias', 'Gastronomía', 'Luxury Travel', 'Wellness', 'Itinerarios'];
 
 const AdminPanel = ({ user }: any) => {
   const [activeSection, setActiveSection] = useState<AdminSection>('overview');
@@ -21,6 +21,14 @@ const AdminPanel = ({ user }: any) => {
     const roles = (user?.roles || []) as Role[];
     return roles.some(r => r.name.toLowerCase() === roleName.toLowerCase());
   };
+
+  const AccessDenied = () => (
+      <div className="flex flex-col items-center justify-center p-20 text-center animate-fade-in bg-white border border-red-100 shadow-sm">
+          <i className="fa-solid fa-triangle-exclamation text-red-500 text-5xl mb-6"></i>
+          <h2 className="text-2xl font-serif text-primary mb-2">Acceso Restringido</h2>
+          <p className="text-secondary text-sm">No cuentas con los permisos necesarios para investigar o editar esta sección.</p>
+      </div>
+  );
 
   const SectionHeader = ({ title, subtitle, actionLabel, onAction, secondActionLabel, onSecondAction }: { title: string, subtitle: string, actionLabel?: string, onAction?: () => void, secondActionLabel?: string, onSecondAction?: () => void }) => (
     <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-6">
@@ -149,17 +157,17 @@ const AdminPanel = ({ user }: any) => {
 
       <main className="flex-1 p-8 md:p-12 overflow-y-auto bg-[#F9FAFB]">
         {activeSection === 'overview' && <AdminOverview setActive={setActiveSection} />}
-        {activeSection === 'users' && <AdminUsers Header={SectionHeader} />}
-        {activeSection === 'recorded_webinars' && <AdminRecordedWebinars Header={SectionHeader} />}
-        {activeSection === 'documents' && <AdminDocuments Header={SectionHeader} />}
         {activeSection === 'directory' && <AdminDirectory Header={SectionHeader} />}
-        {activeSection === 'sellers' && <AdminSellers Header={SectionHeader} />}
-        {activeSection === 'notices' && <AdminNotices Header={SectionHeader} />}
-        {activeSection === 'events' && <AdminEvents Header={SectionHeader} />}
-        {activeSection === 'mentorships' && <AdminMentorships Header={SectionHeader} />}
-        {activeSection === 'certifications' && <AdminCertifications Header={SectionHeader} />}
-        {activeSection === 'search_logs' && <AdminSearchLogs Header={SectionHeader} />}
-        {activeSection === 'blog' && <AdminBlog Header={SectionHeader} currentUser={user} />}
+        {activeSection === 'users' && (user?.role === 'admin' ? <AdminUsers Header={SectionHeader} /> : <AccessDenied />)}
+        {activeSection === 'search_logs' && (user?.role === 'admin' ? <AdminSearchLogs Header={SectionHeader} /> : <AccessDenied />)}
+        {activeSection === 'notices' && (hasRole('editor_avisos') ? <AdminNotices Header={SectionHeader} /> : <AccessDenied />)}
+        {activeSection === 'sellers' && (hasRole('editor_vendedores') ? <AdminSellers Header={SectionHeader} /> : <AccessDenied />)}
+        {activeSection === 'events' && (hasRole('editor_eventos') ? <AdminEvents Header={SectionHeader} /> : <AccessDenied />)}
+        {activeSection === 'documents' && (hasRole('editor_documentos') ? <AdminDocuments Header={SectionHeader} /> : <AccessDenied />)}
+        {activeSection === 'recorded_webinars' && ((hasRole('editor_webinars') || hasRole('editor_eventos')) ? <AdminRecordedWebinars Header={SectionHeader} /> : <AccessDenied />)}
+        {activeSection === 'certifications' && ((hasRole('editor_certificaciones') || hasRole('editor_eventos')) ? <AdminCertifications Header={SectionHeader} /> : <AccessDenied />)}
+        {activeSection === 'mentorships' && ((hasRole('editor_mentorias') || hasRole('editor_eventos')) ? <AdminMentorships Header={SectionHeader} /> : <AccessDenied />)}
+        {activeSection === 'blog' && (hasRole('editor_blogs') ? <AdminBlog Header={SectionHeader} currentUser={user} /> : <AccessDenied />)}
       </main>
     </div>
   );
@@ -219,6 +227,13 @@ const AdminBlog = ({ Header, currentUser }: any) => {
       alert("Por favor sube una imagen para el artículo.");
       return;
     }
+    
+    // Validar mínimo 400 caracteres reales (removiendo etiquetas HTML de JoditEditor)
+    const plainTextContent = (formData.content || '').replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim();
+    if (plainTextContent.length < 400) {
+      alert(`El artículo es demasiado corto. Debe contener al menos 400 caracteres de texto real (sin contar imágenes o formato). Actualmente tiene: ${plainTextContent.length} caracteres.`);
+      return;
+    }
     setSaving(true);
     try {
       // Auto-assign today's date and author ONLY if it is a new post (no ID)
@@ -226,7 +241,8 @@ const AdminBlog = ({ Header, currentUser }: any) => {
       if (!postData.id) {
         const today = new Date();
         postData.publish_date = today.toISOString().split('T')[0];
-        postData.author = currentUser?.name || 'Admin';
+        const fullName = [currentUser?.name, currentUser?.last_name].filter(Boolean).join(' ');
+        postData.author = fullName || 'Admin';
       }
 
       await api.upsertBlogPost(postData);

@@ -572,7 +572,7 @@ export const api = {
   getNoticeById: async (id: string): Promise<Notice | null> => {
     if (!supabase) return null;
     try {
-      const { data, error } = await supabase.from('notices').select('*').eq('id', parseInt(id)).single();
+      const { data, error } = await supabase.from('notices').select('*').eq('id', id).single();
       if (error) throw error;
       return { ...data, id: data.id.toString() };
     } catch (err) {
@@ -639,7 +639,14 @@ export const api = {
     if (!supabase) return null;
     const { day, month, ...payload } = event as any;
     try {
-      let query = (payload.id && payload.id !== 0) ? supabase.from('events').update(payload).eq('id', payload.id) : supabase.from('events').insert(payload);
+      let query;
+      if (payload.id && payload.id !== 0) {
+        const { id, ...updateData } = payload;
+        query = supabase.from('events').update(updateData).eq('id', payload.id);
+      } else {
+        const { id, ...insertData } = payload;
+        query = supabase.from('events').insert(insertData);
+      }
       const { data, error } = await query.select().single();
       if (error) throw error;
       const dateObj = new Date(data.event_date + 'T00:00:00');
@@ -671,7 +678,14 @@ export const api = {
   upsertCertification: async (cert: Partial<Certification>): Promise<Certification | null> => {
     if (!supabase) return null;
     try {
-      let query = (cert.id && cert.id !== 0) ? supabase.from('certifications').update(cert).eq('id', cert.id) : supabase.from('certifications').insert(cert);
+      let query;
+      if (cert.id && cert.id !== 0) {
+        const { id, ...updateData } = cert;
+        query = supabase.from('certifications').update(updateData).eq('id', cert.id);
+      } else {
+        const { id, ...insertData } = cert;
+        query = supabase.from('certifications').insert(insertData);
+      }
       const { data, error } = await query.select().single();
       if (error) throw error;
       return data;
@@ -867,7 +881,14 @@ export const api = {
   upsertBlogPost: async (post: Partial<BlogPost>): Promise<BlogPost | null> => {
     if (!supabase) return null;
     try {
-      let query = (post.id && post.id !== 0) ? supabase.from('blog_posts').update(post).eq('id', post.id) : supabase.from('blog_posts').insert(post);
+      let query;
+      if (post.id && post.id !== 0) {
+        const { id, ...updateData } = post;
+        query = supabase.from('blog_posts').update(updateData).eq('id', post.id);
+      } else {
+        const { id, ...insertData } = post;
+        query = supabase.from('blog_posts').insert(insertData);
+      }
       const { data, error } = await query.select().single();
       if (error) throw error;
       return data;

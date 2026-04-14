@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavigationItem, Event, User } from '../types';
 import { api, BlogPost, BlogComment } from '../services/api';
+import { BLOG_CATEGORIES } from './AdminPanel';
 
 interface InspirationProps {
     user: User;
@@ -15,6 +16,7 @@ const Inspiration: React.FC<InspirationProps> = ({ user, onNavigate, initialPost
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialPostId !== undefined && initialPostId !== null) {
@@ -143,6 +145,7 @@ const Inspiration: React.FC<InspirationProps> = ({ user, onNavigate, initialPost
 
   const selectedPost = posts.find(p => p.id === selectedPostId);
   const popularPosts = [...posts].sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0)).slice(0, 5);
+  const filteredPosts = selectedCategory ? posts.filter(p => p.category === selectedCategory) : posts;
 
   const renderPostContent = (content?: string) => {
     if (!content) {
@@ -380,6 +383,27 @@ const Inspiration: React.FC<InspirationProps> = ({ user, onNavigate, initialPost
                         )}
                     </div>
                   </div>
+
+                  <div className="bg-surface p-6 border border-neutral shadow-sm mt-8">
+                    <div className="flex items-center justify-between mb-8 border-b border-neutral pb-4">
+                        <h2 className="text-xl font-serif font-light text-primary">Categorías</h2>
+                        <i className="fa-solid fa-tags text-brand"></i>
+                    </div>
+                    <ul className="space-y-4">
+                        {BLOG_CATEGORIES.map(cat => {
+                            const count = posts.filter(p => p.category === cat).length;
+                            if (count === 0) return null;
+                            return (
+                                <li key={cat} onClick={() => { setSelectedCategory(cat); setSelectedPostId(null); if (onClearInitialPost) onClearInitialPost(); window.scrollTo({top: 0, behavior: 'smooth'}); }} className="flex justify-between items-center group cursor-pointer text-sm font-light text-secondary hover:text-brand transition-colors">
+                                    <span>{cat}</span>
+                                    <span className="w-6 h-6 rounded-full bg-background border border-neutral flex items-center justify-center text-[10px] group-hover:bg-brand group-hover:text-white group-hover:border-brand transition-all">
+                                        {count}
+                                    </span>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                  </div>
                 </div>
             </div>
         </div>
@@ -394,13 +418,35 @@ const Inspiration: React.FC<InspirationProps> = ({ user, onNavigate, initialPost
         <p className="text-secondary text-lg font-light leading-relaxed">Descubre las últimas tendencias, destinos emergentes y estrategias de mercado.</p>
       </div>
 
+      <div className="flex overflow-x-auto gap-4 py-4 mb-12 no-scrollbar border-b border-neutral justify-start md:justify-center">
+        <button
+          onClick={() => setSelectedCategory(null)}
+          className={`px-4 py-2 whitespace-nowrap text-xs font-bold uppercase tracking-widest transition-all ${!selectedCategory ? 'text-brand border-b-2 border-brand' : 'text-secondary hover:text-brand'}`}
+        >
+          Todos
+        </button>
+        {BLOG_CATEGORIES.map(cat => {
+          const count = posts.filter(p => p.category === cat).length;
+          if (count === 0) return null;
+          return (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-4 py-2 whitespace-nowrap text-xs font-bold uppercase tracking-widest transition-all ${selectedCategory === cat ? 'text-brand border-b-2 border-brand' : 'text-secondary hover:text-brand'}`}
+              >
+                {cat} <span className="opacity-50 ml-1">({count})</span>
+              </button>
+          );
+        })}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-grid-gap">
         {loading ? (
           Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="bg-surface h-96 border border-neutral animate-pulse"></div>
           ))
         ) : (
-          posts.map((post) => (
+          filteredPosts.map((post) => (
             <article key={post.id} onClick={() => { setSelectedPostId(post.id); window.scrollTo({top: 0, behavior: 'smooth'}); }} className="flex flex-col bg-surface rounded-none border border-neutral overflow-hidden hover:shadow-2xl transition-all duration-500 group cursor-pointer luxury-image-hover h-full">
               <div className="h-64 overflow-hidden relative w-full">
                 <img src={post.image} alt={post.title} className="w-full h-full object-cover" />

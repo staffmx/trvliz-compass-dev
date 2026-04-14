@@ -13,6 +13,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate, onSearch, onNoticeClick }) => {
+  const hasAdminAccess = user.role === 'admin' || (user.roles && user.roles.length > 0);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -206,12 +207,12 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate,
                   <div className="px-6 py-4 border-b border-neutral mb-2">
                     <p className="text-sm font-serif font-bold text-primary">{user.name}</p>
                     <p className="text-xs text-secondary tracking-wide truncate">{user.email}</p>
-                    {(user.role === 'admin' || user.roles?.some(r => r && r.name && (r.name.toLowerCase().includes('admin') || r.name.toLowerCase().includes('administrador')))) && (
+                    {hasAdminAccess && (
                       <span className="mt-1 inline-block text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-accent/10 text-accent border border-accent/20">Administrator</span>
                     )}
                   </div>
                   
-                  {(user.role === 'admin' || user.roles?.some(r => r && r.name && (r.name.toLowerCase().includes('admin') || r.name.toLowerCase().includes('administrador')))) && (
+                  {hasAdminAccess && (
                     <button 
                       onClick={() => { onNavigate(NavigationItem.ADMIN); setIsProfileOpen(false); }}
                       className="w-full text-left block px-6 py-2.5 text-sm text-brand font-bold hover:bg-background transition-colors"
@@ -258,7 +259,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate,
               </button>
             ))}
             
-            {(user.role === 'admin' || user.roles?.some(r => r && r.name && (r.name.toLowerCase().includes('admin') || r.name.toLowerCase().includes('administrador')))) && (
+            {hasAdminAccess && (
               <button
                 onClick={() => onNavigate(NavigationItem.ADMIN)}
                 className={`ml-auto flex items-center gap-2 py-2 px-4 text-[10px] font-bold uppercase tracking-[2px] border transition-all duration-300 ${
@@ -297,7 +298,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate,
                 {item.label}
               </button>
             ))}
-            {(user.role === 'admin' || user.roles?.some(r => r && r.name && (r.name.toLowerCase().includes('admin') || r.name.toLowerCase().includes('administrador')))) && (
+            {hasAdminAccess && (
               <button
                 onClick={() => { onNavigate(NavigationItem.ADMIN); setIsMobileMenuOpen(false); }}
                 className="w-full flex items-center gap-3 px-4 py-4 border-l-2 border-transparent text-accent font-bold text-sm uppercase tracking-widest hover:bg-white/5"
