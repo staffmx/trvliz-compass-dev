@@ -784,7 +784,7 @@ const AdminSellers = ({ Header }: any) => {
             ...formData,
             name: `${assoc.name} ${assoc.last_name || ''}`.trim(),
             avatar: assoc.image,
-            branch: assoc.branch || ''
+            branch: assoc.Branch || assoc.branch || '' // Uses associate branch directly
         });
     } else {
         setFormData({ ...formData, name: '', avatar: '', branch: '' });
@@ -901,15 +901,19 @@ const AdminSellers = ({ Header }: any) => {
                 />
               </div>
 
+
+
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Sucursal</label>
-                <input 
-                    type="text" 
-                    placeholder="Ej. ROBLE, CDMX"
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Nivel / Rango</label>
+                <select 
                     className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none" 
-                    value={formData.branch}
-                    onChange={(e) => setFormData({...formData, branch: e.target.value})}
-                />
+                    value={formData.tier || 'SENIOR PARTNER'}
+                    onChange={(e) => setFormData({...formData, tier: e.target.value})}
+                >
+                    <option value="SENIOR PARTNER">SENIOR PARTNER</option>
+                    <option value="JUNIOR PARTNER">JUNIOR PARTNER</option>
+                    <option value="ASSOCIATE">ASSOCIATE</option>
+                </select>
               </div>
             </div>
             <button type="submit" disabled={saving || loadingAssociates} className="bg-brand text-white px-12 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all shadow-xl disabled:opacity-50">
@@ -925,6 +929,7 @@ const AdminSellers = ({ Header }: any) => {
             <tr>
               <th className="px-8 py-5">Ranking</th>
               <th className="px-8 py-5">Vendedor</th>
+              <th className="px-8 py-5">Rango</th>
               <th className="px-8 py-5">Sucursal</th>
               <th className="px-8 py-5 text-right">Acciones</th>
             </tr>
@@ -940,6 +945,9 @@ const AdminSellers = ({ Header }: any) => {
                       <img src={seller.avatar} alt={seller.name} className="w-12 h-12 rounded-full object-cover border border-neutral ring-1 ring-neutral/20 group-hover:ring-accent transition-all" />
                       <p className="font-bold text-primary group-hover:text-brand transition-colors">{seller.name}</p>
                    </div>
+                </td>
+                <td className="px-8 py-6">
+                  <span className="text-[9px] font-bold uppercase tracking-widest bg-brand/5 text-brand px-2 py-1 rounded-sm border border-brand/10">{seller.tier || 'SENIOR PARTNER'}</span>
                 </td>
                 <td className="px-8 py-6">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-secondary">{seller.branch || 'N/A'}</span>
@@ -1660,11 +1668,11 @@ const AdminOverview = ({ setActive }: { setActive: (s: AdminSection) => void }) 
     { label: 'Webinars Grabados', count: stats.webinars, icon: 'fa-play', section: 'recorded_webinars' as AdminSection },
   ];
 
-  // Group sellers by branch
-  const sellersByBranch = topSellers.reduce((acc, seller) => {
-    const branch = seller.branch || 'OTRO';
-    if (!acc[branch]) acc[branch] = [];
-    acc[branch].push(seller);
+  // Group sellers by tier
+  const sellersByTier = topSellers.reduce((acc, seller) => {
+    const tier = seller.tier || 'SENIOR PARTNER';
+    if (!acc[tier]) acc[tier] = [];
+    acc[tier].push(seller);
     return acc;
   }, {} as Record<string, Seller[]>);
 
@@ -1697,22 +1705,22 @@ const AdminOverview = ({ setActive }: { setActive: (s: AdminSection) => void }) 
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        {/* Top Producers by Branch */}
+        {/* Top Producers by Tier */}
         <div className="bg-white border border-neutral p-8 shadow-sm">
           <div className="flex justify-between items-center mb-8">
-            <h3 className="text-xl font-serif font-medium text-primary">Top Producers por Sucursal</h3>
+            <h3 className="text-xl font-serif font-medium text-primary">Top Producers por Nivel</h3>
             <button onClick={() => setActive('sellers')} className="text-[10px] font-bold uppercase tracking-widest text-accent hover:text-brand transition-colors">Ver todos</button>
           </div>
           
           <div className="space-y-8">
-            {Object.entries(sellersByBranch).length === 0 && !loading ? (
+            {Object.entries(sellersByTier).length === 0 && !loading ? (
               <p className="text-secondary italic text-sm">No hay datos de productores disponibles.</p>
             ) : (
-              (Object.entries(sellersByBranch) as [string, Seller[]][]).map(([branch, sellers]) => (
-                <div key={branch}>
+              (Object.entries(sellersByTier) as [string, Seller[]][]).map(([tier, sellers]) => (
+                <div key={tier}>
                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-4 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 bg-accent rounded-full"></span>
-                    Sucursal {branch}
+                    Nivel {tier}
                   </h4>
                   <div className="space-y-3">
                     {sellers.sort((a, b) => a.ranking - b.ranking).map((seller) => (

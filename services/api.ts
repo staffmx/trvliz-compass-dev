@@ -109,6 +109,7 @@ export interface Seller {
   avatar: string;
   ranking: number;
   branch?: string;
+  tier?: string;
 }
 
 export type FileType = 'folder' | 'pdf' | 'doc' | 'xls' | 'img' | 'video' | 'other';

@@ -72,10 +72,14 @@ const CONTACTO_FIELDS = ['Nombre', 'Correo', 'CorreoSec', 'Telefono'];
 
 export const providersService = {
   async fetchProviders(): Promise<{ code: number, data: Provider[] }> {
-    // According to user instruction we fetch the local ListProveedoresApi.json file
-    const response = await fetch('/ListProveedoresAPI.json');
+    // Usamos el proxy (/zoho-api) para evitar problemas de CORS en el navegador
+    const PROXY_PATH = '/zoho-api';
+    const API_ENDPOINT = '/icmxapps/traveliz-ave/json/ListProveedoresAPI/dp5RObAWdKEB4uqDSzUqrx8zR7e9TqFAAQkQCnnPNJbFv06Ty7Awpa2CV8VHFpdC0wBqmgujbs6FQS7nm9a93GUbsk4kgOD08n2W';
+    const ZOHO_URL = `${PROXY_PATH}${API_ENDPOINT}`;
+    
+    const response = await fetch(ZOHO_URL);
     if (!response.ok) {
-        throw new Error('Error al cargar el listado de proveedores');
+        throw new Error('Error al conectar con la API de Zoho a través del proxy');
     }
     const data = await response.json();
     const proveedoresRaw = data.ListProveedoresAPI || [];

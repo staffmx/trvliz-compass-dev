@@ -8,6 +8,13 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        proxy: {
+          '/zoho-api': {
+            target: 'https://creatorapp.zohopublic.com',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/zoho-api/, '')
+          }
+        }
       },
       plugins: [react()],
       define: {

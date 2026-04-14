@@ -66,6 +66,23 @@ const App: React.FC = () => {
     };
   }, []);
 
+  // 3. Bloquear el botón de "Atrás" del navegador
+  useEffect(() => {
+    // Inyectamos un estado extra al inicio
+    window.history.pushState(null, "", window.location.href);
+
+    const handlePopState = () => {
+      // Forzamos al navegador a ir "adelante" inmediatamente después de que intentó ir "atrás"
+      window.history.go(1);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
   const handleProfileSync = async (userId: string, email?: string) => {
     try {
       const profile = await api.getUserProfile(userId, email);

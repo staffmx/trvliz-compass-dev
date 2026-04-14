@@ -19,6 +19,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
   const [teamMembers, setTeamMembers] = useState<Associate[]>([]);
   const [currentUserAssociate, setCurrentUserAssociate] = useState<Associate | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeSellerTier, setActiveSellerTier] = useState<string>('SENIOR PARTNER');
 
   useEffect(() => {
     const loadAllData = async () => {
@@ -287,9 +288,22 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
 
           <div className="bg-brand rounded-none p-8 text-white shadow-xl relative overflow-hidden">
              <div className="relative z-10">
-                 <div className="flex items-center justify-between mb-8 border-b border-white/20 pb-4">
-                    <h3 className="font-serif text-2xl font-light tracking-wide text-white">Top Producers</h3>
-                    <i className="fa-solid fa-trophy text-accent text-xl"></i>
+                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 pb-4 border-b border-white/20 gap-4">
+                    <div className="flex items-center gap-3">
+                        <h3 className="font-serif text-2xl font-light tracking-wide text-white">Top Producers</h3>
+                        <i className="fa-solid fa-trophy text-accent text-xl"></i>
+                    </div>
+                    <div className="flex gap-2 bg-black/20 p-1 w-full overflow-x-auto md:w-auto scrollbar-hide">
+                        {['SENIOR PARTNER', 'JUNIOR PARTNER', 'ASSOCIATE'].map(tier => (
+                            <button 
+                                key={tier}
+                                onClick={() => setActiveSellerTier(tier)}
+                                className={`px-4 py-2 text-[9px] font-bold uppercase tracking-widest whitespace-nowrap transition-colors ${activeSellerTier === tier ? 'bg-accent text-white shadow-md' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
+                            >
+                                {tier}
+                            </button>
+                        ))}
+                    </div>
                  </div>
                  <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
                     {loading ? (
@@ -300,7 +314,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
                             </div>
                         ))
                     ) : (
-                        sellers.map((seller, index) => (
+                        sellers.filter(s => (s.tier || 'SENIOR PARTNER') === activeSellerTier).map((seller, index) => (
                             <div key={index} className="flex flex-col items-center text-center gap-3 relative group">
                                 <div className="relative">
                                     <img src={seller.avatar} alt={seller.name} className={`w-16 h-16 rounded-full object-cover ring-4 ${index === 0 ? 'ring-accent' : 'ring-white/10 group-hover:ring-white/30'} transition-all`} />
