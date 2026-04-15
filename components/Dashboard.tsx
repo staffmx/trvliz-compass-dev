@@ -21,6 +21,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
   const [loading, setLoading] = useState(true);
   const [activeSellerTier, setActiveSellerTier] = useState<string>('SENIOR PARTNER');
 
+  const welcomePhrases = [
+    { main: "Your World, ", accent: "Tailored." },
+    { main: "Presence is the New ", accent: "Luxury" },
+    { main: "The Art of Travel, ", accent: "Reimagined" },
+    { main: "The Associates: ", accent: "Eleva tu pasión." },
+    { main: "Tu respaldo en el ", accent: "mundo" }
+  ];
+  const [randomPhrase] = useState(() => welcomePhrases[Math.floor(Math.random() * welcomePhrases.length)]);
+
   useEffect(() => {
     const loadAllData = async () => {
       setLoading(true);
@@ -184,7 +193,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
 
             <div className="space-y-4">
                 <h1 className="text-4xl md:text-6xl font-serif font-medium tracking-tight text-white leading-none">
-                Your World, <span className="italic text-accent">Tailored.</span>
+                {randomPhrase.main} <span className="italic text-accent">{randomPhrase.accent}</span>
                 </h1>
                 <div className="space-y-1">
                     <p className="text-xl md:text-2xl text-white font-light tracking-wide">
@@ -200,6 +209,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
              Ir a mis avisos
           </button>
         </div>
+      </div>
+      
+      {/* Welcome Video Section */}
+      <div className="mb-12 max-w-5xl mx-auto shadow-2xl overflow-hidden rounded-none border border-neutral animate-fade-in" style={{ animationDelay: '0.2s' }}>
+         <div className="aspect-video w-full bg-black relative">
+            <iframe 
+                src="https://www.youtube.com/embed/y6bIwLj7-vM?rel=0&showinfo=0&autoplay=0" 
+                title="Traveliz Compass Welcome" 
+                frameBorder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                referrerPolicy="strict-origin-when-cross-origin" 
+                allowFullScreen
+                className="absolute top-0 left-0 w-full h-full"
+            ></iframe>
+         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-grid-gap mb-16">

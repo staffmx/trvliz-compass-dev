@@ -1,0 +1,12 @@
+Fase,Tarea,Prioridad,Observaciones
+"Fase 1: Go-Live","Configuración de Dominio Personalizado y SSL","Alta","Cambiar a URL oficial y quitar el link temporal de desarrollo de Google Cloud."
+"Fase 1: Go-Live","Eliminación de Datos de Prueba (Limpieza)","Alta","Borrar usuarios/datos falsos (Dummies) y llenar con información real del cliente."
+"Fase 1: Go-Live","Pruebas y Branding en Correos del Sistema","Alta","Asegurar que los emails de Bienvenida/Recuperar Contraseña de Supabase salgan con el logo y textos correctos de Traveliz."
+"Fase 1: Go-Live","Validación de la conexión con ZOHO en el Servidor Real","Alta","Verificar que los proveedores carguen rápido y sin bloqueos de seguridad del navegador en modo producción."
+"Fase 2: Fast-Follows (Mejoras Cercanas)","Prerenderizado SEO para Redes Sociales","Media","Mejora técnica indispensable para que las previsualizaciones miniatura de imágenes del blog se vean bien al enviarlas por WhatsApp o iMessage."
+"Fase 2: Fast-Follows (Mejoras Cercanas)","Compresión Automática de Imágenes","Media","Reducir drásticamente el peso de imágenes que se suban (como flyers) para no sobrecargar de megabytes la plataforma."
+"Fase 2: Fast-Follows (Mejoras Cercanas)","Dashboard Analítico Administrativo","Media","Crear vistas para que los dueños/administradores vean qué agentes se conectan más, webinars con mejores vistas, etc."
+"Fase 3: Proyecto Futuro (Expansión)","Central de Notificaciones Dinámicas","Baja","Alertas visuales o correos push hacia todos los agentes comunicando avisos de nuevos webinars o directorios actualizados."
+"Fase 3: Proyecto Futuro (Expansión)","Módulo de Comunicación Directa (Mesa de Ayuda)","Baja","Área tipo chat o tickets donde los agentes hagan preguntas concretas a administración y reciban respuestas desde la App."
+"Fase 1: Go-Live","Incrustar Video en Portada Principal","Alta","Incrustar video de YouTube (y6bIwLj7-vM) debajo de la pleca de bienvenida del Dashboard."
+"Fase 1: Go-Live","Frases Aleatorias en Portada","Media","Alternar frases motivacionales en la pleca negra del dashboard."

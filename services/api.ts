@@ -1018,13 +1018,20 @@ export const api = {
 
   createCategory: async (name: string, parentId: number = 0, description: string = ''): Promise<DocumentCategory | null> => {
     if (!supabase) return null;
-    const tableNames = ['documents_categoria', 'documents_categorias', 'document_categories'];
-    for (const tableName of tableNames) {
-      try {
-        const { data, error } = await supabase.from(tableName).insert({ nombre: name, name: name, parent_id: parentId, descripcion: description, description: description }).select().single();
-        if (!error && data) return data;
-      } catch (err) {}
-    }
+    
+    // Attempt 1: documents_categoria with parent_id
+    let res = await supabase.from('documents_categoria').insert({ nombre: name, descripcion: description, parent_id: parentId }).select().single();
+    if (!res.error && res.data) return res.data;
+    
+    // Attempt 2: documents_categoria with categoria_padre_id
+    res = await supabase.from('documents_categoria').insert({ nombre: name, descripcion: description, categoria_padre_id: parentId }).select().single();
+    if (!res.error && res.data) return res.data;
+
+    // Attempt 3: document_categories with english columns
+    res = await supabase.from('document_categories').insert({ name: name, description: description, parent_id: parentId }).select().single();
+    if (!res.error && res.data) return res.data;
+
+    console.error("AdminPanel CreateCategory failed. Last error from DB:", res.error);
     return null;
   },
 
