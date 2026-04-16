@@ -120,7 +120,8 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ provider, onBack }) => 
                 </h3>
                 {provider.comisiones && provider.comisiones.length > 0 ? (
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm whitespace-nowrap">
+                        <div className="overflow-x-auto w-full max-w-full block">
+<table className="w-full text-left text-sm whitespace-nowrap">
                             <thead>
                                 <tr className="border-b border-neutral text-secondary uppercase tracking-wider text-[10px]">
                                     <th className="py-3 pr-4 font-bold">Clasificación</th>
@@ -142,6 +143,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ provider, onBack }) => 
                                 ))}
                             </tbody>
                         </table>
+</div>
                     </div>
                 ) : (
                     <p className="text-xs text-secondary italic">No hay comisiones registradas para este proveedor.</p>

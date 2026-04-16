@@ -10,3 +10,4 @@ Fase,Tarea,Prioridad,Observaciones
 "Fase 3: Proyecto Futuro (Expansión)","Módulo de Comunicación Directa (Mesa de Ayuda)","Baja","Área tipo chat o tickets donde los agentes hagan preguntas concretas a administración y reciban respuestas desde la App."
 "Fase 1: Go-Live","Incrustar Video en Portada Principal","Alta","Incrustar video de YouTube (y6bIwLj7-vM) debajo de la pleca de bienvenida del Dashboard."
 "Fase 1: Go-Live","Frases Aleatorias en Portada","Media","Alternar frases motivacionales en la pleca negra del dashboard."
+"Fase 2: Estabilización","Punto 17: UI Móvil en Formularios y Tablas","Media","Asegurar que todas las tablas de administrador e inserciones tengan desbordamiento horizontal nativo responsivo en celular."

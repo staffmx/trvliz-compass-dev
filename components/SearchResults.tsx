@@ -172,7 +172,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                 <span className="text-[10px] uppercase tracking-widest text-gray-400">{results.documents.length}</span>
               </div>
               <div className="bg-white border border-gray-100 overflow-hidden shadow-sm">
-                <table className="w-full text-left border-collapse">
+                <div className="overflow-x-auto w-full max-w-full block">
+<table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-100">
                       <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-gray-500 font-semibold">Nombre</th>
@@ -213,6 +214,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                     ))}
                   </tbody>
                 </table>
+</div>
               </div>
             </section>
           )}

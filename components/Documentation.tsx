@@ -266,7 +266,8 @@ const Documentation: React.FC<DocumentationProps> = ({ user }) => {
                         </div>
 
                     {filteredDocs.length > 0 ? (
-                        <table className="w-full text-left">
+                        <div className="overflow-x-auto w-full max-w-full block">
+<table className="w-full text-left">
                             <thead className="bg-white border-b border-neutral">
                                 <tr>
                                     <th className="px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary w-1/4">Nombre</th>
@@ -311,6 +312,7 @@ const Documentation: React.FC<DocumentationProps> = ({ user }) => {
                                 ))}
                             </tbody>
                         </table>
+</div>
                     ) : (
                         <div className="py-20 text-center text-secondary">
                             <i className="fa-regular fa-folder-open text-4xl mb-4 opacity-30"></i>

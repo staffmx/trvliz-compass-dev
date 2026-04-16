@@ -353,7 +353,8 @@ const AdminBlog = ({ Header, currentUser }: any) => {
       )}
 
       <div className="bg-white border border-neutral shadow-sm overflow-hidden">
-        <table className="w-full text-left">
+        <div className="overflow-x-auto w-full max-w-full block">
+<table className="w-full text-left">
           <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
             <tr>
               <th className="px-8 py-5">Artículo</th>
@@ -395,6 +396,7 @@ const AdminBlog = ({ Header, currentUser }: any) => {
             ))}
           </tbody>
         </table>
+</div>
       </div>
     </div>
   );
@@ -529,7 +531,8 @@ const AdminRecordedWebinars = ({ Header }: any) => {
       )}
 
       <div className="bg-white border border-neutral shadow-sm overflow-hidden">
-        <table className="w-full text-left">
+        <div className="overflow-x-auto w-full max-w-full block">
+<table className="w-full text-left">
           <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
             <tr>
               <th className="px-8 py-5">Capacitación</th>
@@ -557,6 +560,7 @@ const AdminRecordedWebinars = ({ Header }: any) => {
             ))}
           </tbody>
         </table>
+</div>
       </div>
     </div>
   );
@@ -613,7 +617,8 @@ const AdminMentorships = ({ Header }: any) => {
       <Header title="Solicitudes de Mentoría" subtitle="Revisa y gestiona las solicitudes de mentoría 1:1 de los agentes." />
 
       <div className="bg-white border border-neutral shadow-sm overflow-hidden">
-        <table className="w-full text-left">
+        <div className="overflow-x-auto w-full max-w-full block">
+<table className="w-full text-left">
           <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
             <tr>
               <th className="px-8 py-5">Agente</th>
@@ -678,6 +683,7 @@ const AdminMentorships = ({ Header }: any) => {
             ))}
           </tbody>
         </table>
+</div>
       </div>
 
       {/* Modal de Detalles */}
@@ -924,7 +930,8 @@ const AdminSellers = ({ Header }: any) => {
       )}
 
       <div className="bg-white border border-neutral overflow-hidden shadow-sm">
-        <table className="w-full text-left">
+        <div className="overflow-x-auto w-full max-w-full block">
+<table className="w-full text-left">
           <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
             <tr>
               <th className="px-8 py-5">Ranking</th>
@@ -965,6 +972,7 @@ const AdminSellers = ({ Header }: any) => {
             )}
           </tbody>
         </table>
+</div>
       </div>
     </div>
   );
@@ -1135,7 +1143,8 @@ const AdminUsers = ({ Header }: any) => {
       )}
 
       <div className="bg-surface border border-neutral shadow-sm overflow-hidden">
-        <table className="w-full text-left">
+        <div className="overflow-x-auto w-full max-w-full block">
+<table className="w-full text-left">
           <thead className="bg-background border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
             <tr>
               <th className="px-8 py-5">Usuario</th>
@@ -1196,6 +1205,7 @@ const AdminUsers = ({ Header }: any) => {
             );})}
           </tbody>
         </table>
+</div>
       </div>
     </div>
   );
@@ -1512,7 +1522,8 @@ const AdminDocuments = ({ Header }: any) => {
 
       <div className="bg-white border border-neutral shadow-sm overflow-hidden">
         {/* Subcategories Section */}
-        <table className="w-full text-left">
+        <div className="overflow-x-auto w-full max-w-full block">
+<table className="w-full text-left">
           <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
             <tr>
               <th className="px-8 py-5">{currentCategory ? 'Subcategorías' : 'Categorías Raíz'}</th>
@@ -1548,6 +1559,7 @@ const AdminDocuments = ({ Header }: any) => {
             ))}
           </tbody>
         </table>
+</div>
 
         {/* Documents Section (Only if category selected) */}
         {currentCategory && (
@@ -1555,7 +1567,8 @@ const AdminDocuments = ({ Header }: any) => {
             <div className="bg-background/50 px-8 py-4 border-b border-neutral">
                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-secondary">Documentos en esta carpeta</h4>
             </div>
-            <table className="w-full text-left">
+            <div className="overflow-x-auto w-full max-w-full block">
+<table className="w-full text-left">
               <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
                 <tr>
                   <th className="px-8 py-5">Archivo</th>
@@ -1598,6 +1611,7 @@ const AdminDocuments = ({ Header }: any) => {
                 ))}
               </tbody>
             </table>
+</div>
           </div>
         )}
       </div>
@@ -2045,7 +2059,8 @@ const AdminDirectory = ({ Header }: any) => {
       )}
 
       <div className="bg-surface border border-neutral overflow-hidden shadow-sm">
-        <table className="w-full text-left">
+        <div className="overflow-x-auto w-full max-w-full block">
+<table className="w-full text-left">
           <thead className="bg-background border-b border-neutral">
             <tr>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary">Nombre y Perfil</th>
@@ -2109,6 +2124,7 @@ const AdminDirectory = ({ Header }: any) => {
             ))}
           </tbody>
         </table>
+</div>
       </div>
     </div>
   );
@@ -2341,7 +2357,8 @@ const AdminNotices = ({ Header }: any) => {
       )}
 
       <div className="bg-white border border-neutral shadow-sm">
-        <table className="w-full text-left">
+        <div className="overflow-x-auto w-full max-w-full block">
+<table className="w-full text-left">
           <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
             <tr>
               <th className="px-8 py-5">Prioridad / Categoría</th>
@@ -2412,6 +2429,7 @@ const AdminNotices = ({ Header }: any) => {
             ))}
           </tbody>
         </table>
+</div>
       </div>
     </div>
   );
@@ -2647,7 +2665,8 @@ const AdminEvents: React.FC<{ Header: any }> = ({ Header }) => {
       )}
 
       <div className="bg-white border border-neutral overflow-hidden shadow-sm">
-        <table className="w-full text-left">
+        <div className="overflow-x-auto w-full max-w-full block">
+<table className="w-full text-left">
           <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
             <tr>
               <th className="px-8 py-5">Fecha / Tipo</th>
@@ -2754,6 +2773,7 @@ const AdminEvents: React.FC<{ Header: any }> = ({ Header }) => {
             ))}
           </tbody>
         </table>
+</div>
       </div>
     </div>
   );
@@ -2980,7 +3000,8 @@ const AdminCertifications: React.FC<{ Header: any }> = ({ Header }) => {
       )}
 
       <div className="bg-white border border-neutral overflow-hidden shadow-sm">
-        <table className="w-full text-left">
+        <div className="overflow-x-auto w-full max-w-full block">
+<table className="w-full text-left">
           <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
             <tr>
               <th className="px-8 py-5">Certificación</th>
@@ -3027,6 +3048,7 @@ const AdminCertifications: React.FC<{ Header: any }> = ({ Header }) => {
             ))}
           </tbody>
         </table>
+</div>
       </div>
     </div>
   );
@@ -3081,7 +3103,8 @@ const AdminSearchLogs: React.FC<{ Header: any }> = ({ Header }) => {
       </div>
 
       <div className="bg-white border border-black/5 shadow-sm overflow-hidden mb-8">
-        <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto w-full max-w-full block">
+<table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-primary text-white text-[10px] font-bold uppercase tracking-widest">
               <th className="px-8 py-5">Usuario</th>
@@ -3134,6 +3157,7 @@ const AdminSearchLogs: React.FC<{ Header: any }> = ({ Header }) => {
             )}
           </tbody>
         </table>
+</div>
       </div>
 
       {/* Pagination Controls */}
