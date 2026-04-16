@@ -170,6 +170,37 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
     </div>
   );
 
+  const MiEquipoSection = () => (
+      <div className="bg-white border border-neutral p-8 shadow-sm">
+          <div className="flex items-center justify-between mb-8 border-b border-neutral pb-4">
+              <h3 className="font-serif text-xl font-light text-primary">Mi Equipo</h3>
+              <button onClick={() => onNavigate(NavigationItem.DIRECTORIO)} className="text-[10px] font-bold uppercase tracking-widest text-brand hover:text-accent transition-colors">Ver Directorio</button>
+          </div>
+          <div className="space-y-6">
+              {loading ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="flex items-center gap-4 animate-pulse">
+                          <div className="w-10 h-10 bg-neutral rounded-full"></div>
+                          <div className="space-y-2 flex-1"><div className="h-3 bg-neutral w-3/4"></div><div className="h-2 bg-neutral w-1/4"></div></div>
+                      </div>
+                  ))
+              ) : (
+                  teamMembers.map((member) => (
+                      <div key={member.id} className="flex items-center gap-4 group cursor-pointer" onClick={() => onNavigate(NavigationItem.DIRECTORIO)}>
+                          <div className="w-10 h-10 rounded-full overflow-hidden border border-neutral grayscale group-hover:grayscale-0 transition-all">
+                              <img src={member.image || 'https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/travel_advisors/blank-user.png'} alt={member.name} className="w-full h-full object-cover" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-primary truncate group-hover:text-brand transition-colors">{member.name} {member.last_name}</p>
+                              <p className="text-[10px] text-secondary uppercase tracking-widest truncate">{member.position || 'Travel Consultant'}</p>
+                          </div>
+                      </div>
+                  ))
+              )}
+          </div>
+      </div>
+  );
+
   return (
     <div className="max-w-site mx-auto px-mobile-x pt-[50px] pb-section-y animate-fade-in">
       <div className="mb-12 relative overflow-hidden rounded-none bg-brand text-white shadow-2xl">
@@ -353,6 +384,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
                  </div>
              </div>
           </div>
+          
+          <div className="block lg:hidden"><MiEquipoSection /></div>
         </div>
 
         <div className="space-y-10 order-1 lg:order-2">
@@ -393,35 +426,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
           </div>
 
           <div><CalendarSection /></div>
-
-          <div className="bg-white border border-neutral p-8 shadow-sm">
-              <div className="flex items-center justify-between mb-8 border-b border-neutral pb-4">
-                  <h3 className="font-serif text-xl font-light text-primary">Mi Equipo</h3>
-                  <button onClick={() => onNavigate(NavigationItem.DIRECTORIO)} className="text-[10px] font-bold uppercase tracking-widest text-brand hover:text-accent transition-colors">Ver Directorio</button>
-              </div>
-              <div className="space-y-6">
-                  {loading ? (
-                      Array.from({ length: 4 }).map((_, i) => (
-                          <div key={i} className="flex items-center gap-4 animate-pulse">
-                              <div className="w-10 h-10 bg-neutral rounded-full"></div>
-                              <div className="space-y-2 flex-1"><div className="h-3 bg-neutral w-3/4"></div><div className="h-2 bg-neutral w-1/4"></div></div>
-                          </div>
-                      ))
-                  ) : (
-                      teamMembers.map((member) => (
-                          <div key={member.id} className="flex items-center gap-4 group cursor-pointer" onClick={() => onNavigate(NavigationItem.DIRECTORIO)}>
-                              <div className="w-10 h-10 rounded-full overflow-hidden border border-neutral grayscale group-hover:grayscale-0 transition-all">
-                                  <img src={member.image || 'https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/travel_advisors/blank-user.png'} alt={member.name} className="w-full h-full object-cover" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-primary truncate group-hover:text-brand transition-colors">{member.name} {member.last_name}</p>
-                                  <p className="text-[10px] text-secondary uppercase tracking-widest truncate">{member.position || 'Travel Consultant'}</p>
-                              </div>
-                          </div>
-                      ))
-                  )}
-              </div>
-          </div>
+          
+          <div className="hidden lg:block"><MiEquipoSection /></div>
         </div>
       </div>
 
