@@ -277,8 +277,17 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate,
       </nav>
 
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-primary border-t border-white/10 animate-slide-down">
+        <div className="md:hidden bg-primary border-t border-white/10 animate-slide-down max-h-[70vh] overflow-y-auto">
           <div className="px-2 pt-2 pb-3 space-y-1">
+            {hasAdminAccess && (
+              <button
+                onClick={() => { onNavigate(NavigationItem.ADMIN); setIsMobileMenuOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-4 mb-2 border-l-2 border-accent bg-accent/10 text-accent font-bold text-sm uppercase tracking-widest"
+              >
+                <div className="w-5 flex justify-center"><i className="fa-solid fa-toolbox"></i></div>
+                Panel Admin
+              </button>
+            )}
             {navItems.map((item) => (
               <button
                 key={item.id}
@@ -288,7 +297,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate,
                 }}
                 className={`w-full flex items-center gap-3 px-4 py-4 border-l-2 text-sm font-semibold uppercase tracking-widest ${
                   currentNav === item.id
-                    ? 'bg-white/5 border-accent text-accent'
+                    ? 'bg-white/5 border-white text-white'
                     : 'border-transparent text-secondary hover:bg-white/5 hover:text-white'
                 }`}
               >
@@ -298,15 +307,6 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate,
                 {item.label}
               </button>
             ))}
-            {hasAdminAccess && (
-              <button
-                onClick={() => { onNavigate(NavigationItem.ADMIN); setIsMobileMenuOpen(false); }}
-                className="w-full flex items-center gap-3 px-4 py-4 border-l-2 border-transparent text-accent font-bold text-sm uppercase tracking-widest hover:bg-white/5"
-              >
-                <div className="w-5 flex justify-center"><i className="fa-solid fa-toolbox"></i></div>
-                Panel Admin
-              </button>
-            )}
             <div className="border-t border-white/10 my-2 pt-2">
                  <button 
                     onClick={onLogout}
