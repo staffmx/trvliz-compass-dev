@@ -22,6 +22,23 @@ const AdminPanel = ({ user }: any) => {
     return roles.some(r => r.name.toLowerCase() === roleName.toLowerCase());
   };
 
+  const sections = useMemo(() => [
+    { id: 'overview', label: 'Dashboard', icon: 'fa-chart-line', group: 'Management', show: true },
+    { id: 'notices', label: 'Avisos', icon: 'fa-bullhorn', group: 'Management', show: hasRole('editor_avisos') },
+    { id: 'directory', label: 'Directorio', icon: 'fa-address-book', group: 'Management', show: true },
+    { id: 'sellers', label: 'Top Producers', icon: 'fa-trophy', group: 'Management', show: hasRole('editor_vendedores') },
+    { id: 'events', label: 'Eventos', icon: 'fa-calendar-days', group: 'Management', show: hasRole('editor_eventos') },
+    { id: 'documents', label: 'Documentos', icon: 'fa-folder-tree', group: 'Management', show: hasRole('editor_documentos') },
+    { id: 'recorded_webinars', label: 'Webinars Grabados', icon: 'fa-play', group: 'Capacitación', show: hasRole('editor_webinars') || hasRole('editor_eventos') },
+    { id: 'certifications', label: 'Certificaciones', icon: 'fa-award', group: 'Capacitación', show: hasRole('editor_certificaciones') || hasRole('editor_eventos') },
+    { id: 'mentorships', label: 'Mentoría 1:1', icon: 'fa-graduation-cap', group: 'Capacitación', show: hasRole('editor_mentorias') || hasRole('editor_eventos') },
+    { id: 'users', label: 'Usuarios', icon: 'fa-users-gear', group: 'Sistema', show: user?.role === 'admin' },
+    { id: 'blog', label: 'Blogs', icon: 'fa-newspaper', group: 'Sistema', show: hasRole('editor_blogs') },
+    { id: 'search_logs', label: 'Búsquedas', icon: 'fa-magnifying-glass', group: 'Sistema', show: user?.role === 'admin' },
+  ].filter(s => s.show), [user]);
+
+  const activeSectionLabel = sections.find(s => s.id === activeSection)?.label || 'Sección';
+
   const AccessDenied = () => (
       <div className="flex flex-col items-center justify-center p-20 text-center animate-fade-in bg-white border border-red-100 shadow-sm">
           <i className="fa-solid fa-triangle-exclamation text-red-500 text-5xl mb-6"></i>
@@ -60,86 +77,63 @@ const AdminPanel = ({ user }: any) => {
 
   return (
     <div className="min-h-[80vh] flex flex-col lg:flex-row bg-background animate-fade-in">
-      <aside className="w-full lg:w-72 bg-primary text-white border-r border-white/5 flex flex-col">
+      {/* Mobile Sticky Navigation Selector */}
+      <div className="lg:hidden sticky top-20 z-40 bg-primary border-b border-white/10 p-4 shadow-lg">
+        <div className="relative group">
+          <select 
+            value={activeSection}
+            onChange={(e) => {
+                setActiveSection(e.target.value as AdminSection);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="w-full bg-white/5 border border-white/20 text-accent font-bold uppercase tracking-widest text-xs p-4 pr-10 appearance-none focus:outline-none focus:border-accent transition-all"
+          >
+            {sections.map(s => (
+                <option key={s.id} value={s.id} className="bg-primary text-white">{s.label}</option>
+            ))}
+          </select>
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-accent">
+            <i className="fa-solid fa-chevron-down text-xs"></i>
+          </div>
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-accent/50">
+             <i className={`fa-solid ${sections.find(s => s.id === activeSection)?.icon || 'fa-toolbox'} text-sm`}></i>
+          </div>
+          <style dangerouslySetInnerHTML={{ __html: `
+            select { padding-left: 3rem !important; }
+          `}} />
+        </div>
+      </div>
+
+      <aside className="hidden lg:flex lg:w-72 bg-primary text-white border-r border-white/5 flex-col">
         <div className="p-8 border-b border-white/5">
           <p className="text-[10px] font-bold uppercase tracking-[3px] text-accent mb-1">Compass</p>
           <h3 className="text-xl font-serif">Management</h3>
         </div>
         
         <nav className="flex-1 py-6 overflow-y-auto no-scrollbar">
-          <button onClick={() => setActiveSection('overview')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'overview' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-            <i className="fa-solid fa-chart-line w-5"></i> Dashboard
-          </button>
-
-          {hasRole('editor_avisos') && (
-            <button onClick={() => setActiveSection('notices')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'notices' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-              <i className="fa-solid fa-bullhorn w-5"></i> Avisos
-            </button>
-          )}
-
-          <button onClick={() => setActiveSection('directory')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'directory' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-            <i className="fa-solid fa-address-book w-5"></i> Directorio
-          </button>
-
-          {hasRole('editor_vendedores') && (
-            <button onClick={() => setActiveSection('sellers')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'sellers' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-              <i className="fa-solid fa-trophy w-5"></i> Top Producers
-            </button>
-          )}
-
-          {hasRole('editor_eventos') && (
-            <button onClick={() => setActiveSection('events')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'events' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-              <i className="fa-solid fa-calendar-days w-5"></i> Eventos
-            </button>
-          )}
-
-          {hasRole('editor_documentos') && (
-            <button onClick={() => setActiveSection('documents')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'documents' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-              <i className="fa-solid fa-folder-tree w-5"></i> Documentos
-            </button>
-          )}
-
-          <div className="px-8 py-4 mt-4 mb-2">
-            <p className="text-[10px] font-bold uppercase tracking-[3px] text-accent/60">Capacitación</p>
-          </div>
-
-          {(hasRole('editor_webinars') || hasRole('editor_eventos')) && (
-            <button onClick={() => setActiveSection('recorded_webinars')} className={`w-full flex items-center gap-4 px-10 py-3 text-[11px] font-bold uppercase tracking-widest transition-all ${activeSection === 'recorded_webinars' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-              <i className="fa-solid fa-play w-4"></i> Webinars Grabados
-            </button>
-          )}
-          
-          {(hasRole('editor_certificaciones') || hasRole('editor_eventos')) && (
-            <button onClick={() => setActiveSection('certifications')} className={`w-full flex items-center gap-4 px-10 py-3 text-[11px] font-bold uppercase tracking-widest transition-all ${activeSection === 'certifications' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-              <i className="fa-solid fa-award w-4"></i> Certificaciones
-            </button>
-          )}
-          
-          {(hasRole('editor_mentorias') || hasRole('editor_eventos')) && (
-            <button onClick={() => setActiveSection('mentorships')} className={`w-full flex items-center gap-4 px-10 py-3 text-[11px] font-bold uppercase tracking-widest transition-all ${activeSection === 'mentorships' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-              <i className="fa-solid fa-graduation-cap w-4"></i> Mentoría 1:1
-            </button>
-          )}
-
-          <div className="my-4 border-t border-white/5 mx-8"></div>
-
-          {user?.role === 'admin' && (
-            <button onClick={() => setActiveSection('users')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'users' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-              <i className="fa-solid fa-users-gear w-5"></i> Usuarios
-            </button>
-          )}
-          
-          {hasRole('editor_blogs') && (
-            <button onClick={() => setActiveSection('blog')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'blog' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-              <i className="fa-solid fa-newspaper w-5"></i> Blogs
-            </button>
-          )}
-
-          {user?.role === 'admin' && (
-            <button onClick={() => setActiveSection('search_logs')} className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === 'search_logs' ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}>
-              <i className="fa-solid fa-magnifying-glass w-5"></i> Búsquedas
-            </button>
-          )}
+          {sections.map((section, index) => {
+              const prevSection = index > 0 ? sections[index-1] : null;
+              const showGroupHeader = !prevSection || prevSection.group !== section.group;
+              
+              return (
+                <React.Fragment key={section.id}>
+                  {showGroupHeader && section.group !== 'Management' && (
+                    <div className="px-8 py-4 mt-6 mb-2">
+                        <p className="text-[10px] font-bold uppercase tracking-[3px] text-accent/60">{section.group}</p>
+                    </div>
+                  )}
+                  {showGroupHeader && section.group === 'Sistema' && index > 0 && (
+                     <div className="my-4 border-t border-white/5 mx-8"></div>
+                  )}
+                  <button 
+                    onClick={() => setActiveSection(section.id as AdminSection)} 
+                    className={`w-full flex items-center gap-4 px-8 py-4 text-xs font-bold uppercase tracking-widest transition-all ${activeSection === section.id ? 'bg-white/5 text-accent border-l-4 border-accent' : 'text-secondary hover:text-white hover:bg-white/5'}`}
+                  >
+                    <i className={`fa-solid ${section.icon} w-5`}></i> {section.label}
+                  </button>
+                </React.Fragment>
+              );
+          })}
         </nav>
 
         <div className="p-8 border-t border-white/5">
