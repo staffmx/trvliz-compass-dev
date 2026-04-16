@@ -227,7 +227,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-grid-gap mb-16">
-        <div className="lg:col-span-2 space-y-12">
+        <div className="lg:col-span-2 space-y-12 order-2 lg:order-1">
 
           <div className="space-y-8 animate-slide-up">
              <div className="flex items-center justify-between border-b border-neutral pb-4">
@@ -289,7 +289,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
              </div>
           </div>
 
-          <div className="block lg:hidden"><CalendarSection /></div>
+          {/* El calendario móvil fue removido de aquí ya que ahora la columna derecha sale primero */}
 
           <div>
             <h2 className="text-2xl font-serif font-light text-primary mb-6 pb-4 border-b border-neutral">Accesos Rápidos</h2>
@@ -355,7 +355,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
           </div>
         </div>
 
-        <div className="space-y-10">
+        <div className="space-y-10 order-1 lg:order-2">
           <div className="bg-surface border border-neutral p-6 shadow-sm">
              <div className="flex items-center justify-between border-b border-neutral pb-4 mb-6">
                 <h2 className="text-xl font-serif font-light text-primary">Avisos</h2>
@@ -392,7 +392,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
             </div>
           </div>
 
-          <div className="hidden lg:block"><CalendarSection /></div>
+          <div><CalendarSection /></div>
 
           <div className="bg-white border border-neutral p-8 shadow-sm">
               <div className="flex items-center justify-between mb-8 border-b border-neutral pb-4">
