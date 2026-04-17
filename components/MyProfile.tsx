@@ -246,11 +246,14 @@ const MyProfile: React.FC<MyProfileProps> = ({ user, onBack, onUserUpdate }) => 
               
               <div className="flex flex-col md:flex-row items-end gap-6 md:gap-8 translate-y-6">
                   <div className="relative group shrink-0">
-                      <div className="w-32 h-32 md:w-44 md:h-44 rounded-2xl overflow-hidden border-4 border-white shadow-2xl relative bg-white">
+                      <div className="w-32 h-32 md:w-44 md:h-44 rounded-2xl overflow-hidden border-4 border-white shadow-2xl relative bg-white flex items-center justify-center">
                           <img 
-                              src={associate?.image || profile?.avatar_url || 'https://via.placeholder.com/200'} 
+                              src={associate?.image || profile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.name || user.name)}&background=random&color=fff&size=256`} 
                               alt="Profile" 
                               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.name || user.name)}&background=random&color=fff&size=256`;
+                              }}
                           />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer">
                               {uploading ? (
@@ -437,10 +440,11 @@ const MyProfile: React.FC<MyProfileProps> = ({ user, onBack, onUserUpdate }) => 
                               <input 
                                   type="text"
                                   name="name"
-                                  value={profile?.name || ''}
+                                  value={profile?.name || associate?.name || ''}
                                   onChange={(e) => { handleProfileChange(e); handleAssociateChange(e); }}
                                   className="w-full py-2 border-b-2 border-neutral focus:border-brand bg-transparent outline-none transition-all text-sm font-medium text-primary"
                                   required
+                                  placeholder="Tu nombre..."
                               />
                           </div>
                           <div className="space-y-2">
@@ -448,9 +452,10 @@ const MyProfile: React.FC<MyProfileProps> = ({ user, onBack, onUserUpdate }) => 
                               <input 
                                   type="text"
                                   name="last_name"
-                                  value={profile?.last_name || ''}
+                                  value={profile?.last_name || associate?.last_name || ''}
                                   onChange={(e) => { handleProfileChange(e); handleAssociateChange(e); }}
                                   className="w-full py-2 border-b-2 border-neutral focus:border-brand bg-transparent outline-none transition-all text-sm font-medium text-primary"
+                                  placeholder="Tus apellidos..."
                               />
                           </div>
                           <div className="space-y-2 opacity-60">

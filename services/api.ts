@@ -133,10 +133,98 @@ export const api = {
     return true;
   },
 
+  logAction: async (actionType: string, description: string, metadata?: any): Promise<void> => {
+    if (!supabase) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id || null;
+      
+      const { error } = await supabase.from('audit_logs').insert({
+        user_id: userId,
+        action_type: actionType,
+        description: description,
+        metadata: metadata || {}
+      });
+      if (error) {
+        console.error("Supabase Error logAction:", error);
+      }
+    } catch (err) {
+      console.warn("Failed to log action:", err);
+    }
+  },
+
+  getAuditLogs: async (limit: number = 20): Promise<any[]> => {
+    if (!supabase) return [];
+    try {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select(`
+          *,
+          profiles:user_id (
+            full_name,
+            email
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      
+      if (error) {
+        console.error("Supabase Error fetching audit logs:", error);
+        throw error;
+      }
+      return data || [];
+    } catch (err: any) {
+      console.error("Error fetching audit logs:", err);
+      // Fallback: intentar recuperar sin el join de perfiles si falla por relación
+      if (err.message && err.message.includes("relationship")) {
+        console.warn("Attempting fetch without profiles join due to relationship error...");
+        const { data } = await supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(limit);
+        return data || [];
+      }
+      return [];
+    }
+  },
+
+  getAuditLogsPaged: async (page: number = 1, limit: number = 100, search: string = ''): Promise<{ data: any[], count: number }> => {
+    if (!supabase) return { data: [], count: 0 };
+    try {
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+
+      let query = supabase
+        .from('audit_logs')
+        .select(`
+          *,
+          profiles:user_id (
+            full_name,
+            email
+          )
+        `, { count: 'exact' });
+
+      if (search) {
+        query = query.or(`description.ilike.%${search}%,action_type.ilike.%${search}%`);
+      }
+
+      const { data, error, count } = await query
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      if (error) throw error;
+      return { data: data || [], count: count || 0 };
+    } catch (err: any) {
+      console.error("Error fetching paged audit logs:", err);
+      return { data: [], count: 0 };
+    }
+  },
+
   // --- AUTH & SESSION ---
   signIn: async (email: string, password: string) => {
     if (!supabase) throw new Error("Supabase no configurado");
-    return await supabase.auth.signInWithPassword({ email, password });
+    const result = await supabase.auth.signInWithPassword({ email, password });
+    if (!result.error && result.data.user) {
+      await api.logAction('USER_LOGIN', `El usuario ${email} inició sesión en el sistema.`);
+    }
+    return result;
   },
 
   signOut: async () => {
@@ -188,6 +276,7 @@ export const api = {
         password: newPassword
       });
       if (error) throw error;
+      api.logAction('PASSWORD_CHANGED', `El usuario cambió su contraseña de acceso.`);
       return { success: true };
     } catch (err: any) {
       console.error("Error updating password:", err);
@@ -303,6 +392,7 @@ export const api = {
       }
       const { error } = await query;
       if (error) throw error;
+      api.logAction('WEBINAR_UPDATED', `Se subió o actualizó el webinar: ${webinar.title}`);
       return true;
     } catch (err) {
       console.error("Error saving webinar:", err);
@@ -375,12 +465,17 @@ export const api = {
       }
       
       return (data || []).map(profile => {
-        const nameToSplit = profile.full_name || profile.name || '';
-        const [firstName, ...lastNameParts] = nameToSplit.split(' ');
+        const full = profile.full_name || profile.name || '';
+        const parts = full.trim().split(/\s+/);
+        
+        // Si no tenemos nombre o apellido explícito, intentamos derivarlos del nombre completo
+        const derivedName = profile.name && !profile.name.includes(' ') ? profile.name : parts[0] || '';
+        const derivedLastName = profile.last_name || parts.slice(1).join(' ') || '';
+
         return {
           ...profile,
-          name: profile.last_name === undefined ? firstName : (profile.full_name || profile.name),
-          last_name: profile.last_name === undefined ? lastNameParts.join(' ') : profile.last_name,
+          name: profile.name && profile.last_name ? profile.name : derivedName,
+          last_name: profile.last_name ? profile.last_name : derivedLastName,
           roles: profile.user_roles?.map((ur: any) => ur.roles) || []
         };
       });
@@ -428,6 +523,8 @@ export const api = {
         await supabase.from('user_roles').insert(rolePayload);
       }
 
+      api.logAction('USER_PROFILE_UPDATED', `Se creó/actualizó el perfil maestro de: ${profile.email}`);
+
       return { success: true, tempPassword: generatedPassword };
     } catch (err: any) {
       console.error("Error creating/updating user profile:", err);
@@ -459,6 +556,7 @@ export const api = {
       await supabase.from('user_roles').delete().eq('user_id', userId);
       const { error } = await supabase.from('profiles').delete().eq('id', userId);
       if (error) throw error;
+      api.logAction('USER_DELETED', `Se eliminó el perfil y roles del usuario con ID: ${userId}`);
       return true;
     } catch (err) {
       console.error("Error deleting user profile:", err);
@@ -514,6 +612,7 @@ export const api = {
         })
         .eq('id', profileData.id);
       if (error) throw error;
+      api.logAction('PROFILE_UPDATED', `Se actualizaron los datos básicos del perfil (nombre/puesto).`, { profile_id: profileData.id });
       return true;
     } catch (err) {
       console.error("Error updating profile:", err);
@@ -552,6 +651,10 @@ export const api = {
     }
     const { data, error } = await query.select().single();
     if (error) throw error;
+
+    // Track standard action
+    api.logAction('PROFILE_UPDATED', `El usuario ha actualizado su perfil de asociado.`, { associate_id: data.id, name: `${data.name} ${data.last_name || ''}` });
+
     return data;
   },
 
@@ -559,6 +662,7 @@ export const api = {
     if (!supabase) return false;
     const { error } = await supabase.from('associates').delete().eq('id', id);
     if (error) throw error;
+    api.logAction('ASSOCIATE_DELETED', `Se eliminó un registro del directorio (Asociada ID: ${id})`);
     return true;
   },
 
@@ -589,6 +693,9 @@ export const api = {
       let query = (id && id !== 'null' && id !== '') ? supabase.from('notices').update(rest).eq('id', id) : supabase.from('notices').insert(rest);
       const { data, error } = await query.select().single();
       if (error) throw error;
+      
+      api.logAction('NOTICE_UPDATED', `Se publicó/actualizó el aviso: ${data.title}`);
+      
       return { ...data, id: data.id.toString() };
     } catch (err) {
       console.error("Error in upsertNotice:", err);
@@ -601,6 +708,7 @@ export const api = {
     try {
       const { error } = await supabase.from('notices').delete().eq('id', id);
       if (error) throw error;
+      api.logAction('NOTICE_DELETED', `Se eliminó el aviso ID: ${id}`);
       return true;
     } catch (err) {
       console.error("Error in deleteNotice:", err);
@@ -650,6 +758,9 @@ export const api = {
       }
       const { data, error } = await query.select().single();
       if (error) throw error;
+      
+      api.logAction('EVENT_UPDATED', `Se publicó/actualizó el evento: ${data.title}`);
+      
       const dateObj = new Date(data.event_date + 'T00:00:00');
       return { ...data, day: dateObj.getDate().toString().padStart(2, '0'), month: dateObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '') };
     } catch (err) {
@@ -661,6 +772,9 @@ export const api = {
   deleteEvent: async (id: number): Promise<boolean> => {
     if (!supabase) return false;
     const { error } = await supabase.from('events').delete().eq('id', id);
+    if (!error) {
+      api.logAction('EVENT_DELETED', `Se eliminó el evento ID: ${id}`);
+    }
     return !error;
   },
 
@@ -689,6 +803,7 @@ export const api = {
       }
       const { data, error } = await query.select().single();
       if (error) throw error;
+      api.logAction('CERTIFICATION_UPDATED', `Se creó/actualizó la certificación: ${data.name}`);
       return data;
     } catch (err) {
       console.error("Error upserting certification:", err);
@@ -700,6 +815,9 @@ export const api = {
     if (!supabase) return false;
     try {
       const { error } = await supabase.from('certifications').delete().eq('id', id);
+      if (!error) {
+        api.logAction('CERTIFICATION_DELETED', `Se eliminó la certificación ID: ${id}`);
+      }
       return !error;
     } catch (err) {
       return false;
@@ -892,6 +1010,7 @@ export const api = {
       }
       const { data, error } = await query.select().single();
       if (error) throw error;
+      api.logAction('BLOG_POST_UPDATED', `Se publicó o actualizó un blog: ${data.title}`, { post_id: data.id });
       return data;
     } catch (err) {
       console.error("Error upserting blog post:", err);
@@ -903,6 +1022,9 @@ export const api = {
     if (!supabase) return false;
     try {
       const { error } = await supabase.from('blog_posts').delete().eq('id', id);
+      if (!error) {
+        api.logAction('BLOG_POST_DELETED', `Se eliminó el blog ID: ${id}`);
+      }
       return !error;
     } catch (err) {
       return false;
@@ -936,12 +1058,16 @@ export const api = {
     if (!supabase) return null;
     const { data, error } = await supabase.from('sellers').upsert(seller).select().single();
     if (error) throw error;
+    api.logAction('SELLER_UPDATED', `Se actualizó el ranking/perfil del vendedor ID: ${data.id}`);
     return data;
   },
 
   deleteSeller: async (id: number): Promise<boolean> => {
     if (!supabase) return false;
     const { error } = await supabase.from('sellers').delete().eq('id', id);
+    if (!error) {
+      api.logAction('SELLER_DELETED', `Se eliminó del ranking al vendedor ID: ${id}`);
+    }
     return !error;
   },
 
@@ -1029,7 +1155,10 @@ export const api = {
 
     // Attempt 3: document_categories with english columns
     res = await supabase.from('document_categories').insert({ name: name, description: description, parent_id: parentId }).select().single();
-    if (!res.error && res.data) return res.data;
+    if (!res.error && res.data) {
+      api.logAction('CATEGORY_CREATED', `Se creó la categoría de documentos: ${name}`);
+      return res.data;
+    }
 
     console.error("AdminPanel CreateCategory failed. Last error from DB:", res.error);
     return null;
@@ -1045,6 +1174,7 @@ export const api = {
       const sizeStr = file.size > 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : `${(file.size / 1024).toFixed(0)} KB`;
       const { data, error } = await supabase.from('documents').insert({ name: file.name, type: file.name.split('.').pop() || 'other', size: sizeStr, cat_id: catId, storage_path: filePath, descripcion: description || '' }).select().single();
       if (error) throw error;
+      api.logAction('DOCUMENT_UPLOADED', `Se subió un nuevo documento: ${file.name}`, { document_id: data.id, size: sizeStr });
       const { data: { publicUrl } } = supabase.storage.from('documentation').getPublicUrl(filePath);
       return { ...data, id: parseInt(data.id, 10), name: data.nombre || data.name, url: publicUrl, created_at: new Date(data.created_at).toLocaleDateString('es-ES') };
     } catch (err) {
@@ -1056,6 +1186,9 @@ export const api = {
     if (!supabase) return false;
     try {
       const { error } = await supabase.from('documents').update({ name, descripcion: description }).eq('id', docId);
+      if (!error) {
+        api.logAction('DOCUMENT_UPDATED', `Se actualizaron los datos del documento ID: ${docId} (${name})`);
+      }
       return !error;
     } catch (err) {
       return false;
@@ -1066,6 +1199,9 @@ export const api = {
     if (!supabase) return false;
     try {
       const { error } = await supabase.from('documents_categoria').update({ nombre: name, descripcion: description }).eq('id', catId);
+      if (!error) {
+        api.logAction('CATEGORY_UPDATED', `Se actualizó la categoría ID: ${catId} (${name})`);
+      }
       return !error;
     } catch (err) {
       return false;
@@ -1078,6 +1214,9 @@ export const api = {
       const docs = await api.getDocumentsByCategory(catId);
       for (const doc of docs) await api.deleteDocument(doc.id, doc.storage_path);
       const { error } = await supabase.from('documents_categoria').delete().eq('id', catId);
+      if (!error) {
+        api.logAction('CATEGORY_DELETED', `Se eliminó la categoría ID: ${catId}`);
+      }
       return !error;
     } catch (err) {
       return false;
@@ -1089,6 +1228,9 @@ export const api = {
     try {
       await supabase.storage.from('documentation').remove([storagePath]);
       const { error } = await supabase.from('documents').delete().eq('id', docId);
+      if (!error) {
+        api.logAction('DOCUMENT_DELETED', `Se eliminó el documento ID: ${docId}`);
+      }
       return !error;
     } catch (err) {
       return false;
@@ -1137,6 +1279,9 @@ export const api = {
     if (!supabase) return false;
     try {
       const { error } = await supabase.from('mentorship_requests').update({ status }).eq('id', requestId);
+      if (!error) {
+        api.logAction('MENTORSHIP_UPDATED', `Se cambió el estado de la mentoría ID: ${requestId} a ${status}`);
+      }
       return !error;
     } catch (err) {
       return false;

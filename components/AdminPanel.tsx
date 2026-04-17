@@ -4,13 +4,14 @@ import JoditEditor from 'jodit-react';
 import { api, EventRegistration, Seller, RecordedWebinar, WEBINAR_CATEGORIES, MentorshipRequest, BlogPost } from '../services/api';
 import { Notice, UserProfile, Role, DocumentCategory, Document as DocType, Associate, Certification, Event, SearchLog } from '../types';
 
-type AdminSection = 'overview' | 'directory' | 'notices' | 'events' | 'blog' | 'sellers' | 'users' | 'documents' | 'recorded_webinars' | 'mentorships' | 'certifications' | 'search_logs';
+type AdminSection = 'overview' | 'directory' | 'notices' | 'events' | 'blog' | 'sellers' | 'users' | 'documents' | 'recorded_webinars' | 'mentorships' | 'certifications' | 'search_logs' | 'audit_logs';
 
 export const BLOG_CATEGORIES = ['Destinos', 'Tendencias', 'Tips de Viaje', 'Noticias', 'Gastronomía', 'Luxury Travel', 'Wellness', 'Itinerarios'];
 
 const AdminPanel = ({ user }: any) => {
   const [activeSection, setActiveSection] = useState<AdminSection>('overview');
   const [dbStatus, setDbStatus] = useState<'connected' | 'error' | 'disconnected'>('disconnected');
+  const [preselectedAssociateId, setPreselectedAssociateId] = useState<number | null>(null);
 
   useEffect(() => {
     setDbStatus(api.isSupabaseConnected() ? 'connected' : 'error');
@@ -35,6 +36,7 @@ const AdminPanel = ({ user }: any) => {
     { id: 'users', label: 'Usuarios', icon: 'fa-users-gear', group: 'Sistema', show: user?.role === 'admin' },
     { id: 'blog', label: 'Blogs', icon: 'fa-newspaper', group: 'Sistema', show: hasRole('editor_blogs') },
     { id: 'search_logs', label: 'Búsquedas', icon: 'fa-magnifying-glass', group: 'Sistema', show: user?.role === 'admin' },
+    { id: 'audit_logs', label: 'Auditoría', icon: 'fa-clipboard-list', group: 'Sistema', show: user?.role === 'admin' },
   ].filter(s => s.show), [user]);
 
   const activeSectionLabel = sections.find(s => s.id === activeSection)?.label || 'Sección';
@@ -150,8 +152,25 @@ const AdminPanel = ({ user }: any) => {
       </aside>
 
       <main className="flex-1 p-8 md:p-12 overflow-y-auto bg-[#F9FAFB]">
-        {activeSection === 'overview' && <AdminOverview setActive={setActiveSection} />}
-        {activeSection === 'directory' && (hasRole('editor_directorio') ? <AdminDirectory Header={SectionHeader} /> : <AccessDenied />)}
+        {activeSection === 'overview' && (
+          <AdminOverview 
+            setActive={setActiveSection} 
+            user={user} 
+            onNavigateToAssociate={(id: number) => {
+              setPreselectedAssociateId(id);
+              setActiveSection('directory');
+            }}
+          />
+        )}
+        {activeSection === 'directory' && (
+          hasRole('editor_directorio') ? (
+            <AdminDirectory 
+              Header={SectionHeader} 
+              preselectedId={preselectedAssociateId}
+              onClearSelection={() => setPreselectedAssociateId(null)}
+            />
+          ) : <AccessDenied />
+        )}
         {activeSection === 'users' && (user?.role === 'admin' ? <AdminUsers Header={SectionHeader} /> : <AccessDenied />)}
         {activeSection === 'search_logs' && (user?.role === 'admin' ? <AdminSearchLogs Header={SectionHeader} /> : <AccessDenied />)}
         {activeSection === 'notices' && (hasRole('editor_avisos') ? <AdminNotices Header={SectionHeader} /> : <AccessDenied />)}
@@ -162,6 +181,15 @@ const AdminPanel = ({ user }: any) => {
         {activeSection === 'certifications' && ((hasRole('editor_certificaciones') || hasRole('editor_eventos')) ? <AdminCertifications Header={SectionHeader} /> : <AccessDenied />)}
         {activeSection === 'mentorships' && ((hasRole('editor_mentorias') || hasRole('editor_eventos')) ? <AdminMentorships Header={SectionHeader} /> : <AccessDenied />)}
         {activeSection === 'blog' && (hasRole('editor_blogs') ? <AdminBlog Header={SectionHeader} currentUser={user} /> : <AccessDenied />)}
+        {activeSection === 'audit_logs' && (user?.role === 'admin' ? (
+          <AdminAuditLogs 
+            Header={SectionHeader} 
+            onNavigateToAssociate={(id: number) => {
+              setPreselectedAssociateId(id);
+              setActiveSection('directory');
+            }} 
+          />
+        ) : <AccessDenied />)}
       </main>
     </div>
   );
@@ -1614,7 +1642,7 @@ const AdminDocuments = ({ Header }: any) => {
 };
 
 /* --- SUB-COMPONENT: OVERVIEW --- */
-const AdminOverview = ({ setActive }: { setActive: (s: AdminSection) => void }) => {
+const AdminOverview = ({ setActive, user, onNavigateToAssociate }: { setActive: (s: AdminSection) => void, user: any, onNavigateToAssociate: (id: number) => void }) => {
   const [stats, setStats] = useState({ 
     associates: 0, 
     notices: 0, 
@@ -1624,49 +1652,62 @@ const AdminOverview = ({ setActive }: { setActive: (s: AdminSection) => void }) 
   });
   const [topSellers, setTopSellers] = useState<Seller[]>([]);
   const [latestSearchLogs, setLatestSearchLogs] = useState<SearchLog[]>([]);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      setLoading(true);
-      try {
-        const [associates, notices, docs, mentorships, webinars, sellers, logs] = await Promise.allSettled([
-          api.getAssociates(),
-          api.getNotices(),
-          api.getAllDocuments(),
-          api.getMentorshipRequests(),
-          api.getRecordedWebinars(),
-          api.getTopSellers(),
-          api.getSearchLogs()
-        ]);
-        
-        const newMentorships = mentorships.status === 'fulfilled' 
-          ? mentorships.value.filter(m => m.status === 'pending').length 
-          : 0;
+  const fetchStats = async () => {
+    try {
+      const [associates, notices, docs, mentorships, webinars, sellers, logs, audits] = await Promise.allSettled([
+        api.getAssociates(),
+        api.getNotices(),
+        api.getAllDocuments(),
+        api.getMentorshipRequests(),
+        api.getRecordedWebinars(),
+        api.getTopSellers(),
+        api.getSearchLogs(),
+        api.getAuditLogs(10)
+      ]);
+      
+      const newMentorships = mentorships.status === 'fulfilled' 
+        ? mentorships.value.filter(m => m.status === 'pending').length 
+        : 0;
 
-        setStats({
-          associates: associates.status === 'fulfilled' ? associates.value.length : 0,
-          notices: notices.status === 'fulfilled' ? notices.value.length : 0,
-          documents: docs.status === 'fulfilled' ? docs.value.data.length : 0,
-          mentorships: newMentorships,
-          webinars: webinars.status === 'fulfilled' ? webinars.value.length : 0
-        });
+      setStats({
+        associates: associates.status === 'fulfilled' ? associates.value.length : 0,
+        notices: notices.status === 'fulfilled' ? notices.value.length : 0,
+        documents: docs.status === 'fulfilled' ? docs.value.data.length : 0,
+        mentorships: newMentorships,
+        webinars: webinars.status === 'fulfilled' ? webinars.value.length : 0
+      });
 
-        if (sellers.status === 'fulfilled') {
-          setTopSellers(sellers.value);
-        }
-
-        if (logs.status === 'fulfilled') {
-          setLatestSearchLogs(logs.value.slice(0, 10));
-        }
-      } catch (error) {
-        console.error("Error fetching admin stats:", error);
-      } finally {
-        setLoading(false);
+      if (sellers.status === 'fulfilled') {
+        setTopSellers(sellers.value);
       }
-    };
-    fetchStats();
+
+      if (logs.status === 'fulfilled') {
+        setLatestSearchLogs(logs.value.slice(0, 10));
+      }
+
+      if (audits.status === 'fulfilled') {
+        setAuditLogs(audits.value);
+      }
+    } catch (error) {
+      console.error("Error fetching admin stats:", error);
+    }
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    fetchStats().finally(() => setLoading(false));
+
+    // Polling cada 30 segundos para el Dashboard
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
   }, []);
+
+  const refreshLogs = () => {
+    fetchStats();
+  };
 
   const statCards = [
     { label: 'Avisos Totales', count: stats.notices, icon: 'fa-bullhorn', section: 'notices' as AdminSection },
@@ -1774,13 +1815,78 @@ const AdminOverview = ({ setActive }: { setActive: (s: AdminSection) => void }) 
             )}
           </div>
         </div>
+
+        {/* Audit Log Widget - ONLY for Admins */}
+        {user?.role === 'admin' && (
+          <div className="bg-white border border-neutral p-8 shadow-sm lg:col-span-2">
+            <div className="flex justify-between items-center mb-8">
+              <div className="flex items-center gap-3">
+                <h3 className="text-xl font-serif font-medium text-primary">Registro de Auditoría</h3>
+                <button 
+                  onClick={refreshLogs}
+                  className="text-secondary hover:text-brand transition-colors"
+                  title="Actualizar registro"
+                >
+                  <i className="fa-solid fa-arrows-rotate text-sm"></i>
+                </button>
+              </div>
+              <button 
+                onClick={() => setActive('audit_logs')}
+                className="text-[10px] font-bold uppercase tracking-widest text-accent hover:text-brand transition-colors flex items-center gap-2"
+              >
+                Ver historial completo
+                <i className="fa-solid fa-arrow-right-long"></i>
+              </button>
+            </div>
+            
+            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              {auditLogs.length === 0 && !loading ? (
+                <p className="text-secondary italic text-sm text-center py-10">No hay actividad registrada aún.</p>
+              ) : (
+                auditLogs.map((log) => (
+                  <div key={log.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-background/30 border border-neutral/50 hover:border-accent/50 transition-colors group">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-2 h-2 rounded-full ${
+                        log.action_type.includes('DELETED') ? 'bg-red-500' : 
+                        log.action_type.includes('UPDATED') ? 'bg-amber-500' : 'bg-green-500'
+                      }`}></div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-primary/5 px-2 py-0.5 text-primary">
+                            {log.action_type}
+                          </span>
+                          <span className="text-[10px] text-secondary">
+                            {new Date(log.created_at).toLocaleString('es-ES')}
+                          </span>
+                        </div>
+                        <p className="text-sm text-primary mt-1">{log.description}</p>
+                        <p className="text-[10px] text-secondary">
+                          Realizado por: <span className="font-bold">{log.profiles?.full_name || 'Sistema'}</span>
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {log.metadata?.associate_id && (
+                      <button 
+                        onClick={() => onNavigateToAssociate(log.metadata.associate_id)}
+                        className="mt-3 md:mt-0 text-[10px] font-bold uppercase tracking-widest text-accent hover:text-brand underline decoration-accent/30 underline-offset-4"
+                      >
+                        Ver perfil completo
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 /* --- SUB-COMPONENT: DIRECTORY MANAGEMENT --- */
-const AdminDirectory = ({ Header }: any) => {
+const AdminDirectory = ({ Header, preselectedId, onClearSelection }: any) => {
   const [associates, setAssociates] = useState<Associate[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1820,6 +1926,16 @@ const AdminDirectory = ({ Header }: any) => {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (preselectedId && associates.length > 0) {
+      const target = associates.find(a => a.id === preselectedId);
+      if (target) {
+        handleEdit(target);
+        onClearSelection?.(); // Limpiar para no re-abrir accidentalmente
+      }
+    }
+  }, [preselectedId, associates]);
 
   const loadData = async () => {
     setLoading(true);
@@ -3199,6 +3315,171 @@ const AdminSearchLogs: React.FC<{ Header: any }> = ({ Header }) => {
             className={`w-10 h-10 flex items-center justify-center border border-black/5 transition-all ${currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-primary hover:bg-white hover:shadow-sm'}`}
           >
             <i className="fa-solid fa-chevron-right text-xs"></i>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const AdminAuditLogs: React.FC<{ Header: any, onNavigateToAssociate: (id: number) => void }> = ({ Header, onNavigateToAssociate }) => {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [totalCount, setTotalCount] = useState(0);
+  const itemsPerPage = 100;
+
+  const fetchLogs = async () => {
+    setLoading(true);
+    try {
+      const { data, count } = await api.getAuditLogsPaged(currentPage, itemsPerPage, searchTerm);
+      setLogs(data);
+      setTotalCount(count);
+    } catch (err) {
+      console.error("Error fetching audit logs:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchLogs();
+    }, 500); // Debounce search
+    return () => clearTimeout(timer);
+  }, [currentPage, searchTerm]);
+
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+
+  return (
+    <div className="animate-fade-in">
+       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+        <Header 
+          title="Registro de Auditoría" 
+          subtitle="Historial detallado de todas las acciones administrativas y de sistema" 
+        />
+        
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative">
+            <input 
+              type="text"
+              placeholder="Buscar por descripción o acción..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-10 pr-4 py-3 bg-white border border-black/10 text-xs w-full md:w-80 shadow-sm focus:border-accent outline-none transition-all"
+            />
+            <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-secondary/50 text-xs"></i>
+          </div>
+          <button 
+            onClick={fetchLogs}
+            disabled={loading}
+            className="px-6 py-3 bg-white border border-black/10 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-background transition-all flex items-center justify-center gap-2"
+          >
+            <i className={`fa-solid fa-rotate ${loading ? 'animate-spin' : ''}`}></i>
+            Actualizar
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white border border-black/5 shadow-sm overflow-hidden mb-12">
+        <div className="overflow-x-auto w-full max-w-full block">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-primary text-white text-[10px] font-bold uppercase tracking-widest">
+                <th className="px-8 py-5">Fecha / Hora</th>
+                <th className="px-8 py-5">Acción</th>
+                <th className="px-8 py-5">Usuario</th>
+                <th className="px-8 py-5">Descripción</th>
+                <th className="px-8 py-5 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral">
+              {loading ? (
+                Array.from({ length: 10 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan={5} className="px-8 py-6 bg-gray-50/50 h-16"></td>
+                  </tr>
+                ))
+              ) : logs.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-8 py-20 text-center text-secondary font-serif italic text-sm">
+                    No se encontraron registros que coincidan con la búsqueda.
+                  </td>
+                </tr>
+              ) : (
+                logs.map((log) => (
+                  <tr key={log.id} className="hover:bg-background/20 transition-colors group">
+                    <td className="px-8 py-6 whitespace-nowrap text-xs text-secondary font-mono">
+                      {new Date(log.created_at).toLocaleString('es-ES', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit'
+                      })}
+                    </td>
+                    <td className="px-8 py-6">
+                      <span className={`text-[9px] font-bold px-2 py-1 rounded-none uppercase tracking-tighter ${
+                        log.action_type.includes('DELETE') ? 'bg-red-50 text-red-600 border border-red-100' :
+                        log.action_type.includes('UPDATE') ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                        'bg-green-50 text-green-600 border border-green-100'
+                      }`}>
+                        {log.action_type}
+                      </span>
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-primary">{log.profiles?.full_name || 'Sistema'}</span>
+                        <span className="text-[10px] text-secondary lowercase">{log.profiles?.email || 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6 max-w-md">
+                      <p className="text-sm text-primary line-clamp-2" title={log.description}>{log.description}</p>
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                       {log.metadata?.associate_id && (
+                          <button 
+                            onClick={() => onNavigateToAssociate(log.metadata.associate_id)}
+                            className="text-[10px] font-bold uppercase tracking-widest text-accent hover:text-brand underline decoration-accent/30 underline-offset-4"
+                          >
+                            Ver perfil
+                          </button>
+                        )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Pagination Controls */}
+      {!loading && totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 mb-20">
+          <button 
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+            className={`px-4 py-2 flex items-center gap-2 border border-black/5 text-[10px] font-bold uppercase tracking-widest transition-all ${currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-primary hover:bg-white hover:shadow-md'}`}
+          >
+            <i className="fa-solid fa-chevron-left"></i> Anterior
+          </button>
+          
+          <div className="flex items-center gap-2 px-6 py-2 bg-white border border-black/5 rounded-none shadow-sm">
+             <span className="text-[10px] font-bold text-secondary uppercase tracking-widest">Página</span>
+             <span className="text-sm font-serif text-primary">{currentPage}</span>
+             <span className="text-[10px] font-bold text-secondary uppercase tracking-widest px-1">de</span>
+             <span className="text-sm font-serif text-primary">{totalPages}</span>
+             <span className="text-[10px] text-secondary/60 lowercase italic ml-2">({totalCount} registros)</span>
+          </div>
+
+          <button 
+            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+            className={`px-4 py-2 flex items-center gap-2 border border-black/5 text-[10px] font-bold uppercase tracking-widest transition-all ${currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-primary hover:bg-white hover:shadow-md'}`}
+          >
+            Siguiente <i className="fa-solid fa-chevron-right"></i>
           </button>
         </div>
       )}
