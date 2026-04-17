@@ -66,7 +66,20 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // 3. Bloquear el botón de "Atrás" del navegador
+  // 3. Reiniciar scroll al cambiar de sección o detalle
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [
+    currentNav, 
+    selectedEventId, 
+    selectedAssociateId, 
+    selectedNoticeId, 
+    selectedBlogId, 
+    selectedProvider,
+    searchResults
+  ]);
+
+  // 4. Bloquear el botón de "Atrás" del navegador
   useEffect(() => {
     // Inyectamos un estado extra al inicio
     window.history.pushState(null, "", window.location.href);

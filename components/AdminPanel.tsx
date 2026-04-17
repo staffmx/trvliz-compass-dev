@@ -25,7 +25,7 @@ const AdminPanel = ({ user }: any) => {
   const sections = useMemo(() => [
     { id: 'overview', label: 'Dashboard', icon: 'fa-chart-line', group: 'Management', show: true },
     { id: 'notices', label: 'Avisos', icon: 'fa-bullhorn', group: 'Management', show: hasRole('editor_avisos') },
-    { id: 'directory', label: 'Directorio', icon: 'fa-address-book', group: 'Management', show: true },
+    { id: 'directory', label: 'Directorio', icon: 'fa-address-book', group: 'Management', show: hasRole('editor_directorio') },
     { id: 'sellers', label: 'Top Producers', icon: 'fa-trophy', group: 'Management', show: hasRole('editor_vendedores') },
     { id: 'events', label: 'Eventos', icon: 'fa-calendar-days', group: 'Management', show: hasRole('editor_eventos') },
     { id: 'documents', label: 'Documentos', icon: 'fa-folder-tree', group: 'Management', show: hasRole('editor_documentos') },
@@ -151,7 +151,7 @@ const AdminPanel = ({ user }: any) => {
 
       <main className="flex-1 p-8 md:p-12 overflow-y-auto bg-[#F9FAFB]">
         {activeSection === 'overview' && <AdminOverview setActive={setActiveSection} />}
-        {activeSection === 'directory' && <AdminDirectory Header={SectionHeader} />}
+        {activeSection === 'directory' && (hasRole('editor_directorio') ? <AdminDirectory Header={SectionHeader} /> : <AccessDenied />)}
         {activeSection === 'users' && (user?.role === 'admin' ? <AdminUsers Header={SectionHeader} /> : <AccessDenied />)}
         {activeSection === 'search_logs' && (user?.role === 'admin' ? <AdminSearchLogs Header={SectionHeader} /> : <AccessDenied />)}
         {activeSection === 'notices' && (hasRole('editor_avisos') ? <AdminNotices Header={SectionHeader} /> : <AccessDenied />)}
