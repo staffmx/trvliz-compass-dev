@@ -1,7 +1,7 @@
 Fase,Tarea,Prioridad,Estado,Observaciones
 "Fase 1: Go-Live","Configuración de Dominio Personalizado y SSL","Alta","Pendiente","Cambiar a URL oficial y quitar el link temporal de desarrollo de Google Cloud."
 "Fase 1: Go-Live","Eliminación de Datos de Prueba (Limpieza)","Alta","En Progreso","Borrar usuarios/datos falsos (Dummies) y llenar con información real del cliente."
-"Fase 1: Go-Live","Pruebas y Branding en Correos del Sistema","Alta","Pendiente","Asegurar que los emails de Bienvenida/Recuperar Contraseña de Supabase salgan con el logo y textos correctos de Traveliz."
+"Fase 1: Go-Live","Pruebas y Branding en Correos del Sistema","Alta","Completado","Asegurar que los emails de Bienvenida/Recuperar Contraseña de Supabase salgan con el logo y textos correctos de Traveliz."
 "Fase 1: Go-Live","Validación de la conexión con ZOHO en el Servidor Real","Alta","Completado","Verificar que los proveedores carguen rápido y sin bloqueos de seguridad del navegador en modo producción."
 "Fase 2: Fast-Follows (Mejoras Cercanas)","Prerenderizado SEO para Redes Sociales","Media","Pendiente","Mejora técnica indispensable para que las previsualizaciones miniatura de imágenes del blog se vean bien al enviarlas por WhatsApp o iMessage."
 "Fase 2: Fast-Follows (Mejoras Cercanas)","Compresión Automática de Imágenes","Media","Pendiente","Reducir drásticamente el peso de imágenes que se suban (como flyers) para no sobrecargar de megabytes la plataforma."
