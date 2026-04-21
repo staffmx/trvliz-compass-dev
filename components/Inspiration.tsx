@@ -202,6 +202,40 @@ const Inspiration: React.FC<InspirationProps> = ({ user, onNavigate, initialPost
                                 <button onClick={(e) => handleToggleSave(selectedPost.id, e)} className={`transition-colors hover:scale-110 transform outline-none ${selectedPost.has_saved ? 'text-brand' : 'text-secondary hover:text-primary'}`}>
                                     <i className={`${selectedPost.has_saved ? 'fa-solid' : 'fa-regular'} fa-bookmark`}></i>
                                 </button>
+                                <div className="h-6 w-[1px] bg-neutral mx-2 hidden sm:block"></div>
+                                <div className="flex items-center gap-4">
+                                    <button 
+                                        onClick={() => {
+                                            const url = `${window.location.origin}?post=${selectedPost.id}`;
+                                            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`${selectedPost.title} - Mira este artículo en Traveliz: ${url}`)}`, '_blank');
+                                        }}
+                                        className="text-secondary hover:text-[#25D366] transition-colors hover:scale-110 transform outline-none"
+                                        title="Compartir por WhatsApp"
+                                    >
+                                        <i className="fa-brands fa-whatsapp"></i>
+                                    </button>
+                                    <button 
+                                        onClick={() => {
+                                            const url = `${window.location.origin}?post=${selectedPost.id}`;
+                                            window.location.href = `mailto:?subject=${encodeURIComponent(selectedPost.title)}&body=${encodeURIComponent(`Hola, te comparto este artículo de Traveliz: ${url}`)}`;
+                                        }}
+                                        className="text-secondary hover:text-brand transition-colors hover:scale-110 transform outline-none"
+                                        title="Enviar por Correo"
+                                    >
+                                        <i className="fa-regular fa-envelope"></i>
+                                    </button>
+                                    <button 
+                                        onClick={() => {
+                                            const url = `${window.location.origin}?post=${selectedPost.id}`;
+                                            navigator.clipboard.writeText(url);
+                                            alert("¡Enlace público copiado al portapapeles!");
+                                        }}
+                                        className="text-secondary hover:text-accent transition-colors hover:scale-110 transform outline-none"
+                                        title="Copiar link público"
+                                    >
+                                        <i className="fa-solid fa-link text-lg"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

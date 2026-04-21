@@ -58,6 +58,53 @@ export interface QuickLink {
   color: string;
 }
 
+export type WebinarCategory = 
+  | "ONBOARDING TRAVELIZ - SESIONES DE FAMILIARIZACIÓN"
+  | "ONBOARDING TRAVELIZ - SESIONES DE REFUERZO (TERRESTRE)"
+  | "TEMAS GENERALES"
+  | "HOTELES"
+  | "DMC´s Y OTROS PROVEEDORES"
+  | "DESTINOS"
+  | "CERTIFICADO TRAVELIZ SAFARIS"
+  | "CRUCEROS"
+  | "TRAVELIZ - LUXURY CRUISES - PLAYBOOK";
+
+export interface RecordedWebinar {
+  id?: number;
+  name: string;
+  category: WebinarCategory;
+  cover_image: string;
+  access_link: string;
+  access_code?: string;
+  created_at?: string;
+}
+
+export interface BlogPost {
+  id: number;
+  title: string;
+  category: string;
+  image: string;
+  excerpt: string;
+  content?: string;
+  read_time: string;   
+  author: string;
+  publish_date: string;
+  vistas?: number;
+  likes_count?: number;
+  comments_count?: number;
+  has_liked?: boolean;
+  has_saved?: boolean;
+}
+
+export interface BlogComment {
+  id: number;
+  post_id: number;
+  user_id: string;
+  content: string;
+  created_at: string;
+  profiles?: { full_name: string; avatar_url: string; };
+}
+
 export interface DocumentCategory {
   id: number;
   name: string;
@@ -139,6 +186,8 @@ export interface SearchResults {
   certifications: Certification[];
   associates: Associate[];
   documents: Document[];
+  blogs: BlogPost[];
+  recorded_webinars: RecordedWebinar[];
 }
 
 export interface SearchLog {

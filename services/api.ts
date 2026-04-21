@@ -1,4 +1,4 @@
-import { Notice, UserProfile, Role, DocumentCategory, Document as DocType, Associate, Certification, Event, SearchResults, SearchLog } from '../types';
+import { Notice, UserProfile, Role, DocumentCategory, Document as DocType, Associate, Certification, Event, SearchResults, SearchLog, BlogPost, RecordedWebinar, BlogComment, WebinarCategory } from '../types';
 import { createClient } from '@supabase/supabase-js';
 
 // --- SUPABASE CONFIGURATION ---
@@ -33,63 +33,7 @@ export const NOTICE_CATEGORIES = [
   "GENERAL"
 ];
 
-// --- INTERFACES ---
 
-export type WebinarCategory = 
-  | "ONBOARDING TRAVELIZ - SESIONES DE FAMILIARIZACIÓN"
-  | "ONBOARDING TRAVELIZ - SESIONES DE REFUERZO (TERRESTRE)"
-  | "TEMAS GENERALES"
-  | "HOTELES"
-  | "DMC´s Y OTROS PROVEEDORES"
-  | "DESTINOS"
-  | "CERTIFICADO TRAVELIZ SAFARIS"
-  | "CRUCEROS"
-  | "TRAVELIZ - LUXURY CRUISES - PLAYBOOK";
-
-export interface RecordedWebinar {
-  id?: number;
-  name: string;
-  category: WebinarCategory;
-  cover_image: string;
-  access_link: string;
-  access_code?: string;
-  created_at?: string;
-}
-
-export interface EventRegistration {
-  id: number;
-  event_id: number;
-  user_email: string;
-  created_at: string;
-  associate_name?: string; // Virtual field for UI
-}
-
-export interface BlogPost {
-  id: number;
-  title: string;
-  category: string;
-  image: string;
-  excerpt: string;
-  content?: string;
-  read_time: string;   
-  author: string;
-  publish_date: string;
-  vistas?: number;
-  // Social features (populated dynamically)
-  likes_count?: number;
-  comments_count?: number;
-  has_liked?: boolean;
-  has_saved?: boolean;
-}
-
-export interface BlogComment {
-  id: number;
-  post_id: number;
-  user_id: string;
-  content: string;
-  created_at: string;
-  profiles?: { full_name: string; avatar_url: string; };
-}
 
 export interface MentorshipRequest {
   id?: number;
@@ -928,6 +872,18 @@ export const api = {
     return [];
   },
 
+  getBlogPostById: async (id: number): Promise<BlogPost | null> => {
+    if (!supabase) return null;
+    try {
+      const { data, error } = await supabase.from('blog_posts').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error("Error in getBlogPostById:", err);
+      return null;
+    }
+  },
+
   getFeedInteractions: async (postIds: number[], userId?: string) => {
     if (!supabase || postIds.length === 0) return { likes: {}, saves: {}, comments: {} };
     const { data: allLikes } = await supabase.from('blog_likes').select('post_id, user_id').in('post_id', postIds);
@@ -1338,15 +1294,17 @@ export const api = {
   },
 
   search: async (query: string, user?: { id: string, name: string }): Promise<SearchResults> => {
-    if (!supabase) return { notices: [], events: [], certifications: [], associates: [], documents: [] };
+    if (!supabase) return { notices: [], events: [], certifications: [], associates: [], documents: [], blogs: [], recorded_webinars: [] };
     const term = `%${query}%`;
     try {
-      const [notices, events, certifications, associates, documents] = await Promise.all([
+      const [notices, events, certifications, associates, documents, blogs, webinars] = await Promise.all([
         supabase.from('notices').select('*').or(`title.ilike.${term},content.ilike.${term}`),
         supabase.from('events').select('*').or(`title.ilike.${term},description.ilike.${term}`),
         supabase.from('certifications').select('*').or(`name.ilike.${term},description.ilike.${term}`),
         supabase.from('associates').select('*').or(`name.ilike.${term},last_name.ilike.${term},position.ilike.${term},email.ilike.${term}`),
-        supabase.from('documents').select('*').or(`name.ilike.${term},description.ilike.${term}`)
+        supabase.from('documents').select('*').or(`name.ilike.${term},description.ilike.${term}`),
+        supabase.from('blog_posts').select('*').or(`title.ilike.${term},content.ilike.${term},author.ilike.${term},category.ilike.${term}`),
+        supabase.from('recorded_webinars').select('*').or(`name.ilike.${term},category.ilike.${term}`)
       ]);
       return {
         notices: (notices.data || []).map(d => ({ ...d, id: d.id.toString() })),
@@ -1356,10 +1314,12 @@ export const api = {
         }),
         certifications: certifications.data || [],
         associates: associates.data || [],
-        documents: (documents.data || []).map(d => ({ ...d, id: parseInt(d.id, 10), url: d.storage_path }))
+        documents: (documents.data || []).map(d => ({ ...d, id: parseInt(d.id, 10), url: d.storage_path })),
+        blogs: blogs.data || [],
+        recorded_webinars: webinars.data || []
       };
     } catch (err) {
-      return { notices: [], events: [], certifications: [], associates: [], documents: [] };
+      return { notices: [], events: [], certifications: [], associates: [], documents: [], blogs: [], recorded_webinars: [] };
     }
   },
 

@@ -17,6 +17,7 @@ import NoticeDetail from './components/NoticeDetail';
 import NoticesList from './components/NoticesList';
 import MyProfile from './components/MyProfile';
 import SearchResults from './components/SearchResults';
+import PublicPostView from './components/PublicPostView';
 import { User, NavigationItem, SearchResults as SearchResultsType } from './types';
 import { api } from './services/api';
 
@@ -42,6 +43,7 @@ const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
+  const [renderPublicPostId, setRenderPublicPostId] = useState<number | null>(null);
   
   // Provider Filter States (Elevated for persistence)
   const [providerSearchTerm, setProviderSearchTerm] = useState('');
@@ -53,6 +55,17 @@ const App: React.FC = () => {
   const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
 
   useEffect(() => {
+    // 0. Verificar si es una vista pública de compartido
+    const params = new URLSearchParams(window.location.search);
+    const postIdStr = params.get('post');
+    if (postIdStr) {
+      const pId = parseInt(postIdStr, 10);
+      if (!isNaN(pId)) {
+        setRenderPublicPostId(pId);
+        // No verificamos sesión técnica si es vista pública, pero el efecto de auth seguirá corriendo
+      }
+    }
+
     // 1. Verificar sesión inicial
     api.getCurrentSession().then(session => {
       if (session) {
@@ -317,6 +330,7 @@ const App: React.FC = () => {
             onEventClick={handleNavigateToEvent}
             onNoticeClick={handleNavigateToNotice}
             onViewProfile={handleViewAssociate}
+            onBlogClick={handleNavigateToBlog}
           />
         ) : <PlaceholderPage title="No hay resultados" icon="fa-magnifying-glass" />;
       default:
@@ -369,6 +383,10 @@ const App: React.FC = () => {
         </div>
       </div>
     );
+  }
+
+  if (renderPublicPostId) {
+    return <PublicPostView postId={renderPublicPostId} />;
   }
 
   if (!isAuthenticated) {

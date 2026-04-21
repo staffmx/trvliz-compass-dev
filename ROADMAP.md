@@ -14,7 +14,7 @@
     - [x] Verificar funcionamiento con datos reales de la base de datos
 - [x] **19. Notificaciones Push e Email:** Habilitar envío de alertas directas a usuarios (desde admin) integrando un disparador para que también llegue notificación a su buzón de correo.
 - [x] **20. Bloqueo Botón Atrás:** Evitar que el navegador salga de la app al usar el botón físico de retroceso.
-- [ ] **13. Open Graph Blogs:** Insertar Meta-tags dinámicos para que los blogs muestren imágenes y títulos ricos al compartirse.
+- [x] **13. Open Graph Blogs:** Insertar Meta-tags dinámicos para que los blogs muestren imágenes y títulos ricos al compartirse. 🚀 (Completado 21 Abr)
 
 ### Fase 2: Mobile y Estabilización
 - [ ] **3. Bugs Pendientes:** Identificar y parchar errores de la versión actual.
