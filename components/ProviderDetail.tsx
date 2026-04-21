@@ -214,22 +214,33 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ provider, onBack }) => 
             <div className="bg-primary text-white p-8">
                 <h4 className="font-serif text-lg mb-6 border-b border-white/10 pb-4">Contacto Principal</h4>
                 <div className="space-y-6">
-                    <div>
-                        <span className="block text-[9px] uppercase tracking-widest text-white/40 mb-1">General</span>
-                        <span className="text-sm">{provider.contactoGeneral || 'No registrado'}</span>
-                    </div>
-                    <div>
-                        <span className="block text-[9px] uppercase tracking-widest text-white/40 mb-1">Correo</span>
-                        {provider.correo ? (
-                          <a href={`mailto:${provider.correo}`} className="text-sm text-brand hover:underline">{provider.correo}</a>
-                        ) : (
-                          <span className="text-sm text-white/70">No registrado</span>
-                        )}
-                    </div>
-                    <div>
-                        <span className="block text-[9px] uppercase tracking-widest text-white/40 mb-1">Teléfono</span>
-                        <span className="text-sm">{provider.telefono || 'No registrado'}</span>
-                    </div>
+                    {(() => {
+                      const firstContact = provider.contactos && provider.contactos.length > 0 ? provider.contactos[0] : null;
+                      const displayGeneral = provider.contactoGeneral || firstContact?.Nombre || 'No registrado';
+                      const displayCorreo = provider.correo || firstContact?.Correo;
+                      const displayTelefono = provider.telefono || firstContact?.Telefono || 'No registrado';
+
+                      return (
+                        <>
+                          <div>
+                              <span className="block text-[9px] uppercase tracking-widest text-white/40 mb-1">General</span>
+                              <span className="text-sm">{displayGeneral}</span>
+                          </div>
+                          <div>
+                              <span className="block text-[9px] uppercase tracking-widest text-white/40 mb-1">Correo</span>
+                              {displayCorreo ? (
+                                <a href={`mailto:${displayCorreo}`} className="text-sm text-white hover:text-brand transition-colors">{displayCorreo}</a>
+                              ) : (
+                                <span className="text-sm text-white/70">No registrado</span>
+                              )}
+                          </div>
+                          <div>
+                              <span className="block text-[9px] uppercase tracking-widest text-white/40 mb-1">Teléfono</span>
+                              <span className="text-sm">{displayTelefono}</span>
+                          </div>
+                        </>
+                      );
+                    })()}
                     {provider.paginaWeb && (
                       <div>
                           <span className="block text-[9px] uppercase tracking-widest text-white/40 mb-1">Sitio Web</span>

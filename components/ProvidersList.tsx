@@ -4,18 +4,34 @@ import { providersService } from '../services/providers';
 
 interface ProvidersListProps {
   onSelectProvider: (provider: Provider) => void;
+  searchTerm: string;
+  setSearchTerm: (term: string) => void;
+  selectedServiceTypes: string[];
+  setSelectedServiceTypes: (types: string[]) => void;
+  selectedProviderTypes: string[];
+  setSelectedProviderTypes: (types: string[]) => void;
+  selectedPlatforms: string[];
+  setSelectedPlatforms: (platforms: string[]) => void;
+  selectedRegions: string[];
+  setSelectedRegions: (regions: string[]) => void;
 }
 
-const ProvidersList: React.FC<ProvidersListProps> = ({ onSelectProvider }) => {
+const ProvidersList: React.FC<ProvidersListProps> = ({ 
+  onSelectProvider,
+  searchTerm,
+  setSearchTerm,
+  selectedServiceTypes,
+  setSelectedServiceTypes,
+  selectedProviderTypes,
+  setSelectedProviderTypes,
+  selectedPlatforms,
+  setSelectedPlatforms,
+  selectedRegions,
+  setSelectedRegions
+}) => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Filter States
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedServiceTypes, setSelectedServiceTypes] = useState<string[]>([]);
-  const [selectedProviderTypes, setSelectedProviderTypes] = useState<string[]>([]);
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
 
   useEffect(() => {
     const loadProviders = async () => {
@@ -60,6 +76,11 @@ const ProvidersList: React.FC<ProvidersListProps> = ({ onSelectProvider }) => {
   }
 
   // Safe Data Extractions
+    const allRegions: string[] = Array.from(new Set(providers.flatMap(p => {
+      const locations = p.ubicaciones;
+      return Array.isArray(locations) ? locations.map(u => u.Continente) : [];
+    }))).filter(t => t).sort() as string[];
+
     const allServiceTypes: string[] = Array.from(new Set(providers.flatMap(p => {
       const services = p.servicios;
       return Array.isArray(services) ? services : [];
@@ -91,10 +112,14 @@ const ProvidersList: React.FC<ProvidersListProps> = ({ onSelectProvider }) => {
       const platforms = Array.isArray(rawPlatforms) ? rawPlatforms : (rawPlatforms ? [rawPlatforms] : []);
       const platformMatch = selectedPlatforms.length === 0 || platforms.some(plat => plat && selectedPlatforms.includes(String(plat)));
 
-      return nameMatch && serviceMatch && typeMatch && platformMatch;
+      const locations = p.ubicaciones;
+      const regionMatch = selectedRegions.length === 0 ||
+        (Array.isArray(locations) && locations.some(u => u && u.Continente && selectedRegions.includes(u.Continente)));
+
+      return nameMatch && serviceMatch && typeMatch && platformMatch && regionMatch;
     });
 
-    const toggleFilter = (list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>, item: string) => {
+    const toggleFilter = (list: string[], setList: (items: string[]) => void, item: string) => {
       if (list.includes(item)) {
         setList(list.filter(i => i !== item));
       } else {
@@ -115,7 +140,7 @@ const ProvidersList: React.FC<ProvidersListProps> = ({ onSelectProvider }) => {
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-serif text-xl text-primary">Filtros</h3>
               <button 
-                onClick={() => { setSearchTerm(''); setSelectedServiceTypes([]); setSelectedProviderTypes([]); setSelectedPlatforms([]); }}
+                onClick={() => { setSearchTerm(''); setSelectedServiceTypes([]); setSelectedProviderTypes([]); setSelectedPlatforms([]); setSelectedRegions([]); }}
                 className="text-[10px] font-bold uppercase tracking-widest text-brand hover:text-accent underline"
               >
                 Limpiar
@@ -128,6 +153,21 @@ const ProvidersList: React.FC<ProvidersListProps> = ({ onSelectProvider }) => {
                 <div className="relative">
                   <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Buscar..." className="w-full p-3 pl-10 bg-background border border-neutral text-sm focus:border-accent outline-none" />
                   <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-3">Continentes / Regiones</label>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                  {allRegions.map(region => (
+                    <label key={region} className="flex items-center gap-3 cursor-pointer group">
+                      <div className={`w-4 h-4 border flex items-center justify-center transition-colors ${selectedRegions.includes(region) ? 'bg-brand border-brand' : 'border-neutral bg-white'}`}>
+                        {selectedRegions.includes(region) && <i className="fa-solid fa-check text-white text-[10px]"></i>}
+                      </div>
+                      <input type="checkbox" className="hidden" onChange={() => toggleFilter(selectedRegions, setSelectedRegions, region)} />
+                      <span className={`text-xs ${selectedRegions.includes(region) ? 'text-primary font-bold' : 'text-secondary group-hover:text-primary'}`}>{region}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
 
@@ -148,7 +188,7 @@ const ProvidersList: React.FC<ProvidersListProps> = ({ onSelectProvider }) => {
 
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-3">Servicios</label>
-                <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-2 no-scrollbar">
+                <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                   {allServiceTypes.map(type => (
                     <label key={type} className="flex items-center gap-3 cursor-pointer group">
                       <div className={`w-4 h-4 border flex items-center justify-center transition-colors ${selectedServiceTypes.includes(type) ? 'bg-brand border-brand' : 'border-neutral bg-white'}`}>

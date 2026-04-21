@@ -16,6 +16,7 @@ export interface User {
   name: string;
   email: string;
   role: 'admin' | 'employee';
+  isSuperAdmin?: boolean; // New flag for strictly restricted views like Audit
   roles?: Role[];
   avatar?: string;
 }

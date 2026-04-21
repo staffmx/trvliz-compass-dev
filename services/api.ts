@@ -185,7 +185,7 @@ export const api = {
     }
   },
 
-  getAuditLogsPaged: async (page: number = 1, limit: number = 100, search: string = ''): Promise<{ data: any[], count: number }> => {
+  getAuditLogsPaged: async (page: number = 1, limit: number = 100, search: string = '', actionType: string = '', dateFrom?: string, dateTo?: string): Promise<{ data: any[], count: number }> => {
     if (!supabase) return { data: [], count: 0 };
     try {
       const from = (page - 1) * limit;
@@ -203,6 +203,19 @@ export const api = {
 
       if (search) {
         query = query.or(`description.ilike.%${search}%,action_type.ilike.%${search}%`);
+      }
+
+      if (actionType) {
+        query = query.eq('action_type', actionType);
+      }
+
+      if (dateFrom) {
+        query = query.gte('created_at', dateFrom);
+      }
+
+      if (dateTo) {
+        // Añadimos + 'T23:59:59' para incluir todo el día final
+        query = query.lte('created_at', dateTo.includes('T') ? dateTo : `${dateTo}T23:59:59`);
       }
 
       const { data, error, count } = await query
@@ -238,10 +251,22 @@ export const api = {
     return session;
   },
 
-  subscribeToAuth: (callback: (session: any) => void) => {
+  resetPasswordForEmail: async (email: string) => {
+    if (!supabase) return { error: { message: "No Supabase connection" } };
+    return await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}`,
+    });
+  },
+
+  updateUserPassword: async (newPassword: string) => {
+    if (!supabase) return { error: { message: "No Supabase connection" } };
+    return await supabase.auth.updateUser({ password: newPassword });
+  },
+
+  subscribeToAuth: (callback: (event: string, session: any) => void) => {
     if (!supabase) return { unsubscribe: () => {} };
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      callback(session);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      callback(event, session);
     });
     return subscription;
   },
@@ -683,6 +708,20 @@ export const api = {
     } catch (err) {
       console.error("API Error getNoticeById:", err);
       return null;
+    }
+  },
+
+  sendIndividualNotification: async (noticeId: string, associateId: string) => {
+    if (!supabase) return { error: "No Supabase connection" };
+    try {
+      const { data, error } = await supabase.functions.invoke('send-individual-notification', {
+        body: { noticeId, targetAssociateId: associateId }
+      });
+      if (error) throw error;
+      return { success: true, data };
+    } catch (err: any) {
+      console.error("Send notification error:", err);
+      return { error: err.message };
     }
   },
 

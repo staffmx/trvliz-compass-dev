@@ -12,6 +12,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const [view, setView] = useState<'login' | 'forgot'>('login');
+  const [success, setSuccess] = useState('');
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -31,15 +34,30 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         setIsLoading(false);
         return;
       }
-
-      // Si el login es exitoso, App.tsx detectará el cambio mediante el listener
-      // y hará el handleProfileSync. No necesitamos llamar a onLogin aquí directamente
-      // a menos que queramos pasar datos inmediatos.
-      // Pero por seguridad y consistencia, dejaremos que App.tsx maneje el estado global.
       
     } catch (err: any) {
       console.error("Login catch:", err);
       setError("Error de conexión. Intenta de nuevo.");
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const { error: resetError } = await api.resetPasswordForEmail(email.trim());
+      if (resetError) {
+        setError(resetError.message);
+      } else {
+        setSuccess("Se ha enviado un enlace de recuperación a tu correo electrónico.");
+      }
+    } catch (err: any) {
+      setError("Ocurrió un error. Intenta de nuevo.");
+    } finally {
       setIsLoading(false);
     }
   };
@@ -60,66 +78,143 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <p className="text-secondary text-xs tracking-[4px] uppercase font-semibold">Intranet Corporativa</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-8">
-          <div>
-            <label className="block text-xs font-bold text-gray-300 mb-2 ml-1 uppercase tracking-widest">Correo Corporativo</label>
-            <div className="relative group">
-              <span className="absolute left-3 top-4 text-secondary group-focus-within:text-white transition-colors">
-                <i className="fa-regular fa-envelope"></i>
-              </span>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-3.5 bg-black/20 border border-white/10 rounded-none text-white placeholder-secondary focus:ring-1 focus:ring-accent focus:border-accent outline-none transition-all"
-                placeholder="nombre@traveliz.com"
-              />
+        {view === 'login' ? (
+          <form onSubmit={handleLogin} className="space-y-8">
+            <div>
+              <label className="block text-xs font-bold text-gray-300 mb-2 ml-1 uppercase tracking-widest">Correo Corporativo</label>
+              <div className="relative group">
+                <span className="absolute left-3 top-4 text-secondary group-focus-within:text-white transition-colors">
+                  <i className="fa-regular fa-envelope"></i>
+                </span>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3.5 bg-black/20 border border-white/10 rounded-none text-white placeholder-secondary focus:ring-1 focus:ring-accent focus:border-accent outline-none transition-all"
+                  placeholder="nombre@traveliz.com"
+                />
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-xs font-bold text-gray-300 mb-2 ml-1 uppercase tracking-widest">Contraseña</label>
-            <div className="relative group">
-              <span className="absolute left-3 top-4 text-secondary group-focus-within:text-white transition-colors">
-                <i className="fa-solid fa-lock"></i>
-              </span>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3.5 bg-black/20 border border-white/10 rounded-none text-white placeholder-secondary focus:ring-1 focus:ring-accent focus:border-accent outline-none transition-all"
-                placeholder="••••••••"
-              />
+            <div>
+              <div className="flex justify-between items-center mb-2 ml-1">
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-widest">Contraseña</label>
+                <button 
+                  type="button" 
+                  onClick={() => setView('forgot')}
+                  className="text-[10px] text-accent hover:text-white transition-colors uppercase font-bold tracking-widest"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </div>
+              <div className="relative group">
+                <span className="absolute left-3 top-4 text-secondary group-focus-within:text-white transition-colors">
+                  <i className="fa-solid fa-lock"></i>
+                </span>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3.5 bg-black/20 border border-white/10 rounded-none text-white placeholder-secondary focus:ring-1 focus:ring-accent focus:border-accent outline-none transition-all"
+                  placeholder="••••••••"
+                />
+              </div>
             </div>
-          </div>
 
-          {error && (
-            <div className="p-4 rounded-none bg-red-900/20 border border-red-900/30 text-red-300 text-sm flex items-center animate-shake">
-              <i className="fa-solid fa-circle-exclamation mr-2"></i>
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-4 bg-surface text-brand hover:text-accent font-bold uppercase tracking-[2px] rounded-none shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-2 mt-6 text-sm group"
-          >
-            {isLoading ? (
-              <>
-                <i className="fa-solid fa-circle-notch fa-spin"></i>
-                Iniciando sesión...
-              </>
-            ) : (
-              <>
-                Entrar a Compass
-                <i className="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
-              </>
+            {error && (
+              <div className="p-4 rounded-none bg-red-900/20 border border-red-900/30 text-red-300 text-sm flex items-center animate-shake">
+                <i className="fa-solid fa-circle-exclamation mr-2"></i>
+                {error}
+              </div>
             )}
-          </button>
-        </form>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-4 bg-surface text-brand hover:text-accent font-bold uppercase tracking-[2px] rounded-none shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-2 mt-6 text-sm group"
+            >
+              {isLoading ? (
+                <>
+                  <i className="fa-solid fa-circle-notch fa-spin"></i>
+                  Iniciando sesión...
+                </>
+              ) : (
+                <>
+                  Entrar a Compass
+                  <i className="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                </>
+              )}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleResetPassword} className="space-y-8 animate-fade-in">
+            <h3 className="text-white text-lg font-serif text-center mb-2">Recuperar Acceso</h3>
+            <p className="text-secondary text-xs text-center mb-8 leading-relaxed">
+              Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.
+            </p>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-300 mb-2 ml-1 uppercase tracking-widest">Correo Corporativo</label>
+              <div className="relative group">
+                <span className="absolute left-3 top-4 text-secondary group-focus-within:text-white transition-colors">
+                  <i className="fa-regular fa-envelope"></i>
+                </span>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3.5 bg-black/20 border border-white/10 rounded-none text-white placeholder-secondary focus:ring-1 focus:ring-accent focus:border-accent outline-none transition-all"
+                  placeholder="nombre@traveliz.com"
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="p-4 rounded-none bg-red-900/20 border border-red-900/30 text-red-300 text-sm flex items-center animate-shake">
+                <i className="fa-solid fa-circle-exclamation mr-2"></i>
+                {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="p-4 rounded-none bg-green-900/20 border border-green-900/30 text-green-300 text-sm flex items-center">
+                <i className="fa-solid fa-circle-check mr-2"></i>
+                {success}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <button
+                type="submit"
+                disabled={isLoading || !!success}
+                className="w-full py-4 bg-surface text-brand hover:text-accent font-bold uppercase tracking-[2px] rounded-none shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-2 text-sm group"
+              >
+                {isLoading ? (
+                  <>
+                    <i className="fa-solid fa-circle-notch fa-spin"></i>
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    Enviar enlace de recuperación
+                    <i className="fa-solid fa-paper-plane group-hover:translate-x-1 transition-transform"></i>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setView('login'); setError(''); setSuccess(''); }}
+                className="w-full py-3 text-white/60 hover:text-white text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
+              >
+                <i className="fa-solid fa-arrow-left"></i> Volver al inicio
+              </button>
+            </div>
+          </form>
+        )}
 
         <div className="mt-10 text-center border-t border-white/5 pt-8">
           <p className="text-xs text-secondary leading-relaxed">

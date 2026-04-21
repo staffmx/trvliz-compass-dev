@@ -42,6 +42,15 @@ const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
+  
+  // Provider Filter States (Elevated for persistence)
+  const [providerSearchTerm, setProviderSearchTerm] = useState('');
+  const [providerSelectedServiceTypes, setProviderSelectedServiceTypes] = useState<string[]>([]);
+  const [providerSelectedTypes, setProviderSelectedTypes] = useState<string[]>([]);
+  const [providerSelectedPlatforms, setProviderSelectedPlatforms] = useState<string[]>([]);
+  const [providerSelectedRegions, setProviderSelectedRegions] = useState<string[]>([]);
+
+  const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
 
   useEffect(() => {
     // 1. Verificar sesión inicial
@@ -52,7 +61,11 @@ const App: React.FC = () => {
     });
 
     // 2. Escuchar cambios de autenticación
-    const subscription = api.subscribeToAuth((session) => {
+    const subscription = api.subscribeToAuth((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoveringPassword(true);
+      }
+
       if (session) {
         handleProfileSync(session.user.id, session.user.email);
       } else {
@@ -96,17 +109,34 @@ const App: React.FC = () => {
     };
   }, []);
 
+  const handlePasswordUpdate = async (newPassword: string) => {
+    try {
+      const { error } = await api.updateUserPassword(newPassword);
+      if (error) throw error;
+      alert("Contraseña actualizada con éxito.");
+      setIsRecoveringPassword(false);
+    } catch (err: any) {
+      alert("Error al actualizar la contraseña: " + err.message);
+    }
+  };
+
   const handleProfileSync = async (userId: string, email?: string) => {
     try {
       const profile = await api.getUserProfile(userId, email);
       
       if (profile) {
         // Mapear UserProfile a User
+        const adminRoleNames = ['admin', 'administrador', 'super_admin', 'superadmin', 'administrador maestro'];
+        const userRoles = (profile.roles || []).map(r => (r?.name || '').toLowerCase());
+        const hasAdminRole = userRoles.some(name => adminRoleNames.includes(name));
+        const isActuallySuper = userRoles.includes('super_admin') || userRoles.includes('superadmin') || profile.email === 'yibrant@internationalcruises.mx';
+
         const userData: User = {
           id: profile.id,
           name: profile.name,
           email: profile.email,
-          role: (profile.roles?.some(r => r && r.name && (r.name.toLowerCase().includes('admin') || r.name.toLowerCase().includes('administrador'))) || profile.email === 'yibrant@internationalcruises.mx') ? 'admin' : 'employee',
+          role: (hasAdminRole || profile.email === 'yibrant@internationalcruises.mx') ? 'admin' : 'employee',
+          isSuperAdmin: isActuallySuper,
           roles: profile.roles || [],
           avatar: profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'U')}&background=random`
         };
@@ -120,6 +150,7 @@ const App: React.FC = () => {
             name: 'Yibrant Medina',
             email: email,
             role: 'admin',
+            isSuperAdmin: true,
             roles: [],
             avatar: `https://ui-avatars.com/api/?name=Yibrant&background=random`
           };
@@ -227,7 +258,19 @@ const App: React.FC = () => {
             onBack={() => setSelectedProvider(null)} 
           />
         ) : (
-          <ProvidersList onSelectProvider={setSelectedProvider} />
+          <ProvidersList 
+            onSelectProvider={setSelectedProvider}
+            searchTerm={providerSearchTerm}
+            setSearchTerm={setProviderSearchTerm}
+            selectedServiceTypes={providerSelectedServiceTypes}
+            setSelectedServiceTypes={setProviderSelectedServiceTypes}
+            selectedProviderTypes={providerSelectedTypes}
+            setSelectedProviderTypes={setProviderSelectedTypes}
+            selectedPlatforms={providerSelectedPlatforms}
+            setSelectedPlatforms={setProviderSelectedPlatforms}
+            selectedRegions={providerSelectedRegions}
+            setSelectedRegions={setProviderSelectedRegions}
+          />
         );
       case NavigationItem.BLOG:
         return <Inspiration 
@@ -285,6 +328,48 @@ const App: React.FC = () => {
         />;
     }
   };
+
+  if (isRecoveringPassword) {
+    return (
+      <div className="min-h-screen bg-brand flex items-center justify-center p-4">
+        <div className="w-full max-w-md p-10 bg-brand border border-white/10 shadow-2xl backdrop-blur-md">
+          <div className="text-center mb-8">
+            <img 
+              src="https://traveliz.com/trvconnect/16-547x184.png" 
+              alt="TRV Connect" 
+              className="h-20 w-auto mx-auto mb-6 object-contain"
+            />
+            <h3 className="text-white text-xl font-serif">Nueva Contraseña</h3>
+            <p className="text-secondary text-xs mt-2 uppercase tracking-widest">Establece tu nuevo acceso</p>
+          </div>
+          
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const pwd = (e.currentTarget.elements.namedItem('new_password') as HTMLInputElement).value;
+            handlePasswordUpdate(pwd);
+          }} className="space-y-6">
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-widest">Nueva Contraseña</label>
+              <input
+                name="new_password"
+                type="password"
+                required
+                minLength={6}
+                className="w-full px-4 py-3 bg-black/20 border border-white/10 text-white focus:border-accent outline-none transition-all rounded-none"
+                placeholder="••••••••"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full py-4 bg-white text-brand font-bold uppercase tracking-widest hover:bg-accent transition-colors duration-300 text-xs"
+            >
+              Actualizar Contraseña
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Login onLogin={handleLogin} />;

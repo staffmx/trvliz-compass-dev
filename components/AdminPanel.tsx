@@ -2271,16 +2271,64 @@ const AdminNotices = ({ Header }: any) => {
     } finally { setLoading(false); }
   };
 
+  const [systemUsers, setSystemUsers] = useState<any[]>([]);
+
   const loadAssociates = async () => {
     setLoadingAssociates(true);
     try {
-      const data = await api.getAssociates();
-      setAssociates(data || []);
+      const [assocData, sellersData] = await Promise.all([
+        api.getAssociates(),
+        api.getTopSellers()
+      ]);
+      
+      // Filtrar solos los que tienen user_id (usuarios del sistema)
+      const validUsers = (assocData || []).filter(a => a.user_id).map(a => {
+        // Buscar su tier en sellers
+        const seller = sellersData.find(s => 
+          `${a.name} ${a.last_name || ''}`.trim().toLowerCase() === s.name.trim().toLowerCase()
+        );
+        return {
+          ...a,
+          tier: seller?.tier || 'ASSOCIATE' // Default tier if not found
+        };
+      });
+
+      setAssociates(assocData || []);
+      setSystemUsers(validUsers);
     } catch (err) {
-      console.error("Error loading associates:", err);
+      console.error("Error loading system users:", err);
     } finally {
       setLoadingAssociates(false);
     }
+  };
+
+  const getGroupedUsers = () => {
+    const grouped: any = {};
+    systemUsers.forEach(u => {
+      const branch = u.Branch || 'HOME OFFICE';
+      const tier = u.tier || 'ASSOCIATE';
+      if (!grouped[branch]) grouped[branch] = {};
+      if (!grouped[branch][tier]) grouped[branch][tier] = [];
+      grouped[branch][tier].push(u);
+    });
+    return grouped;
+  };
+
+  const toggleMassSelection = (ids: string[], forceState?: boolean) => {
+    const currentIds = formData.recipient_ids ? formData.recipient_ids.split(',').filter(i => i) : [];
+    
+    // Si forceState no se provee, decidimos basándonos en si todos los ids ya están seleccionados
+    const allSelected = ids.every(id => currentIds.includes(id));
+    const shouldSelect = forceState !== undefined ? forceState : !allSelected;
+
+    let newIds;
+    if (shouldSelect) {
+      newIds = Array.from(new Set([...currentIds, ...ids]));
+    } else {
+      newIds = currentIds.filter(id => !ids.includes(id));
+    }
+    
+    setFormData({ ...formData, recipient_ids: newIds.join(',') });
   };
 
   const handleDelete = async (id: string) => {
@@ -2329,6 +2377,7 @@ const AdminNotices = ({ Header }: any) => {
         setEditingId(null);
         setFormData({ 
           title: '', content: '', priority: 'medium', category: 'General',
+          recipient_ids: '',
           date: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) 
         });
         loadInitialData();
@@ -2339,6 +2388,34 @@ const AdminNotices = ({ Header }: any) => {
       console.error("Error in handleSubmit:", err);
       alert(`Error al guardar: ${err.message || 'Error desconocido'}`);
     } finally { setSaving(false); }
+  };
+
+  const [isNotifying, setIsNotifying] = useState<string | null>(null);
+
+  const handleSendEmail = async (notice: Notice) => {
+    if (!notice.recipient_ids) return;
+    const recipientIds = notice.recipient_ids.split(',').filter(id => id);
+    if (recipientIds.length === 0) return;
+
+    setIsNotifying(notice.id);
+    try {
+      // Si hay varios, mandamos a cada uno (el user dijo 'individuales')
+      // pero por ahora la función soporta 1 targetAssociateId. 
+      // Mandaremos al primero del grupo si hay varios, o ajustaremos para individual.
+      const multi = recipientIds.length > 1;
+      let count = 0;
+      
+      for (const rid of recipientIds) {
+        const result = await api.sendIndividualNotification(notice.id, rid);
+        if (result.success) count++;
+      }
+      
+      alert(multi ? `Se enviaron ${count} correos correctamente.` : "Correo enviado correctamente.");
+    } catch (err) {
+      alert("Error al enviar el correo.");
+    } finally {
+      setIsNotifying(null);
+    }
   };
 
   return (
@@ -2400,35 +2477,102 @@ const AdminNotices = ({ Header }: any) => {
               <div className="md:col-span-2">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-3">Destinatarios (Vacio = Todos)</label>
                 <div className="border border-neutral p-4 bg-[#F9FAFB] max-h-48 overflow-y-auto space-y-2">
-                  <div className="flex items-center gap-2 pb-2 border-b border-neutral/50 mb-2">
-                    <input 
-                      type="checkbox" 
-                      id="all-recipients"
-                      checked={!formData.recipient_ids} 
-                      onChange={() => setFormData({...formData, recipient_ids: ''})}
-                      className="accent-brand"
-                    />
-                    <label htmlFor="all-recipients" className="text-sm font-bold text-primary cursor-pointer">Público General (Todos)</label>
+                  <div className="flex items-center justify-between gap-2 pb-2 border-b border-neutral/50 mb-4 px-2">
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        id="all-recipients"
+                        checked={!formData.recipient_ids} 
+                        onChange={() => setFormData({...formData, recipient_ids: ''})}
+                        className="accent-brand"
+                      />
+                      <label htmlFor="all-recipients" className="text-sm font-bold text-primary cursor-pointer uppercase tracking-tight">Público General (Todos)</label>
+                    </div>
+                    {formData.recipient_ids && (
+                      <button 
+                        type="button"
+                        onClick={() => setFormData({...formData, recipient_ids: ''})}
+                        className="text-[9px] font-bold text-brand hover:text-accent uppercase tracking-widest border border-brand/20 px-2 py-1 bg-brand/5"
+                      >
+                        Limpiar Selección
+                      </button>
+                    )}
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                    {associates.map(assoc => {
-                      const idStr = assoc.id?.toString() || '';
-                      const isSelected = formData.recipient_ids?.split(',').includes(idStr);
-                      return (
-                        <div key={idStr} className="flex items-center gap-2">
-                          <input 
-                            type="checkbox" 
-                            id={`recipient-${idStr}`}
-                            checked={isSelected}
-                            onChange={() => toggleRecipient(idStr)}
-                            className="accent-brand"
-                          />
-                          <label htmlFor={`recipient-${idStr}`} className="text-xs text-secondary truncate cursor-pointer" title={`${assoc.name} ${assoc.last_name}`}>
-                            {assoc.name} {assoc.last_name}
-                          </label>
-                        </div>
-                      );
-                    })}
+
+                  <div className="space-y-8 px-2 pb-4">
+                    {(() => {
+                      const groups = getGroupedUsers();
+                      return Object.keys(groups).sort().map(branch => {
+                        const tiers = groups[branch];
+                        const branchUserIds = Object.values(tiers).flat().map((u: any) => u.id.toString());
+                        const isBranchSelected = branchUserIds.every(id => formData.recipient_ids?.split(',').includes(id));
+
+                        return (
+                          <div key={branch} className="space-y-4">
+                            <div className="flex items-center justify-between border-b border-neutral pb-2">
+                                <h4 className="text-xs font-bold text-brand uppercase tracking-wider flex items-center gap-2">
+                                  <i className="fa-solid fa-location-dot text-[10px]"></i>
+                                  {branch}
+                                </h4>
+                                <button 
+                                  type="button" 
+                                  onClick={() => toggleMassSelection(branchUserIds)}
+                                  className="text-[8px] font-bold uppercase tracking-widest px-2 py-1 border border-neutral hover:bg-neutral transition-colors"
+                                >
+                                  {isBranchSelected ? 'Deseleccionar Sucursal' : 'Seleccionar Sucursal'}
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-6 pl-4 font-sans">
+                              {Object.keys(tiers).sort().map(tier => {
+                                const usersInTier = tiers[tier];
+                                const tierUserIds = usersInTier.map((u: any) => u.id.toString());
+                                const isTierSelected = tierUserIds.every(id => formData.recipient_ids?.split(',').includes(id));
+
+                                return (
+                                  <div key={tier} className="space-y-3">
+                                    <div className="flex items-center justify-between bg-neutral/20 px-3 py-1.5">
+                                      <span className="text-[9px] font-bold text-secondary uppercase tracking-widest">{tier}</span>
+                                      <button 
+                                        type="button" 
+                                        onClick={() => toggleMassSelection(tierUserIds)}
+                                        className="text-[7px] font-bold uppercase underline hover:text-brand"
+                                      >
+                                        {isTierSelected ? 'Quitar Rango' : 'Sumar Rango'}
+                                      </button>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 px-1">
+                                      {usersInTier.map((u: any) => {
+                                        const idStr = u.id.toString();
+                                        const isSelected = formData.recipient_ids?.split(',').includes(idStr);
+                                        return (
+                                          <div key={idStr} className="flex items-center gap-2 group">
+                                            <input 
+                                              type="checkbox" 
+                                              id={`recipient-${idStr}`}
+                                              checked={isSelected}
+                                              onChange={() => toggleRecipient(idStr)}
+                                              className="accent-brand w-3 h-3"
+                                            />
+                                            <label 
+                                              htmlFor={`recipient-${idStr}`} 
+                                              className={`text-[11px] truncate cursor-pointer transition-colors ${isSelected ? 'font-bold text-primary' : 'text-secondary group-hover:text-primary'}`}
+                                              title={`${u.name} ${u.last_name || ''}`}
+                                            >
+                                              {u.name} {u.last_name || ''}
+                                            </label>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
                 <p className="text-[10px] text-secondary mt-2 italic">Selecciona usuarios específicos o deja sin marcar para que sea un aviso general.</p>
@@ -2517,6 +2661,16 @@ const AdminNotices = ({ Header }: any) => {
                       </div>
                     ) : (
                       <>
+                        {notice.recipient_ids && (
+                          <button 
+                            onClick={() => handleSendEmail(notice)}
+                            disabled={isNotifying === notice.id}
+                            className={`p-2 transition-colors ${isNotifying === notice.id ? 'text-neutral cursor-wait' : 'text-accent hover:text-brand'}`}
+                            title="Enviar por email (individual)"
+                          >
+                            <i className={`fa-solid ${isNotifying === notice.id ? 'fa-circle-notch fa-spin' : 'fa-paper-plane'}`}></i>
+                          </button>
+                        )}
                         <button 
                           onClick={() => handleEdit(notice)}
                           className="text-secondary hover:text-brand transition-colors p-2"
@@ -3327,13 +3481,35 @@ const AdminAuditLogs: React.FC<{ Header: any, onNavigateToAssociate: (id: number
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const [actionFilter, setActionFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [totalCount, setTotalCount] = useState(0);
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const itemsPerPage = 100;
+
+  const actionTypes = [
+    { label: 'Todos', value: '' },
+    { label: 'Inicios de Sesión', value: 'USER_LOGIN' },
+    { label: 'Cambio Contraseña', value: 'PASSWORD_CHANGED' },
+    { label: 'Perfil Creado/Modificado', value: 'USER_PROFILE_UPDATED' },
+    { label: 'Usuario Eliminado', value: 'USER_DELETED' },
+    { label: 'Aviso Actualizado', value: 'NOTICE_UPDATED' },
+    { label: 'Evento Actualizado', value: 'EVENT_UPDATED' },
+    { label: 'Asociado Actualizado', value: 'PROFILE_UPDATED' }
+  ];
 
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const { data, count } = await api.getAuditLogsPaged(currentPage, itemsPerPage, searchTerm);
+      const { data, count } = await api.getAuditLogsPaged(
+        currentPage, 
+        itemsPerPage, 
+        searchTerm, 
+        actionFilter, 
+        dateFrom, 
+        dateTo
+      );
       setLogs(data);
       setTotalCount(count);
     } catch (err) {
@@ -3348,40 +3524,108 @@ const AdminAuditLogs: React.FC<{ Header: any, onNavigateToAssociate: (id: number
       fetchLogs();
     }, 500); // Debounce search
     return () => clearTimeout(timer);
-  }, [currentPage, searchTerm]);
+  }, [currentPage, searchTerm, actionFilter, dateFrom, dateTo]);
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
 
+  const downloadCSV = () => {
+    if (logs.length === 0) return;
+    
+    const headers = ["Fecha", "Accion", "Usuario", "Email", "Descripcion", "Metadata"];
+    const rows = logs.map(log => [
+      new Date(log.created_at).toLocaleString('es-ES'),
+      log.action_type,
+      log.profiles?.full_name || 'Sistema',
+      log.profiles?.email || 'N/A',
+      log.description.replace(/"/g, '""'),
+      JSON.stringify(log.metadata).replace(/"/g, '""')
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(r => r.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `audit_logs_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="animate-fade-in">
-       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+       <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 mb-8">
         <Header 
           title="Registro de Auditoría" 
           subtitle="Historial detallado de todas las acciones administrativas y de sistema" 
         />
         
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative">
+        <div className="flex flex-col md:flex-row flex-wrap gap-4 items-center">
+          <div className="relative w-full md:w-64">
             <input 
               type="text"
-              placeholder="Buscar por descripción o acción..."
+              placeholder="Buscar por descripción..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="pl-10 pr-4 py-3 bg-white border border-black/10 text-xs w-full md:w-80 shadow-sm focus:border-accent outline-none transition-all"
+              className="pl-10 pr-4 py-3 bg-white border border-black/10 text-xs w-full shadow-sm focus:border-accent outline-none transition-all"
             />
             <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-secondary/50 text-xs"></i>
           </div>
-          <button 
-            onClick={fetchLogs}
-            disabled={loading}
-            className="px-6 py-3 bg-white border border-black/10 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-background transition-all flex items-center justify-center gap-2"
-          >
-            <i className={`fa-solid fa-rotate ${loading ? 'animate-spin' : ''}`}></i>
-            Actualizar
-          </button>
+
+          <div className="flex gap-2 w-full md:w-auto">
+            <select 
+              value={actionFilter}
+              onChange={(e) => { setActionFilter(e.target.value); setCurrentPage(1); }}
+              className="p-3 bg-white border border-black/10 text-[10px] font-bold uppercase tracking-widest shadow-sm focus:border-accent outline-none w-full"
+            >
+              <option value="">Tipo de Acción</option>
+              {actionTypes.slice(1).map(at => (
+                <option key={at.value} value={at.value}>{at.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex gap-2 items-center bg-white border border-black/10 p-1 shadow-sm w-full md:w-auto">
+            <input 
+              type="date" 
+              value={dateFrom} 
+              onChange={e => { setDateFrom(e.target.value); setCurrentPage(1); }}
+              className="p-2 text-[10px] bg-transparent outline-none uppercase font-bold"
+            />
+            <span className="text-secondary text-[10px] font-bold">a</span>
+            <input 
+              type="date" 
+              value={dateTo} 
+              onChange={e => { setDateTo(e.target.value); setCurrentPage(1); }}
+              className="p-2 text-[10px] bg-transparent outline-none uppercase font-bold"
+            />
+          </div>
+
+          <div className="flex gap-2 w-full md:w-auto">
+            <button 
+              onClick={downloadCSV}
+              disabled={loading || logs.length === 0}
+              className="px-6 py-3 bg-brand text-white text-[10px] font-bold uppercase tracking-widest hover:bg-accent transition-all flex items-center justify-center gap-2 flex-1 md:flex-initial"
+            >
+              <i className="fa-solid fa-file-csv"></i>
+              Exportar
+            </button>
+            <button 
+              onClick={fetchLogs}
+              disabled={loading}
+              className="p-3 bg-white border border-black/10 text-primary text-xs hover:bg-background transition-all"
+              title="Actualizar"
+            >
+              <i className={`fa-solid fa-rotate ${loading ? 'animate-spin' : ''}`}></i>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -3394,7 +3638,7 @@ const AdminAuditLogs: React.FC<{ Header: any, onNavigateToAssociate: (id: number
                 <th className="px-8 py-5">Acción</th>
                 <th className="px-8 py-5">Usuario</th>
                 <th className="px-8 py-5">Descripción</th>
-                <th className="px-8 py-5 text-right">Acciones</th>
+                <th className="px-8 py-5 text-right w-32">Detalles</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral">
@@ -3412,42 +3656,73 @@ const AdminAuditLogs: React.FC<{ Header: any, onNavigateToAssociate: (id: number
                 </tr>
               ) : (
                 logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-background/20 transition-colors group">
-                    <td className="px-8 py-6 whitespace-nowrap text-xs text-secondary font-mono">
-                      {new Date(log.created_at).toLocaleString('es-ES', {
-                        day: '2-digit', month: '2-digit', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit', second: '2-digit'
-                      })}
-                    </td>
-                    <td className="px-8 py-6">
-                      <span className={`text-[9px] font-bold px-2 py-1 rounded-none uppercase tracking-tighter ${
-                        log.action_type.includes('DELETE') ? 'bg-red-50 text-red-600 border border-red-100' :
-                        log.action_type.includes('UPDATE') ? 'bg-amber-50 text-amber-600 border border-amber-100' :
-                        'bg-green-50 text-green-600 border border-green-100'
-                      }`}>
-                        {log.action_type}
-                      </span>
-                    </td>
-                    <td className="px-8 py-6">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium text-primary">{log.profiles?.full_name || 'Sistema'}</span>
-                        <span className="text-[10px] text-secondary lowercase">{log.profiles?.email || 'N/A'}</span>
-                      </div>
-                    </td>
-                    <td className="px-8 py-6 max-w-md">
-                      <p className="text-sm text-primary line-clamp-2" title={log.description}>{log.description}</p>
-                    </td>
-                    <td className="px-8 py-6 text-right">
-                       {log.metadata?.associate_id && (
-                          <button 
-                            onClick={() => onNavigateToAssociate(log.metadata.associate_id)}
-                            className="text-[10px] font-bold uppercase tracking-widest text-accent hover:text-brand underline decoration-accent/30 underline-offset-4"
-                          >
-                            Ver perfil
-                          </button>
-                        )}
-                    </td>
-                  </tr>
+                  <React.Fragment key={log.id}>
+                    <tr className="hover:bg-background/20 transition-colors group">
+                      <td className="px-8 py-6 whitespace-nowrap text-xs text-secondary font-mono">
+                        {new Date(log.created_at).toLocaleString('es-ES', {
+                          day: '2-digit', month: '2-digit', year: 'numeric',
+                          hour: '2-digit', minute: '2-digit', second: '2-digit'
+                        })}
+                      </td>
+                      <td className="px-8 py-6">
+                        <span className={`text-[9px] font-bold px-2 py-1 rounded-none uppercase tracking-tighter border ${
+                          log.action_type.includes('DELETE') ? 'bg-red-50 text-red-600 border-red-100' :
+                          log.action_type.includes('UPDATE') ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                          log.action_type.includes('LOGIN') ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                          'bg-green-50 text-green-600 border-green-100'
+                        }`}>
+                          {log.action_type}
+                        </span>
+                      </td>
+                      <td className="px-8 py-6">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-primary">{log.profiles?.full_name || 'Sistema'}</span>
+                          <span className="text-[10px] text-secondary lowercase">{log.profiles?.email || 'N/A'}</span>
+                        </div>
+                      </td>
+                      <td className="px-8 py-6">
+                        <p className="text-sm text-primary line-clamp-2" title={log.description}>{log.description}</p>
+                      </td>
+                      <td className="px-8 py-6 text-right">
+                         <div className="flex justify-end gap-3 items-center">
+                            {log.metadata?.associate_id && (
+                              <button 
+                                onClick={() => onNavigateToAssociate(log.metadata.associate_id)}
+                                className="text-[10px] font-bold uppercase tracking-widest text-brand hover:text-accent transition-colors"
+                                title="Ver Perfil Asociado"
+                              >
+                                <i className="fa-solid fa-user-tag text-xs"></i>
+                              </button>
+                            )}
+                            <button 
+                                onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
+                                className={`w-8 h-8 flex items-center justify-center rounded-none border border-neutral transition-all ${expandedLogId === log.id ? 'bg-primary text-white border-primary' : 'bg-white text-secondary hover:border-brand hover:text-brand'}`}
+                                title="Ver JSON Metadata"
+                            >
+                                <i className={`fa-solid ${expandedLogId === log.id ? 'fa-chevron-up' : 'fa-code'} text-[10px]`}></i>
+                            </button>
+                         </div>
+                      </td>
+                    </tr>
+                    {expandedLogId === log.id && (
+                      <tr className="bg-background animate-fade-in border-l-2 border-primary">
+                        <td colSpan={5} className="px-8 py-8">
+                          <div className="bg-white border border-neutral p-6 shadow-inner">
+                            <div className="flex justify-between items-center mb-4 pb-2 border-b border-neutral">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-secondary">Metadatos Técnicos (JSON)</span>
+                                <span className="text-[9px] font-mono text-gray-400">ID: {log.id}</span>
+                            </div>
+                            <pre className="text-[11px] font-mono text-primary bg-gray-50 p-6 overflow-x-auto border border-neutral/50">
+                              {JSON.stringify(log.metadata, null, 2)}
+                            </pre>
+                            <div className="mt-4 flex justify-end">
+                                <p className="text-[9px] text-secondary italic">Estos datos son registrados automáticamente por el core del sistema.</p>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))
               )}
             </tbody>

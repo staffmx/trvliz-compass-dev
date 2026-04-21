@@ -2,11 +2,17 @@
 
 ### Fase 1: Desarrollo de Ajustes Críticos
 - [x] **1. Blogs:** Automatizar que el autor del blog sea asignado al usuario en sesión.
-- [x] **12. Fetch Zoho Proveedores:** Implementar llamado dinámico a la API de Zoho para mantener sincronizado el catálogo en tiempo real. 🚀
+- [x] **12. Fetch Zoho Proveedores:** Implementar llamado dinámico, caché estática diaria, filtros por región y persistencia de búsqueda. 🚀 (Completado 20 Abr)
 - [x] **2. Roles / Accesos (Back-end):** Reforzar que cada tipo de usuario solo acceda a su información (Backend y UI).
 - [x] **4. Top Producers (Backend & Frontend):** Lógica y diseño para 3 rangos (Senior, Junior, Associates).
-- [x] **5. Auditoría en Admin Backend:** Crear tabla/módulo (`AuditLog`) para que el SuperAdmin rastree acciones.
-- [ ] **19. Notificaciones Push e Email:** Habilitar envío de alertas directas a usuarios (desde admin) integrando un disparador para que también llegue notificación a su buzón de correo.
+- [x] **5. Auditoría en Admin Backend:** 
+    - [x] Actualizar `getAuditLogsPaged` en `api.ts` para soportar filtros por tipo de acción
+    - [x] Implementar selector de "Tipo de Acción" en la UI de AuditPanel
+    - [x] Implementar lógica de expansión de filas para ver Metadatos (JSON formateado)
+    - [x] Implementar botón de exportación a CSV
+    - [x] Añadir filtro por rango de fechas (opcional para mayor precisión)
+    - [x] Verificar funcionamiento con datos reales de la base de datos
+- [x] **19. Notificaciones Push e Email:** Habilitar envío de alertas directas a usuarios (desde admin) integrando un disparador para que también llegue notificación a su buzón de correo.
 - [x] **20. Bloqueo Botón Atrás:** Evitar que el navegador salga de la app al usar el botón físico de retroceso.
 - [ ] **13. Open Graph Blogs:** Insertar Meta-tags dinámicos para que los blogs muestren imágenes y títulos ricos al compartirse.
 

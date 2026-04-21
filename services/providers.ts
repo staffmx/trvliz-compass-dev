@@ -72,16 +72,34 @@ const CONTACTO_FIELDS = ['Nombre', 'Correo', 'CorreoSec', 'Telefono'];
 
 export const providersService = {
   async fetchProviders(): Promise<{ code: number, data: Provider[] }> {
-    // Usamos el proxy (/zoho-api) para evitar problemas de CORS en el navegador
-    const PROXY_PATH = '/zoho-api';
-    const API_ENDPOINT = '/icmxapps/traveliz-ave/json/ListProveedoresAPI/dp5RObAWdKEB4uqDSzUqrx8zR7e9TqFAAQkQCnnPNJbFv06Ty7Awpa2CV8VHFpdC0wBqmgujbs6FQS7nm9a93GUbsk4kgOD08n2W';
-    const ZOHO_URL = `${PROXY_PATH}${API_ENDPOINT}`;
-    
-    const response = await fetch(ZOHO_URL);
-    if (!response.ok) {
-        throw new Error('Error al conectar con la API de Zoho a través del proxy');
+    let data;
+
+    try {
+      // 1. Intentar cargar el archivo desde Supabase Storage (Cero tokens de Zoho)
+      // El archivo es actualizado diario por una Edge Function
+      const STORAGE_URL = 'https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/catalogos/providers.json';
+      
+      const storageResponse = await fetch(STORAGE_URL);
+
+      if (storageResponse.ok) {
+        data = await storageResponse.json();
+      } else {
+        throw new Error('Archivo en Storage no encontrado');
+      }
+    } catch (cacheErr) {
+      // 2. Fallback: Cargar desde la API de Zoho directamente (Gasta tokens)
+      console.warn('⚠️ Cache en Storage fallida, recurriendo a Zoho API directamente...', cacheErr);
+      const PROXY_PATH = '/zoho-api';
+      const API_ENDPOINT = '/icmxapps/traveliz-ave/json/ListProveedoresAPI/dp5RObAWdKEB4uqDSzUqrx8zR7e9TqFAAQkQCnnPNJbFv06Ty7Awpa2CV8VHFpdC0wBqmgujbs6FQS7nm9a93GUbsk4kgOD08n2W';
+      const ZOHO_URL = `${PROXY_PATH}${API_ENDPOINT}`;
+      
+      const response = await fetch(ZOHO_URL);
+      if (!response.ok) {
+          throw new Error('Error al conectar con la API de Zoho');
+      }
+      data = await response.json();
     }
-    const data = await response.json();
+
     const proveedoresRaw = data.ListProveedoresAPI || [];
 
     const proveedores: Provider[] = proveedoresRaw.map((p: any) => ({
