@@ -369,10 +369,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
                             </div>
                         ))
                     ) : (
-                        sellers.filter(s => (s.tier || 'SENIOR PARTNER') === activeSellerTier).map((seller, index) => (
+                        sellers
+                            .filter(s => (s.tier || 'SENIOR PARTNER') === activeSellerTier)
+                            .sort((a,b) => a.ranking - b.ranking)
+                            .slice(0, 5)
+                            .map((seller, index) => (
                             <div key={index} className="flex flex-col items-center text-center gap-3 relative group">
                                 <div className="relative">
-                                    <img src={seller.avatar} alt={seller.name} className={`w-16 h-16 rounded-full object-cover ring-4 ${index === 0 ? 'ring-accent' : 'ring-white/10 group-hover:ring-white/30'} transition-all`} />
+                                    <img src={seller.avatar} alt={seller.name} className={`w-16 h-16 rounded-full object-cover ring-4 ${index === 0 ? 'ring-accent' : 'ring-white/10 group-hover:ring-white/30'} transition-all bg-white`} />
                                     <span className={`absolute -bottom-2 -right-2 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold shadow-md ${index === 0 ? 'bg-accent text-white' : 'bg-white text-brand'}`}>
                                         {seller.ranking}
                                     </span>

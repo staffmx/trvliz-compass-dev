@@ -758,6 +758,7 @@ const AdminMentorships = ({ Header }: any) => {
 };
 
 /* --- SUB-COMPONENT: SELLERS MANAGEMENT --- */
+/* --- SUB-COMPONENT: SELLERS MANAGEMENT --- */
 const AdminSellers = ({ Header }: any) => {
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [associates, setAssociates] = useState<Associate[]>([]);
@@ -767,14 +768,16 @@ const AdminSellers = ({ Header }: any) => {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
+  const [selectedTier, setSelectedTier] = useState<string>('SENIOR PARTNER');
+  const [selectedAssociateId, setSelectedAssociateId] = useState<string>('');
+
   const emptyForm: Partial<Seller> = { 
     name: '', 
     avatar: '', 
     ranking: 1,
-    branch: ''
+    tier: 'SENIOR PARTNER'
   };
   const [formData, setFormData] = useState<Partial<Seller>>(emptyForm);
-  const [selectedAssociateId, setSelectedAssociateId] = useState<string>('');
 
   useEffect(() => { 
     loadSellers();
@@ -803,6 +806,12 @@ const AdminSellers = ({ Header }: any) => {
     }
   };
 
+  const handleTierChange = (tier: string) => {
+      setSelectedTier(tier);
+      setSelectedAssociateId('');
+      setFormData({ ...formData, tier: tier, name: '', avatar: '' });
+  };
+
   const handleAssociateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = e.target.value;
     setSelectedAssociateId(id);
@@ -811,18 +820,18 @@ const AdminSellers = ({ Header }: any) => {
         setFormData({
             ...formData,
             name: `${assoc.name} ${assoc.last_name || ''}`.trim(),
-            avatar: assoc.image,
-            branch: assoc.Branch || assoc.branch || '' // Uses associate branch directly
+            avatar: assoc.image || 'https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/travel_advisors/blank-user.png'
         });
     } else {
-        setFormData({ ...formData, name: '', avatar: '', branch: '' });
+        setFormData({ ...formData, name: '', avatar: '' });
     }
   };
 
   const handleEdit = (seller: Seller) => {
     setEditingId(seller.id || null);
     setFormData({ ...seller });
-    // Try to find if this seller exists in associates by name to pre-select
+    setSelectedTier(seller.tier || 'SENIOR PARTNER');
+    // Find associate by name to pre-select
     const matchingAssoc = associates.find(a => `${a.name} ${a.last_name || ''}`.trim() === seller.name);
     setSelectedAssociateId(matchingAssoc?.id?.toString() || '');
     setIsFormOpen(true);
@@ -842,7 +851,7 @@ const AdminSellers = ({ Header }: any) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.avatar) {
+    if (!formData.name) {
         alert("Por favor selecciona una asociada del directorio.");
         return;
     }
@@ -856,11 +865,20 @@ const AdminSellers = ({ Header }: any) => {
       loadSellers();
     } catch (err) {
       console.error(err);
-      alert('Error al guardar vendedor.');
+      alert('Error al guardar productor.');
     } finally {
       setSaving(false);
     }
   };
+
+  // Helper to filter associates by tier
+  const filteredAssociates = associates.filter(a => {
+      const tipo = (a.tipo || '').toUpperCase();
+      if (selectedTier === 'SENIOR PARTNER') return tipo === 'SENIOR PARTNER';
+      if (selectedTier === 'JUNIOR PARTNER') return tipo === 'JUNIOR PARTNER';
+      if (selectedTier === 'ASSOCIATE') return tipo === 'ASSOCIATE' || tipo === 'Associate';
+      return false;
+  });
 
   return (
     <div className="animate-fade-in relative">
@@ -876,8 +894,25 @@ const AdminSellers = ({ Header }: any) => {
           <h3 className="font-serif text-2xl text-primary mb-6">{editingId ? 'Editar Vendedor' : 'Agregar Vendedor al Ranking'}</h3>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              
               <div className="md:col-span-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Seleccionar Travel Advisor del Directorio</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">1. Seleccionar Nivel / Tier</label>
+                <div className="flex gap-4">
+                    {['SENIOR PARTNER', 'JUNIOR PARTNER', 'ASSOCIATE'].map(tier => (
+                        <button 
+                            key={tier}
+                            type="button"
+                            onClick={() => handleTierChange(tier)}
+                            className={`flex-1 py-3 px-4 border text-[10px] font-bold uppercase tracking-widest transition-all ${selectedTier === tier ? 'bg-brand text-white border-brand shadow-lg' : 'bg-white text-secondary border-neutral hover:border-brand'}`}
+                        >
+                            {tier}
+                        </button>
+                    ))}
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">2. Seleccionar Travel Advisor de {selectedTier}</label>
                 <div className="relative">
                     <select 
                         required 
@@ -886,8 +921,8 @@ const AdminSellers = ({ Header }: any) => {
                         disabled={loadingAssociates}
                         className="w-full p-4 pl-12 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none appearance-none transition-colors"
                     >
-                        <option value="">-- Selecciona una asociada --</option>
-                        {associates.map(assoc => (
+                        <option value="">-- Selecciona una asociada ({filteredAssociates.length} disponibles) --</option>
+                        {filteredAssociates.map(assoc => (
                             <option key={assoc.id} value={assoc.id}>
                                 {assoc.name} {assoc.last_name} ({assoc.position || 'Agente'})
                             </option>
@@ -896,109 +931,107 @@ const AdminSellers = ({ Header }: any) => {
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary">
                         {loadingAssociates ? <i className="fa-solid fa-circle-notch fa-spin"></i> : <i className="fa-solid fa-user-tie"></i>}
                     </div>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-secondary">
-                        <i className="fa-solid fa-chevron-down text-xs"></i>
-                    </div>
                 </div>
               </div>
               
               <div className="md:col-span-2 flex items-center gap-6 p-6 bg-background border border-dashed border-neutral">
-                {formData.avatar ? (
-                    <img src={formData.avatar} className="w-20 h-20 rounded-full object-cover ring-2 ring-accent" alt="Preview" />
-                ) : (
-                    <div className="w-20 h-20 rounded-full bg-neutral/20 flex items-center justify-center text-secondary">
-                        <i className="fa-solid fa-image text-2xl"></i>
-                    </div>
-                )}
+                <div className="relative">
+                    <img 
+                        src={formData.avatar || 'https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/travel_advisors/blank-user.png'} 
+                        className="w-20 h-20 rounded-full object-cover ring-2 ring-accent bg-white" 
+                        alt="Preview" 
+                    />
+                    {editingId && <span className="absolute -top-2 -right-2 bg-accent text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">#{formData.ranking}</span>}
+                </div>
                 <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-1">Vista Previa de Vínculo</p>
                     <h4 className="text-xl font-serif text-primary">{formData.name || 'Sin selección'}</h4>
-                    <p className="text-xs text-secondary mt-1">{formData.avatar ? 'Datos sincronizados con directorio' : 'Selecciona una asociada arriba'}</p>
+                    <p className="text-xs text-secondary mt-1">{formData.name ? `Se vinculará como ${formData.tier}` : 'Selecciona una asociada arriba'}</p>
                 </div>
               </div>
 
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Posición en Ranking (Número)</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">3. Posición en Ranking (Número)</label>
                 <input 
                     type="number" 
                     min="1"
                     required 
-                    className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none" 
+                    className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none font-serif text-lg font-bold" 
                     value={formData.ranking}
-                    onChange={(e) => setFormData({...formData, ranking: parseInt(e.target.value)})}
+                    onChange={(e) => setFormData({...formData, ranking: parseInt(e.target.value) || 1})}
                 />
               </div>
-
-
-
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Nivel / Rango</label>
-                <select 
-                    className="w-full p-4 border border-neutral text-sm bg-[#F9FAFB] focus:border-accent outline-none" 
-                    value={formData.tier || 'SENIOR PARTNER'}
-                    onChange={(e) => setFormData({...formData, tier: e.target.value})}
-                >
-                    <option value="SENIOR PARTNER">SENIOR PARTNER</option>
-                    <option value="JUNIOR PARTNER">JUNIOR PARTNER</option>
-                    <option value="ASSOCIATE">ASSOCIATE</option>
-                </select>
-              </div>
             </div>
-            <button type="submit" disabled={saving || loadingAssociates} className="bg-brand text-white px-12 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all shadow-xl disabled:opacity-50">
-              {saving ? 'Guardando...' : 'Guardar Productor'}
-            </button>
+
+            <div className="pt-6 border-t border-neutral flex justify-between items-center">
+                <p className="text-[10px] text-secondary italic">Nota: Solo se mostrarán los Top 5 de cada nivel en el dashboard principal.</p>
+                <button type="submit" disabled={saving || loadingAssociates || !formData.name} className="bg-brand text-white px-12 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all shadow-xl disabled:opacity-50 min-w-[200px]">
+                {saving ? (
+                    <><i className="fa-solid fa-circle-notch fa-spin mr-2"></i> Guardando...</>
+                ) : editingId ? 'Actualizar Productor' : 'Guardar Productor'}
+                </button>
+            </div>
           </form>
         </div>
       )}
 
       <div className="bg-white border border-neutral overflow-hidden shadow-sm">
         <div className="overflow-x-auto w-full max-w-full block">
-<table className="w-full text-left">
+        <table className="w-full text-left">
           <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
             <tr>
               <th className="px-8 py-5">Ranking</th>
               <th className="px-8 py-5">Vendedor</th>
-              <th className="px-8 py-5">Rango</th>
-              <th className="px-8 py-5">Sucursal</th>
+              <th className="px-8 py-5">Nivel / Tier</th>
               <th className="px-8 py-5 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral">
-            {sellers.sort((a,b) => a.ranking - b.ranking).map((seller) => (
-              <tr key={seller.id} className="hover:bg-background/30 group">
-                <td className="px-8 py-6">
-                  <span className={`text-xl font-serif font-bold ${seller.ranking === 1 ? 'text-accent' : 'text-secondary'}`}>#{seller.ranking}</span>
-                </td>
-                <td className="px-8 py-6">
-                   <div className="flex items-center gap-4">
-                      <img src={seller.avatar} alt={seller.name} className="w-12 h-12 rounded-full object-cover border border-neutral ring-1 ring-neutral/20 group-hover:ring-accent transition-all" />
-                      <p className="font-bold text-primary group-hover:text-brand transition-colors">{seller.name}</p>
-                   </div>
-                </td>
-                <td className="px-8 py-6">
-                  <span className="text-[9px] font-bold uppercase tracking-widest bg-brand/5 text-brand px-2 py-1 rounded-sm border border-brand/10">{seller.tier || 'SENIOR PARTNER'}</span>
-                </td>
-                <td className="px-8 py-6">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-secondary">{seller.branch || 'N/A'}</span>
-                </td>
-                <td className="px-8 py-6 text-right">
-                   <button onClick={() => handleEdit(seller)} className="text-secondary hover:text-brand px-3"><i className="fa-solid fa-pen"></i></button>
-                   <button onClick={() => seller.id && handleDelete(seller.id)} className="text-secondary hover:text-red-600 px-3"><i className="fa-solid fa-trash"></i></button>
-                </td>
-              </tr>
-            ))}
-            {!loading && sellers.length === 0 && (
+            {sellers.length > 0 ? (
+                ['SENIOR PARTNER', 'JUNIOR PARTNER', 'ASSOCIATE'].map(tier => {
+                    const tierSellers = sellers.filter(s => s.tier === tier).sort((a,b) => a.ranking - b.ranking);
+                    if (tierSellers.length === 0) return null;
+                    return (
+                        <React.Fragment key={tier}>
+                            <tr className="bg-background/50">
+                                <td colSpan={4} className="px-8 py-2 text-[8px] font-black uppercase tracking-[3px] text-brand/60">{tier}</td>
+                            </tr>
+                            {tierSellers.map(seller => (
+                                <tr key={seller.id} className="hover:bg-background/30 group">
+                                    <td className="px-8 py-6">
+                                    <span className={`text-xl font-serif font-bold ${seller.ranking === 1 ? 'text-accent' : 'text-secondary'}`}>#{seller.ranking}</span>
+                                    </td>
+                                    <td className="px-8 py-6">
+                                    <div className="flex items-center gap-4">
+                                        <img src={seller.avatar} alt={seller.name} className="w-12 h-12 rounded-full object-cover border border-neutral ring-1 ring-neutral/20 group-hover:ring-accent transition-all" />
+                                        <p className="font-bold text-primary group-hover:text-brand transition-colors">{seller.name}</p>
+                                    </div>
+                                    </td>
+                                    <td className="px-8 py-6">
+                                    <span className="text-[9px] font-bold uppercase tracking-widest bg-brand/5 text-brand px-2 py-1 rounded-sm border border-brand/10">{seller.tier}</span>
+                                    </td>
+                                    <td className="px-8 py-6 text-right">
+                                    <button onClick={() => handleEdit(seller)} className="text-secondary hover:text-brand px-3 transition-colors"><i className="fa-solid fa-pen"></i></button>
+                                    <button onClick={() => seller.id && handleDelete(seller.id)} className="text-secondary hover:text-red-600 px-3 transition-colors"><i className="fa-solid fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </React.Fragment>
+                    );
+                })
+            ) : !loading && (
                 <tr>
-                    <td colSpan={3} className="px-8 py-20 text-center text-secondary italic font-serif">No hay productores registrados aún.</td>
+                    <td colSpan={4} className="px-8 py-20 text-center text-secondary italic font-serif">No hay productores registrados aún.</td>
                 </tr>
             )}
           </tbody>
         </table>
-</div>
+        </div>
       </div>
     </div>
   );
 };
+
 
 /* --- REST OF THE COMPONENTS (AdminUsers, AdminDocuments, etc. unchanged) --- */
 const AdminUsers = ({ Header }: any) => {

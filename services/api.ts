@@ -52,8 +52,7 @@ export interface Seller {
   name: string;
   avatar: string;
   ranking: number;
-  branch?: string;
-  tier?: string;
+  tier: string; // REQUIRED for grouping
 }
 
 export type FileType = 'folder' | 'pdf' | 'doc' | 'xls' | 'img' | 'video' | 'other';
@@ -1051,10 +1050,24 @@ export const api = {
 
   upsertSeller: async (seller: Partial<Seller>): Promise<Seller | null> => {
     if (!supabase) return null;
-    const { data, error } = await supabase.from('sellers').upsert(seller).select().single();
-    if (error) throw error;
-    api.logAction('SELLER_UPDATED', `Se actualizó el ranking/perfil del vendedor ID: ${data.id}`);
-    return data;
+    try {
+      // Clean data to ensure no extra fields like 'branch' are sent to DB
+      const cleanData = {
+        id: seller.id,
+        name: seller.name,
+        avatar: seller.avatar,
+        ranking: seller.ranking,
+        tier: (seller.tier || 'ASSOCIATE').toUpperCase() // Normalize to uppercase
+      };
+
+      const { data, error } = await supabase.from('sellers').upsert(cleanData).select().single();
+      if (error) throw error;
+      api.logAction('SELLER_UPDATED', `Se actualizó el ranking/perfil del vendedor ID: ${data.id}`);
+      return data;
+    } catch (err) {
+      console.error("Error in upsertSeller:", err);
+      throw err;
+    }
   },
 
   deleteSeller: async (id: number): Promise<boolean> => {
