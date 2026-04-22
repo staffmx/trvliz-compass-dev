@@ -215,7 +215,13 @@ export const api = {
   },
 
   createAuthUser: async (email: string, fullName: string): Promise<{ success: boolean; userId?: string; tempPassword?: string; error?: string }> => {
-    const tempSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const tempSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      }
+    });
     const tempPassword = "Traveliz2026!"; 
     
     // Attempt signup via secondary client so we don't log out main session
@@ -317,12 +323,25 @@ export const api = {
         }
       }
 
-      if (error || !data) return null;
+      // Ignorar errores de cache de esquema que son comunes en este entorno
+      const isCacheError = error && error.message?.includes("schema cache");
+      if ((error && !isCacheError) || !data) return null;
+      
+      // Intentar obtener el nombre desde la tabla de asociados si está vinculado
+      const { data: linkedAssoc } = await supabase
+        .from('associates')
+        .select('name, last_name')
+        .eq('user_id', data.id)
+        .maybeSingle();
+
+      const fullName = linkedAssoc 
+        ? `${linkedAssoc.name} ${linkedAssoc.last_name || ''}`.trim()
+        : (data as any).full_name || '';
       
       return {
         ...data,
-        name: data.full_name || data.name || '',
-        roles: data.user_roles?.map((ur: any) => ur.roles).filter(Boolean) || []
+        name: fullName || 'Usuario',
+        roles: (data as any).user_roles?.map((ur: any) => ur.roles).filter(Boolean) || []
       };
     } catch (err) {
       console.error("Error fetching user profile:", err);
@@ -433,18 +452,10 @@ export const api = {
       }
       
       return (data || []).map(profile => {
-        const full = profile.full_name || profile.name || '';
-        const parts = full.trim().split(/\s+/);
-        
-        // Si no tenemos nombre o apellido explícito, intentamos derivarlos del nombre completo
-        const derivedName = profile.name && !profile.name.includes(' ') ? profile.name : parts[0] || '';
-        const derivedLastName = profile.last_name || parts.slice(1).join(' ') || '';
-
         return {
           ...profile,
-          name: profile.name && profile.last_name ? profile.name : derivedName,
-          last_name: profile.last_name ? profile.last_name : derivedLastName,
-          roles: profile.user_roles?.map((ur: any) => ur.roles) || []
+          name: profile.full_name || 'Usuario',
+          roles: profile.user_roles?.map((ur: any) => ur.roles).filter(Boolean) || []
         };
       });
     } catch (err) {
@@ -1319,7 +1330,7 @@ export const api = {
         supabase.from('blog_posts').select('*').or(`title.ilike.${term},content.ilike.${term},author.ilike.${term},category.ilike.${term}`),
         supabase.from('recorded_webinars').select('*').or(`name.ilike.${term},category.ilike.${term}`)
       ]);
-      return {
+      const results = {
         notices: (notices.data || []).map(d => ({ ...d, id: d.id.toString() })),
         events: (events.data || []).map(e => {
           const d = new Date(e.event_date + 'T00:00:00');
@@ -1331,6 +1342,14 @@ export const api = {
         blogs: blogs.data || [],
         recorded_webinars: webinars.data || []
       };
+
+      // Registrar la búsqueda en el historial
+      if (user) {
+        const totalCount = Object.values(results).reduce((acc, curr) => acc + curr.length, 0);
+        await api.logSearch(user.id, user.name, query, totalCount);
+      }
+
+      return results;
     } catch (err) {
       return { notices: [], events: [], certifications: [], associates: [], documents: [], blogs: [], recorded_webinars: [] };
     }
@@ -1340,8 +1359,10 @@ export const api = {
     if (!supabase) return false;
     try {
       const { error } = await supabase.from('search_logs').insert({ user_id: userId, user_name: userName, query: query, results_count: resultsCount });
+      if (error) console.error("Error saving search log:", error);
       return !error;
     } catch (err) {
+      console.error("Exception in logSearch:", err);
       return false;
     }
   },

@@ -1154,13 +1154,9 @@ const AdminUsers = ({ Header }: any) => {
           )}
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Nombre(s)</label>
-                <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Apellidos</label>
-                <input required type="text" value={formData.last_name} onChange={e => setFormData({...formData, last_name: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" />
+              <div className="md:col-span-2 p-4 bg-background border border-neutral text-xs text-secondary italic mb-4">
+                <i className="fa-solid fa-circle-info mr-2"></i>
+                El nombre y apellido se tomarán automáticamente del <strong>Directorio</strong> una vez que el usuario sea vinculado a una ficha de asociado.
               </div>
               <div>
                 <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Email Corporativo</label>
@@ -1223,7 +1219,7 @@ const AdminUsers = ({ Header }: any) => {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-primary leading-tight">
-                        {u.name} {u.last_name || ''}
+                        {linkedAssoc ? `${linkedAssoc.name} ${linkedAssoc.last_name || ''}` : (u.name || u.email.split('@')[0])}
                       </p>
                       <p className="text-[10px] text-secondary">{u.email}</p>
                     </div>
