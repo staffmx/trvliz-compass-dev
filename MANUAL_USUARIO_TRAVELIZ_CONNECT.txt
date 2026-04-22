@@ -1,0 +1,84 @@
+================================================================================
+                    MANUAL DE USUARIO - TRAVELIZ CONNECT
+================================================================================
+VERSIÓN: 1.0
+FECHA: 21 de Abril, 2026
+SISTEMA: Traveliz Connect (Compass)
+================================================================================
+
+1. INTRODUCCIÓN
+--------------------------------------------------------------------------------
+Bienvenido a Traveliz Connect, la plataforma centralizada para agentes B2B de 
+Traveliz. Este sistema ha sido diseñado para facilitar tu gestión diaria, 
+proporcionarte recursos de capacitación actualizados y permitirte interactuar 
+con la comunidad de asociados.
+
+2. ACCESO AL SISTEMA
+--------------------------------------------------------------------------------
+Para ingresar a la plataforma:
+1. Diríjase a la URL proporcionada por su administrador.
+2. Ingrese su correo electrónico corporativo/registrado y su contraseña.
+3. Si ha olvidado su contraseña, contacte al administrador para un reseteo de clave.
+
+3. MÓDULOS PRINCIPALES
+--------------------------------------------------------------------------------
+
+A. DASHBOARD Y RANKING "TOP PRODUCERS"
+   - En la página principal visualizará el ranking de ventas.
+   - Los asociados se clasifican en tres niveles (Tiers):
+     * SENIOR PARTNER (Nivel Superior)
+     * JUNIOR PARTNER (Nivel Intermedio)
+     * ASSOCIATE (Nivel Inicial)
+   - Puede filtrar la vista para ver los 5 mejores de cada categoría.
+
+B. BLOG (WHITE LABEL)
+   - Acceda a noticias, actualizaciones y artículos de interés.
+   - Funciones para Agentes:
+     * Dar "Me gusta" (Likes) a publicaciones.
+     * Guardar publicaciones para leer después.
+     * Realizar comentarios en los artículos.
+   - Compartir: Las publicaciones pueden compartirse con clientes externos. Al 
+     hacerlo, el contenido se presenta con la identidad de marca de Traveliz 
+     (White Label) y SEO optimizado.
+
+C. DIRECTORIO Y PERFILES
+   - Busque a otros colegas en el directorio social.
+   - Puede filtrar por Sucursal (Branch) o Nivel (Tier).
+   - En su perfil personal, asegúrese de mantener actualizadas sus 
+     especialidades y redes sociales.
+
+D. BUSCADOR DE PROVEEDORES (ZOHO)
+   - Acceda a la base de datos de proveedores sincronizada con Zoho.
+   - Utilice el buscador para localizar proveedores específicos.
+   - Filtre por Región o Nicho de Mercado para encontrar el aliado perfecto 
+     para su cliente.
+
+E. CAPACITACIÓN Y RECURSOS
+   - Webinars: Repositorio de videos grabados para ver bajo demanda.
+   - Documentación: Descargue manuales, tarifas y material operativo.
+   - Eventos: Consulte el calendario de convenciones y webinars en vivo.
+
+4. PANEL DE ADMINISTRACIÓN (SOLO ADMINISTRADORES)
+--------------------------------------------------------------------------------
+Si tiene rol de Administrador o SuperAdmin, tendrá acceso a:
+- Gestión de Usuarios: Crear cuentas y asignar roles.
+- Auditoría: Revisar los registros de acciones del sistema (Audit Logs).
+- Gestión de Contenido: Crear y editar publicaciones del blog y eventos.
+- Configuración de Ranking: Actualizar la posición de los asociados.
+
+5. RECOMENDACIONES DE USO
+--------------------------------------------------------------------------------
+- Compatibilidad: La plataforma es 100% responsiva. Puede usarla desde su 
+  computadora, tablet o teléfono móvil.
+- Seguridad: No comparta sus credenciales de acceso. El sistema registra las 
+  acciones por usuario para su seguridad.
+
+6. SOPORTE TÉCNICO
+--------------------------------------------------------------------------------
+En caso de presentar inconvenientes técnicos o errores en la plataforma, 
+favor de reportarlos al equipo de TI mencionando su usuario y una captura de 
+pantalla del error.
+
+================================================================================
+                © 2026 Traveliz - Todos los derechos reservados
+================================================================================

@@ -17,7 +17,7 @@ El sistema está construido bajo un enfoque de aplicación de página única (SP
 
 ## 2. Módulos y Funcionalidades del Ecosistema
 
-La herramienta cuenta con un control estricto de accesos. Las visualizaciones reaccionan y ocultan o muestran sus elementos dependiendo del rol verificado del usuario (p. ej. *Administrador, Agente Autorizado, Elite*, etc).
+La herramienta cuenta con un control estricto de accesos. Las visualizaciones reaccionan y ocultan o muestran sus elementos dependiendo del rol verificado del usuario (p. ej. *Administrador, admin_blogs, admin_eventos, admin_documentos, etc).
 
 ### A. Módulo de Dashboard y Tablero Principal
 Una pantalla principal de bienvenida donde todos los elementos cambian según las novedades de la empresa:

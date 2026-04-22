@@ -4,7 +4,7 @@
 - [x] **1. Blogs:** Automatizar que el autor del blog sea asignado al usuario en sesión.
 - [x] **12. Fetch Zoho Proveedores:** Implementar llamado dinámico, caché estática diaria, filtros por región y persistencia de búsqueda. 🚀 (Completado 20 Abr)
 - [x] **2. Roles / Accesos (Back-end):** Reforzar que cada tipo de usuario solo acceda a su información (Backend y UI).
-- [x] **4. Top Producers (Backend & Frontend):** Lógica y diseño para 3 rangos (Senior, Junior, Associates).
+- [x] **4. Top Producers (Backend & Frontend):** Lógica y diseño para 3 rangos (Senior, Junior, Associates). 🚀 (Completado 21 Abr)
 - [x] **5. Auditoría en Admin Backend:** 
     - [x] Actualizar `getAuditLogsPaged` en `api.ts` para soportar filtros por tipo de acción
     - [x] Implementar selector de "Tipo de Acción" en la UI de AuditPanel
@@ -23,7 +23,7 @@
 - [ ] **7. Prototipo Funcional Desarrollo:** Pruebas "End-to-End" en entorno dev.
 
 ### Fase 3: Seguridad y Bases de Datos
-- [ ] **8. Permisos Supabase (RLS):** Bloquear accesos a tablas sin autenticación.
+- [x] **8. Permisos Supabase (RLS):** Bloquear accesos a tablas sin autenticación. 🚀 (Completado 21 Abr)
 - [ ] **14. SMTP Propio:** Configurar envío de correos (magic-links/recuperaciones) directo desde correo propio en Auth Supabase.
 - [ ] **15. Sentry Logs:** Configurar capa de rastreo de errores remotos en JS.
 - [ ] **16. Seguridad CORS:** Configurar Supabase para rechazar peticiones que no vengan del subdominio de producción.
@@ -32,7 +32,7 @@
 - [ ] **6. Agentes Automatizados:** Generar sub-agentes para ejecutar pruebas sintéticas.
 
 ### Fase 5: Producción & Cloud Infraestructura
-- [ ] **9. Entorno Producción:** Triggers en GCP Cloud Build hacia `main` + Cloud Run "Production".
+- [x] **9. Entorno Producción:** Triggers en GCP Cloud Build hacia `main` + Cloud Run "Production". 🚀 (Configurado 21 Abr)
 - [ ] **10. Apuntar Subdominio:** Domain Mapping / Registros DNS hacia producción.
 
 ### Fase 6: Capacitación y Cierre

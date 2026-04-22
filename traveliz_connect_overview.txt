@@ -1,0 +1,79 @@
+================================================================================
+TRAVELIZ CONNECT (COMPASS) - ESPECIFICACIONES TÉCNICAS Y FUNCIONALES
+================================================================================
+FECHA DE REVISIÓN: 21 de Abril, 2026
+ESTADO: Fase 2 (Estabilización y Seguridad)
+
+1. DESCRIPCIÓN GENERAL
+--------------------------------------------------------------------------------
+Traveliz Connect (internamente referido como Traveliz Compass) es un ecosistema 
+digital B2B centralizado. Está diseñado para gestionar la formación, recursos 
+operativos y el ranking de ventas de la fuerza de agentes vinculados a Traveliz. 
+Combina funciones de Intranet corporativa con herramientas sociales y de 
+marketing (White Label).
+
+2. ARQUITECTURA TÉCNICA
+--------------------------------------------------------------------------------
+- Frontend: React 19 + TypeScript + Vite.
+- Backend (BaaS): Supabase (PostgreSQL + Auth + Storage).
+- Servidor: Google Cloud Platform (Cloud Run) vía contenedores Docker + Nginx.
+- CI/CD: Automatizado mediante GitHub Actions / Google Cloud Build con 
+  aislamiento total entre entornos:
+    - Desarrollo: Branch 'development'.
+    - Producción: Branch 'main'.
+- Segurança:
+    - Row Level Security (RLS) habilitado en 13 tablas críticas.
+    - Blindaje de variables de entorno (.env) protegidas de GitHub.
+    - Validación de roles (SuperAdmin, Admin, Editor, Agente) a nivel base de datos.
+
+3. MÓDULOS PRINCIPALES
+--------------------------------------------------------------------------------
+A. PANEL DE ADMINISTRACIÓN (BACKOFFICE)
+   - Gestión visual de todos los recursos sin requerir personal de TI.
+   - Auditoría: Registro de acciones (Logs) por usuario/fecha (Lectura exclusiva 
+     para Admin/SuperAdmin).
+   - Gestión de Roles: Control centralizado de permisos (SuperAdmin).
+   - Gestión de Usuarios: Creación de cuentas secundarias y reseteo de claves.
+
+B. RANKING "TOP PRODUCERS"
+   - Clasificación competitiva de asociados basada en 3 niveles (Tiers):
+     SENIOR PARTNER, JUNIOR PARTNER y ASSOCIATE.
+   - Dashboard: Visualización dinámica del Top 5 de cada categoría.
+   - Administración: Flujo de selección jerárquica vinculado al directorio.
+
+C. BLOG PÚBLICO (WHITE LABEL)
+   - Publicaciones dinámicas con SEO optimizado (Open Graph / Meta Tags).
+   - Versión Pública: Permite a los agentes compartir contenido para clientes 
+     externos con identidad de marca.
+   - Interacción Privada: Likes, Guardado de posts y comentarios (solo agentes).
+
+D. DIRECTORIO SOCIAL Y PERFILES
+   - Perfiles profesionales de agentes con especialidades y redes sociales.
+   - Clasificación por Tier y Branch (Sucursal).
+
+E. INTEGRACIÓN ZOHO (PROVEEDORES)
+   - Sincronización en tiempo real vía API de Zoho Corporativo.
+   - Caché de datos para optimizar rendimiento.
+   - Buscador y filtrado por región/nicho de mercado del proveedor.
+
+F. RECURSOS Y CAPACITACIÓN
+   - Webinars Grabados: Repositorio de video bajo demanda (On-Demand).
+   - Centro de Documentación: Sistema de archivos en la nube (Manuales y Tarifas).
+   - Eventos/Calendario: Registro y control de asistencia para webinars y 
+     convenciones.
+
+4. REQUERIMIENTOS TÉCNICOS DE INFRAESTRUCTURA
+--------------------------------------------------------------------------------
+- Base de Datos: PostgreSQL gestionado por Supabase.
+- Almacenamiento: Buckets en Supabase Storage (Privados y Públicos).
+- Contenedores: Dockerfile optimizado para Nginx sobre Alpine Linux.
+- Redirección DNS: Mapeo de subdominios específicos (.us-west1.run.app y 
+  dominios finales).
+- Autenticación: Flujo JWT manejado por Supabase Auth.
+
+5. SEGURIDAD Y PRIVACIDAD
+--------------------------------------------------------------------------------
+- RLS Tables: Se asegura que un agente NO pueda ver auditoría ni roles de otros.
+- Proxy Seguro: Uso de Edge Functions o Middlewares para llamadas a APIs externas 
+  (Zoho) protegiendo las llaves secretas en el servidor.
+================================================================================

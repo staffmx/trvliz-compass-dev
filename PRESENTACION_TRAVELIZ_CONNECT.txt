@@ -1,0 +1,77 @@
+================================================================================
+          ESTRUCTURA DE PRESENTACIÓN: TRAVELIZ CONNECT (COMPASS)
+================================================================================
+OBJETIVO: Presentación comercial y operativa para agentes y asociados.
+FORMATO: 6 Slides (Título, Cuerpo, Sugerencia Visual).
+================================================================================
+
+SLIDE 1: PORTADA
+--------------------------------------------------------------------------------
+TÍTULO: Traveliz Connect
+SUBTÍTULO: El Ecosistema Digital B2B para el Agente de Viajes Moderno.
+TEXTO: Conectividad, Formación y Crecimiento en un solo lugar.
+SUGERENCIA VISUAL: Imagen de fondo de alta calidad (viajes/tecnología) con el 
+logotipo de Traveliz centrado y un diseño minimalista.
+
+SLIDE 2: ¿QUÉ ES TRAVELIZ CONNECT?
+--------------------------------------------------------------------------------
+TÍTULO: Más que una Intranet
+PUNTOS CLAVE:
+- Plataforma centralizada para la gestión de recursos.
+- Herramientas sociales y de networking para la fuerza de ventas.
+- Acceso exclusivo para asociados Traveliz.
+- Diseño 100% responsiva (Móvil, Tablet y Desktop).
+SUGERENCIA VISUAL: Iconos modernos representando "Comunidad", "Herramientas" y 
+"Nube".
+
+SLIDE 3: RANKING "TOP PRODUCERS"
+--------------------------------------------------------------------------------
+TÍTULO: Reconocimiento y Competitividad
+PUNTOS CLAVE:
+- Sistema de clasificación basado en rendimiento.
+- Tres categorías jerárquicas:
+    * SENIOR PARTNER
+    * JUNIOR PARTNER
+    * ASSOCIATE
+- Dashboard dinámico con los 5 mejores de cada nivel.
+SUGERENCIA VISUAL: Gráfico de podio o medallas metálicas (Oro, Plata, Bronce) 
+estilizadas.
+
+SLIDE 4: MARKETING Y CONTENIDO (WHITE LABEL)
+--------------------------------------------------------------------------------
+TÍTULO: Potencia tu Marca Personal
+PUNTOS CLAVE:
+- Blog dinámico con noticias y tendencias del sector.
+- Función "White Label": Comparte artículos con clientes externos bajo la 
+  identidad de Traveliz.
+- SEO Optimizado para redes sociales (Open Graph).
+- Interacción social: Likes, comentarios y guardado de posts.
+SUGERENCIA VISUAL: Mockup de un teléfono mostrando una publicación del blog 
+compartida en Facebook o WhatsApp.
+
+SLIDE 5: OPERACIONES Y CAPACITACIÓN
+--------------------------------------------------------------------------------
+TÍTULO: Todo lo que necesitas para vender
+PUNTOS CLAVE:
+- Integración Zoho: Buscador de proveedores en tiempo real.
+- Centro de Capacitación: Webinars On-Demand y eventos en vivo.
+- Documentación: Manuales y tarifas actualizadas al instante.
+- Filtros inteligentes por región y nicho de mercado.
+SUGERENCIA VISUAL: Captura de pantalla de la interfaz de proveedores o de un 
+reproductor de video de webinar.
+
+SLIDE 6: SEGURIDAD Y SOPORTE
+--------------------------------------------------------------------------------
+TÍTULO: Tu información está protegida
+PUNTOS CLAVE:
+- Seguridad de grado empresarial (Row Level Security).
+- Auditoría constante de acciones para transparencia.
+- Soporte técnico dedicado.
+- ¡Comienza hoy mismo tu viaje con Traveliz Connect!
+SUGERENCIA VISUAL: Imagen de un candado tecnológico o un equipo humano de 
+soporte con el texto "Únete a la evolución".
+
+================================================================================
+CONSEJO PARA CANVA: Usa una paleta de colores corporativa (Azul Traveliz, Blancos 
+y Grises premium) y fuentes tipo "Montserrat" o "Open Sans".
+================================================================================

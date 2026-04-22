@@ -5,14 +5,17 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-async function listRoles() {
-    const { data, error } = await supabase.from('roles').select('*');
+async function checkRoles() {
+    console.log("Fetching distinct roles from user_roles...");
+    const { data, error } = await supabase.from('user_roles').select('role');
     if (error) {
-        console.error('Error fetching roles:', error);
+        console.error("Error:", error);
+    } else if (data) {
+        const roles = [...new Set(data.map(r => r.role))];
+        console.log("Roles found:", roles);
     } else {
-        console.log('--- ROLES LIST ---');
-        console.log(JSON.stringify(data, null, 2));
+        console.log("No data returned.");
     }
 }
 
-listRoles();
+checkRoles();
