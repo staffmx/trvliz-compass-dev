@@ -79,7 +79,7 @@ const Training: React.FC<TrainingProps> = ({ user }) => {
         user_id: user.id,
         name: mentorshipData.name,
         email: mentorshipData.email,
-        tentative_date: mentorshipData.date,
+        tentative_date: mentorshipData.date ? new Date(mentorshipData.date).toISOString() : null,
         topic: mentorshipData.topic,
         comments: mentorshipData.comments,
         status: 'pending'
