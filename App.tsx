@@ -124,7 +124,7 @@ const App: React.FC = () => {
 
   const handlePasswordUpdate = async (newPassword: string) => {
     try {
-      const { error } = await api.updateUserPassword(newPassword);
+      const { error } = await api.updatePassword(newPassword);
       if (error) throw error;
       alert("Contraseña actualizada con éxito.");
       setIsRecoveringPassword(false);

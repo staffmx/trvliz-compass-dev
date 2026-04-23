@@ -146,10 +146,13 @@ const MyProfile: React.FC<MyProfileProps> = ({ user, onBack, onUserUpdate }) => 
         if (newPassword.length < 6) {
           throw new Error("La nueva contraseña debe tener al menos 6 caracteres.");
         }
+        console.log("Intentando actualizar contraseña...");
         const passResult = await api.updatePassword(newPassword);
         if (!passResult.success) {
+          console.error("Error en passResult:", passResult.error);
           throw new Error("Error al actualizar contraseña: " + passResult.error);
         }
+        console.log("Contraseña actualizada exitosamente");
         setNewPassword(''); // Clear field on success
       }
 
@@ -168,7 +171,8 @@ const MyProfile: React.FC<MyProfileProps> = ({ user, onBack, onUserUpdate }) => 
 
     } catch (error: any) {
       console.error("Error saving profile:", error);
-      setMessage({ type: 'error', text: error.message || 'Ocurrió un error al guardar' });
+      const errorMsg = error.message || (typeof error === 'object' ? JSON.stringify(error) : 'Ocurrió un error al guardar');
+      setMessage({ type: 'error', text: `Error: ${errorMsg}` });
     } finally {
       setSaving(false);
       // Clear message after 5 seconds

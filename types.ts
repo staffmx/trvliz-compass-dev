@@ -273,3 +273,11 @@ export interface NotificationInbox {
   created_at: string;
   notification?: Notification; // Joined data
 }
+
+export interface EventRegistration {
+  id: number;
+  event_id: number;
+  user_email: string;
+  user_name: string;
+  created_at: string;
+}

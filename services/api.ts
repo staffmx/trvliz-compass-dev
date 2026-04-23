@@ -1,9 +1,9 @@
-import { Notice, UserProfile, Role, DocumentCategory, Document as DocType, Associate, Certification, Event, SearchResults, SearchLog, BlogPost, RecordedWebinar, BlogComment, WebinarCategory } from '../types';
+import { Notice, UserProfile, Role, DocumentCategory, Document as DocType, Associate, Certification, Event, SearchResults, SearchLog, BlogPost, RecordedWebinar, BlogComment, WebinarCategory, NotificationInbox, EventRegistration } from '../types';
 import { createClient } from '@supabase/supabase-js';
 
 // --- SUPABASE CONFIGURATION ---
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://klknrbnipvgwywjbzafh.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtsa25yYm5pcHZnd3l3amJ6YWZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2MDM3OTUsImV4cCI6MjA4NDE3OTc5NX0.JcCuNhrRGJFE6kXfMH0rLPc1ZuSxzEihjeWHEx4ny-U';
+const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://klknrbnipvgwywjbzafh.supabase.co';
+const SUPABASE_ANON_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtsa25yYm5pcHZnd3l3amJ6YWZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2MDM3OTUsImV4cCI6MjA4NDE3OTc5NX0.JcCuNhrRGJFE6kXfMH0rLPc1ZuSxzEihjeWHEx4ny-U';
 
 const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY) 
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -201,11 +201,6 @@ export const api = {
     });
   },
 
-  updateUserPassword: async (newPassword: string) => {
-    if (!supabase) return { error: { message: "No Supabase connection" } };
-    return await supabase.auth.updateUser({ password: newPassword });
-  },
-
   subscribeToAuth: (callback: (event: string, session: any) => void) => {
     if (!supabase) return { unsubscribe: () => {} };
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -250,7 +245,6 @@ export const api = {
         password: newPassword
       });
       if (error) throw error;
-      api.logAction('PASSWORD_CHANGED', `El usuario cambió su contraseña de acceso.`);
       return { success: true };
     } catch (err: any) {
       console.error("Error updating password:", err);
@@ -349,6 +343,7 @@ export const api = {
     }
   },
 
+
   getRecordedWebinars: async (): Promise<RecordedWebinar[]> => {
     if (!supabase) return [];
     try {
@@ -379,7 +374,8 @@ export const api = {
       }
       const { error } = await query;
       if (error) throw error;
-      api.logAction('WEBINAR_UPDATED', `Se subió o actualizó el webinar: ${webinar.title}`);
+      api.logAction('WEBINAR_UPDATED', `Se subió o actualizó el webinar: ${webinar.name}`);
+
       return true;
     } catch (err) {
       console.error("Error saving webinar:", err);
@@ -493,8 +489,10 @@ export const api = {
         avatar_url: userData.avatar_url
       };
 
-      const { data: profile, error: pError } = await supabase.from('profiles').upsert(profileToSave).select().single();
+      const { data: profiles, error: pError } = await supabase.from('profiles').upsert(profileToSave).select();
       if (pError) throw pError;
+      if (!profiles || profiles.length === 0) throw new Error("No se pudo crear/actualizar el perfil maestro.");
+      const profile = profiles[0];
 
       await supabase.from('user_roles').delete().eq('user_id', profile.id);
       if (roleIds.length > 0) {
@@ -516,7 +514,8 @@ export const api = {
     try {
       const { error: updateError } = await supabase.from('profiles').update({ id: newAuthId }).eq('id', oldProfileId);
       if (updateError) {
-        const { data: oldProfile } = await supabase.from('profiles').select('*').eq('id', oldProfileId).single();
+        const { data: profiles } = await supabase.from('profiles').select('*').eq('id', oldProfileId);
+        const oldProfile = profiles && profiles.length > 0 ? profiles[0] : null;
         if (!oldProfile) return false;
         await supabase.from('profiles').insert({ ...oldProfile, id: newAuthId });
         await supabase.from('user_roles').update({ user_id: newAuthId }).eq('user_id', oldProfileId);
@@ -558,7 +557,7 @@ export const api = {
   getAssociateById: async (id: number): Promise<Associate | null> => {
     if (!supabase) return null;
     try {
-      const { data, error } = await supabase.from('associates').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('associates').select('*').eq('id', id).maybeSingle();
       if (error) throw error;
       return data;
     } catch (err) {
@@ -601,8 +600,7 @@ export const api = {
 
   upsertAssociate: async (associate: Associate): Promise<Associate | null> => {
     if (!supabase) return null;
-    const payload = {
-      id: associate.id,
+    const payload: any = {
       user_id: associate.user_id === '' ? null : associate.user_id,
       name: associate.name,
       last_name: associate.last_name,
@@ -619,22 +617,95 @@ export const api = {
       especialidades: associate.especialidades,
       Branch: associate.Branch
     };
-    Object.keys(payload).forEach(key => (payload as any)[key] === undefined && delete (payload as any)[key]);
-    let query;
-    if (payload.id && payload.id !== 0) {
-      const { id, ...updateData } = payload;
-      query = supabase.from('associates').update(updateData).eq('id', id);
-    } else {
-      const { id, ...insertData } = payload;
-      query = supabase.from('associates').insert(insertData);
+
+    // Remove undefined values
+    Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
+
+    try {
+      let result;
+      if (associate.id && associate.id !== 0) {
+        // Update existing by ID
+        const { data, error } = await supabase
+          .from('associates')
+          .update(payload)
+          .eq('id', associate.id)
+          .select();
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          result = data;
+        } else {
+          // If ID update returned no rows, fallback to email check
+          console.warn(`No se encontró asociado con ID ${associate.id}, intentando por email...`);
+          const { data: existing } = await supabase
+            .from('associates')
+            .select('id')
+            .eq('email', associate.email)
+            .maybeSingle();
+          
+          if (existing) {
+            const { data: updated, error: updateErr } = await supabase
+              .from('associates')
+              .update(payload)
+              .eq('id', existing.id)
+              .select();
+            if (updateErr) throw updateErr;
+            result = updated;
+          } else {
+            const { data: inserted, error: insertErr } = await supabase
+              .from('associates')
+              .insert(payload)
+              .select();
+            if (insertErr) throw insertErr;
+            result = inserted;
+          }
+        }
+      } else {
+        // No ID in payload, try to find by email first
+        const { data: existing } = await supabase
+          .from('associates')
+          .select('id')
+          .eq('email', associate.email)
+          .maybeSingle();
+        
+        if (existing) {
+          const { data, error } = await supabase
+            .from('associates')
+            .update(payload)
+            .eq('id', existing.id)
+            .select();
+          if (error) throw error;
+          result = data;
+        } else {
+          // New record
+          const { data, error } = await supabase
+            .from('associates')
+            .insert(payload)
+            .select();
+          if (error) throw error;
+          result = data;
+        }
+      }
+
+      if (!result || result.length === 0) {
+        console.warn("La operación se completó pero la base de datos no devolvió el registro (posible RLS). Retornando objeto local.");
+        return associate;
+      }
+
+      const savedAssociate = result[0];
+
+      // Track standard action
+      api.logAction('PROFILE_UPDATED', `El usuario ha actualizado su perfil de asociado.`, { 
+        associate_id: savedAssociate.id, 
+        name: `${savedAssociate.name} ${savedAssociate.last_name || ''}` 
+      });
+
+      return savedAssociate;
+    } catch (err: any) {
+      console.error("Error in upsertAssociate:", err);
+      throw err;
     }
-    const { data, error } = await query.select().single();
-    if (error) throw error;
-
-    // Track standard action
-    api.logAction('PROFILE_UPDATED', `El usuario ha actualizado su perfil de asociado.`, { associate_id: data.id, name: `${data.name} ${data.last_name || ''}` });
-
-    return data;
   },
 
   deleteAssociate: async (id: number): Promise<boolean> => {
@@ -656,7 +727,7 @@ export const api = {
   getNoticeById: async (id: string): Promise<Notice | null> => {
     if (!supabase) return null;
     try {
-      const { data, error } = await supabase.from('notices').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('notices').select('*').eq('id', id).maybeSingle();
       if (error) throw error;
       return { ...data, id: data.id.toString() };
     } catch (err) {
@@ -682,14 +753,32 @@ export const api = {
   upsertNotice: async (notice: Partial<Notice>): Promise<Notice | null> => {
     if (!supabase) return null;
     try {
-      const { id, ...rest } = notice;
-      let query = (id && id !== 'null' && id !== '') ? supabase.from('notices').update(rest).eq('id', id) : supabase.from('notices').insert(rest);
-      const { data, error } = await query.select().single();
-      if (error) throw error;
+      const { id, ...payload } = notice;
+      let result;
+
+      if (id && id !== 'null' && id !== '') {
+        const { data, error } = await supabase
+          .from('notices')
+          .update(payload)
+          .eq('id', id)
+          .select();
+        if (error) throw error;
+        result = data;
+      } else {
+        const { data, error } = await supabase
+          .from('notices')
+          .insert(payload)
+          .select();
+        if (error) throw error;
+        result = data;
+      }
+
+      if (!result || result.length === 0) return notice as Notice;
       
-      api.logAction('NOTICE_UPDATED', `Se publicó/actualizó el aviso: ${data.title}`);
+      const savedNotice = result[0];
+      api.logAction('NOTICE_UPDATED', `Se publicó/actualizó el aviso: ${savedNotice.title}`);
       
-      return { ...data, id: data.id.toString() };
+      return { ...savedNotice, id: savedNotice.id.toString() };
     } catch (err) {
       console.error("Error in upsertNotice:", err);
       throw err;
@@ -728,7 +817,7 @@ export const api = {
 
   getEventById: async (id: number): Promise<Event | null> => {
     if (supabase) {
-      const { data, error } = await supabase.from('events').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('events').select('*').eq('id', id).maybeSingle();
       if (!error && data) {
         const dateObj = new Date(data.event_date + 'T00:00:00');
         return { ...data, day: dateObj.getDate().toString().padStart(2, '0'), month: dateObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '') };
@@ -739,23 +828,33 @@ export const api = {
 
   upsertEvent: async (event: Partial<Event>): Promise<Event | null> => {
     if (!supabase) return null;
-    const { day, month, ...payload } = event as any;
+    const { day, month, id, ...payload } = event as any;
     try {
-      let query;
-      if (payload.id && payload.id !== 0) {
-        const { id, ...updateData } = payload;
-        query = supabase.from('events').update(updateData).eq('id', payload.id);
+      let result;
+      if (id && id !== 0) {
+        const { data, error } = await supabase
+          .from('events')
+          .update(payload)
+          .eq('id', id)
+          .select();
+        if (error) throw error;
+        result = data;
       } else {
-        const { id, ...insertData } = payload;
-        query = supabase.from('events').insert(insertData);
+        const { data, error } = await supabase
+          .from('events')
+          .insert(payload)
+          .select();
+        if (error) throw error;
+        result = data;
       }
-      const { data, error } = await query.select().single();
-      if (error) throw error;
+
+      if (!result || result.length === 0) return event as Event;
       
-      api.logAction('EVENT_UPDATED', `Se publicó/actualizó el evento: ${data.title}`);
+      const savedEvent = result[0];
+      api.logAction('EVENT_UPDATED', `Se publicó/actualizó el evento: ${savedEvent.title}`);
       
-      const dateObj = new Date(data.event_date + 'T00:00:00');
-      return { ...data, day: dateObj.getDate().toString().padStart(2, '0'), month: dateObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '') };
+      const dateObj = new Date(savedEvent.event_date + 'T00:00:00');
+      return { ...savedEvent, day: dateObj.getDate().toString().padStart(2, '0'), month: dateObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '') };
     } catch (err) {
       console.error("Error in upsertEvent:", err);
       throw err;
@@ -794,8 +893,10 @@ export const api = {
         const { id, ...insertData } = cert;
         query = supabase.from('certifications').insert(insertData);
       }
-      const { data, error } = await query.select().single();
+      const { data: certs, error } = await query.select();
       if (error) throw error;
+      if (!certs || certs.length === 0) throw new Error("No se pudo guardar la certificación.");
+      const data = certs[0];
       api.logAction('CERTIFICATION_UPDATED', `Se creó/actualizó la certificación: ${data.name}`);
       return data;
     } catch (err) {
@@ -885,7 +986,7 @@ export const api = {
   getBlogPostById: async (id: number): Promise<BlogPost | null> => {
     if (!supabase) return null;
     try {
-      const { data, error } = await supabase.from('blog_posts').select('*').eq('id', id).single();
+      const { data, error } = await supabase.from('blog_posts').select('*').eq('id', id).maybeSingle();
       if (error) throw error;
       return data;
     } catch (err) {
@@ -962,7 +1063,7 @@ export const api = {
       if (error) throw error;
       if (!comments || comments.length === 0) return [];
 
-      const userIds = [...new Set(comments.map(c => c.user_id))];
+      const userIds = Array.from(new Set(comments.map(c => c.user_id)));
       
       const { data: profilesData } = await supabase
         .from('profiles')
@@ -1013,8 +1114,10 @@ export const api = {
         const { id, ...insertData } = post;
         query = supabase.from('blog_posts').insert(insertData);
       }
-      const { data, error } = await query.select().single();
+      const { data: posts, error } = await query.select();
       if (error) throw error;
+      if (!posts || posts.length === 0) throw new Error("No se pudo guardar el blog.");
+      const data = posts[0];
       api.logAction('BLOG_POST_UPDATED', `Se publicó o actualizó un blog: ${data.title}`, { post_id: data.id });
       return data;
     } catch (err) {
@@ -1062,17 +1165,34 @@ export const api = {
   upsertSeller: async (seller: Partial<Seller>): Promise<Seller | null> => {
     if (!supabase) return null;
     try {
-      // Clean data to ensure no extra fields like 'branch' are sent to DB
+      const { id, ...payload } = seller;
       const cleanData = {
-        id: seller.id,
-        name: seller.name,
-        avatar: seller.avatar,
-        ranking: seller.ranking,
-        tier: (seller.tier || 'ASSOCIATE').toUpperCase() // Normalize to uppercase
+        name: payload.name,
+        avatar: payload.avatar,
+        ranking: payload.ranking,
+        tier: (payload.tier || 'ASSOCIATE').toUpperCase()
       };
 
-      const { data, error } = await supabase.from('sellers').upsert(cleanData).select().single();
-      if (error) throw error;
+      let result;
+      if (id && id !== 0) {
+        const { data, error } = await supabase
+          .from('sellers')
+          .update(cleanData)
+          .eq('id', id)
+          .select();
+        if (error) throw error;
+        result = data;
+      } else {
+        const { data, error } = await supabase
+          .from('sellers')
+          .insert(cleanData)
+          .select();
+        if (error) throw error;
+        result = data;
+      }
+
+      if (!result || result.length === 0) return seller as Seller;
+      const data = result[0];
       api.logAction('SELLER_UPDATED', `Se actualizó el ranking/perfil del vendedor ID: ${data.id}`);
       return data;
     } catch (err) {
@@ -1165,18 +1285,18 @@ export const api = {
     if (!supabase) return null;
     
     // Attempt 1: documents_categoria with parent_id
-    let res = await supabase.from('documents_categoria').insert({ nombre: name, descripcion: description, parent_id: parentId }).select().single();
-    if (!res.error && res.data) return res.data;
+    let res = await supabase.from('documents_categoria').insert({ nombre: name, descripcion: description, parent_id: parentId }).select();
+    if (!res.error && res.data && res.data.length > 0) return res.data[0];
     
     // Attempt 2: documents_categoria with categoria_padre_id
-    res = await supabase.from('documents_categoria').insert({ nombre: name, descripcion: description, categoria_padre_id: parentId }).select().single();
-    if (!res.error && res.data) return res.data;
+    res = await supabase.from('documents_categoria').insert({ nombre: name, descripcion: description, categoria_padre_id: parentId }).select();
+    if (!res.error && res.data && res.data.length > 0) return res.data[0];
 
     // Attempt 3: document_categories with english columns
-    res = await supabase.from('document_categories').insert({ name: name, description: description, parent_id: parentId }).select().single();
-    if (!res.error && res.data) {
+    res = await supabase.from('document_categories').insert({ name: name, description: description, parent_id: parentId }).select();
+    if (!res.error && res.data && res.data.length > 0) {
       api.logAction('CATEGORY_CREATED', `Se creó la categoría de documentos: ${name}`);
-      return res.data;
+      return res.data[0];
     }
 
     console.error("AdminPanel CreateCategory failed. Last error from DB:", res.error);
@@ -1191,8 +1311,10 @@ export const api = {
       const { error: uploadError } = await supabase.storage.from('documentation').upload(filePath, file);
       if (uploadError) throw uploadError;
       const sizeStr = file.size > 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : `${(file.size / 1024).toFixed(0)} KB`;
-      const { data, error } = await supabase.from('documents').insert({ name: file.name, type: file.name.split('.').pop() || 'other', size: sizeStr, cat_id: catId, storage_path: filePath, descripcion: description || '' }).select().single();
+      const { data: docs, error } = await supabase.from('documents').insert({ name: file.name, type: file.name.split('.').pop() || 'other', size: sizeStr, cat_id: catId, storage_path: filePath, descripcion: description || '' }).select();
       if (error) throw error;
+      if (!docs || docs.length === 0) throw new Error("No se pudo guardar el documento.");
+      const data = docs[0];
       api.logAction('DOCUMENT_UPLOADED', `Se subió un nuevo documento: ${file.name}`, { document_id: data.id, size: sizeStr });
       const { data: { publicUrl } } = supabase.storage.from('documentation').getPublicUrl(filePath);
       return { ...data, id: parseInt(data.id, 10), name: data.nombre || data.name, url: publicUrl, created_at: new Date(data.created_at).toLocaleDateString('es-ES') };
@@ -1453,18 +1575,4 @@ export const api = {
       return null;
     }
   },
-
-  updatePassword: async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
-    if (!supabase) return { success: false, error: "No connection" };
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-      if (error) throw error;
-      return { success: true };
-    } catch (err: any) {
-      console.error("Error updating password:", err);
-      return { success: false, error: err.message };
-    }
-  }
 };

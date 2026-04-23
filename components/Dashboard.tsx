@@ -247,7 +247,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
          {[
            "https://www.youtube.com/embed/y6bIwLj7-vM?rel=0&showinfo=0&autoplay=0",
            "https://www.youtube.com/embed/ggET4j3Gdxg?rel=0&showinfo=0&autoplay=0",
-           "https://www.youtube.com/embed/ggET4j3Gdxg?rel=0&showinfo=0&autoplay=0"
+           "https://www.youtube.com/embed/UlORnWguPqk?rel=0&showinfo=0&autoplay=0"
          ].map((videoUrl, idx) => (
            <div key={idx} className="shadow-xl overflow-hidden rounded-none border border-neutral bg-black aspect-video relative group hover:border-accent transition-all duration-500">
               <iframe 
