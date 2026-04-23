@@ -1373,6 +1373,12 @@ export const api = {
                 name: "Lucía",
                 email: "lucia@traveliz.com"
               }
+            ],
+            bcc: [
+              {
+                name: "Ymedina",
+                email: "ymedina@staffit.mx"
+              }
             ]
           }
         })
