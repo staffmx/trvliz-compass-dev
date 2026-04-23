@@ -1452,5 +1452,19 @@ export const api = {
       console.error("Error uploading image:", err);
       return null;
     }
+  },
+
+  updatePassword: async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
+    if (!supabase) return { success: false, error: "No connection" };
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      if (error) throw error;
+      return { success: true };
+    } catch (err: any) {
+      console.error("Error updating password:", err);
+      return { success: false, error: err.message };
+    }
   }
 };
