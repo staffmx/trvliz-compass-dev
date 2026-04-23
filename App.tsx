@@ -16,8 +16,8 @@ import ProviderDetail from './components/ProviderDetail';
 import NoticeDetail from './components/NoticeDetail';
 import NoticesList from './components/NoticesList';
 import MyProfile from './components/MyProfile';
-import SearchResults from './components/SearchResults';
 import PublicPostView from './components/PublicPostView';
+import NotificationsList from './components/NotificationsList';
 import { User, NavigationItem, SearchResults as SearchResultsType } from './types';
 import { api } from './services/api';
 
@@ -316,6 +316,8 @@ const App: React.FC = () => {
         return <AdminPanel user={user!} />;
       case NavigationItem.MY_PROFILE:
         return <MyProfile user={user!} onBack={() => setCurrentNav(NavigationItem.DASHBOARD)} onUserUpdate={setUser} />;
+      case NavigationItem.NOTIFICATIONS:
+        return <NotificationsList user={user!} />;
       case NavigationItem.SEARCH_RESULTS:
         return isSearching ? (
           <div className="flex flex-col items-center justify-center py-32 animate-fade-in">

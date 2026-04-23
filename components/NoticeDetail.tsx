@@ -108,6 +108,15 @@ const NoticeDetail: React.FC<NoticeDetailProps> = ({ noticeId, user, onBack }) =
         {/* Content */}
         <div className="max-w-4xl mx-auto px-mobile-x py-16">
             <div className="bg-surface border border-neutral p-10 md:p-14 shadow-sm">
+                 {notice.image_url && (
+                   <div className="mb-10 border border-neutral/50 overflow-hidden shadow-sm bg-gray-50">
+                     <img 
+                       src={notice.image_url} 
+                       alt={notice.title} 
+                       className="w-full h-auto object-contain mx-auto max-h-[600px]"
+                     />
+                   </div>
+                 )}
                  <div className="prose prose-lg max-w-none text-primary leading-luxury font-light">
                     {/* Render newlines properly */}
                     {notice.content.split('\n').map((paragraph, idx) => (

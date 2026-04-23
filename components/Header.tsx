@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { User, NavigationItem, Notice } from '../types';
+import { User, NavigationItem, Notice, NotificationInbox } from '../types';
 import { api } from '../services/api';
 
 interface HeaderProps {
@@ -18,7 +18,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate,
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [notifications, setNotifications] = useState<Notice[]>([]);
+  const [notifications, setNotifications] = useState<NotificationInbox[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -41,19 +41,8 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate,
       if (!user) return;
       setLoadingNotifications(true);
       try {
-        const [noticesData, myAssociateData] = await Promise.all([
-          api.getNotices(),
-          api.getAssociateByUserId(user.id)
-        ]);
-
-        const directedNotices = noticesData.filter((notice: Notice) => {
-          if (!notice.recipient_ids || notice.recipient_ids.trim() === '') return false;
-          if (!myAssociateData) return false;
-          const ids = notice.recipient_ids.split(',').map(id => id.trim());
-          return ids.includes(myAssociateData.id?.toString() || '');
-        });
-
-        setNotifications(directedNotices);
+        const data = await api.getNotifications(user.id);
+        setNotifications(data);
       } catch (err) {
         console.error("Error loading notifications:", err);
       } finally {
@@ -62,10 +51,20 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate,
     };
 
     loadNotifications();
-    // Refresh every 5 minutes
-    const interval = setInterval(loadNotifications, 5 * 60 * 1000);
+    const interval = setInterval(loadNotifications, 3 * 60 * 1000); // Cada 3 min
     return () => clearInterval(interval);
   }, [user.id]);
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  const handleNotificationClick = async (inboxItem: NotificationInbox) => {
+    if (!inboxItem.is_read) {
+      await api.markNotificationAsRead(inboxItem.id);
+      // Actualizar estado local para feedback inmediato
+      setNotifications(prev => prev.map(n => n.id === inboxItem.id ? { ...n, is_read: true } : n));
+    }
+    setIsNotificationsOpen(false);
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,14 +124,16 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate,
             <div className="relative" ref={notificationsRef}>
               <button 
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                className={`relative p-2 transition-colors ${isNotificationsOpen ? 'text-accent' : 'text-secondary hover:text-white'}`}
+                className={`w-10 h-10 flex items-center justify-center rounded-none transition-all ${isNotificationsOpen ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
               >
-                <i className="fa-regular fa-bell text-xl"></i>
-                {notifications.length > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 rounded-full ring-2 ring-primary text-[8px] font-bold flex items-center justify-center text-white">
-                    {notifications.length}
-                  </span>
-                )}
+                <div className="relative">
+                  <i className="fa-regular fa-bell text-xl"></i>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-accent text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center border-2 border-primary animate-pulse">
+                      {unreadCount}
+                    </span>
+                  )}
+                </div>
               </button>
 
               {isNotificationsOpen && (
@@ -153,21 +154,22 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate,
                       </div>
                     ) : (
                       <div className="divide-y divide-neutral">
-                        {notifications.map((notice) => (
+                        {notifications.map((item) => (
                           <button 
-                            key={notice.id}
-                            onClick={() => {
-                              if (onNoticeClick) onNoticeClick(notice.id);
-                              setIsNotificationsOpen(false);
-                            }}
-                            className="w-full text-left p-4 hover:bg-background transition-colors group"
+                            key={item.id}
+                            onClick={() => handleNotificationClick(item)}
+                            className={`w-full text-left p-4 hover:bg-background transition-colors group ${!item.is_read ? 'bg-brand/5 border-l-2 border-brand' : ''}`}
                           >
                             <div className="flex items-start gap-3">
-                              <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${notice.priority === 'high' ? 'bg-red-500' : 'bg-brand'}`}></div>
+                              <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${!item.is_read ? 'bg-brand animate-pulse' : 'bg-neutral/40'}`}></div>
                               <div>
-                                <p className="text-xs font-bold text-primary group-hover:text-brand transition-colors line-clamp-1">{notice.title}</p>
-                                <p className="text-[10px] text-secondary mt-1 line-clamp-2 leading-relaxed">{notice.content}</p>
-                                <p className="text-[9px] text-neutral mt-2 uppercase tracking-tighter">{notice.date}</p>
+                                <p className={`text-xs font-bold transition-colors line-clamp-1 ${!item.is_read ? 'text-primary' : 'text-secondary'}`}>
+                                  {item.notification?.title || 'Sin Título'}
+                                </p>
+                                <p className="text-[10px] text-secondary mt-1 line-clamp-2 leading-relaxed">{item.notification?.content}</p>
+                                <p className="text-[9px] text-neutral mt-2 uppercase tracking-tighter">
+                                  {item.created_at ? new Date(item.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : ''}
+                                </p>
                               </div>
                             </div>
                           </button>
@@ -178,10 +180,10 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, currentNav, onNavigate,
                   
                   <div className="p-3 border-t border-neutral text-center bg-background/30">
                     <button 
-                      onClick={() => { onNavigate(NavigationItem.AVISOS); setIsNotificationsOpen(false); }}
+                      onClick={() => { onNavigate(NavigationItem.NOTIFICATIONS); setIsNotificationsOpen(false); }}
                       className="text-[9px] font-bold uppercase tracking-widest text-brand hover:text-accent transition-colors"
                     >
-                      Ver todos los avisos
+                      Ver todas mis notificaciones
                     </button>
                   </div>
                 </div>

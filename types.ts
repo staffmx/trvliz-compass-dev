@@ -48,6 +48,7 @@ export interface Notice {
   category: 'General' | 'Corporativo' | 'Capacitación';
   target_associate_id?: number | null;
   recipient_ids?: string | null;
+  image_url?: string;
 }
 
 export interface QuickLink {
@@ -159,6 +160,7 @@ export enum NavigationItem {
   PROVEEDORES = 'proveedores',
   NOTICE_DETAIL = 'notice_detail',
   MY_PROFILE = 'my_profile',
+  NOTIFICATIONS = 'notifications',
   SEARCH_RESULTS = 'search_results',
 }
 
@@ -250,4 +252,24 @@ export interface Provider {
 
 export interface ProvidersResponse {
   ListProveedoresAPI: any[]; // Raw objects from Zoho API
+}
+
+export interface Notification {
+  id: string;
+  title: string;
+  content: string;
+  sender_id?: string;
+  target_type: 'all' | 'branch' | 'specific_users';
+  target_branch?: string;
+  created_at: string;
+}
+
+export interface NotificationInbox {
+  id: string;
+  notification_id: string;
+  user_id: string;
+  is_read: boolean;
+  read_at?: string;
+  created_at: string;
+  notification?: Notification; // Joined data
 }

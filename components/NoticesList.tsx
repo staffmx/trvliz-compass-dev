@@ -118,6 +118,15 @@ const NoticesList: React.FC<NoticesListProps> = ({ user, onNavigate, onEventClic
                   }`}
                 >
                   <div className="px-6 md:px-20 pb-10 pt-2 border-t border-neutral/50">
+                    {notice.image_url && (
+                      <div className="mb-8 border border-neutral/50 overflow-hidden shadow-sm bg-gray-50">
+                        <img 
+                          src={notice.image_url} 
+                          alt={notice.title} 
+                          className="w-full h-auto max-h-[500px] object-contain mx-auto"
+                        />
+                      </div>
+                    )}
                     <div className="prose prose-sm max-w-none text-primary leading-luxury font-light">
                       {notice.content.split('\n').map((paragraph, idx) => (
                         <p key={idx} className="mb-4">{paragraph}</p>

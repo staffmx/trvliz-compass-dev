@@ -1392,5 +1392,65 @@ export const api = {
     } catch (err) {
       return [];
     }
+  },
+
+  // Notificaciones y Comunicaciones
+  getNotifications: async (userId: string): Promise<NotificationInbox[]> => {
+    if (!supabase) return [];
+    try {
+      const { data, error } = await supabase
+        .from('notification_inbox')
+        .select('*, notification:notifications(*)')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      console.error("Error fetching notifications:", err);
+      return [];
+    }
+  },
+
+  createNotification: async (notification: any): Promise<boolean> => {
+    if (!supabase) return false;
+    const { error } = await supabase.from('notifications').insert(notification);
+    if (error) {
+      console.error("Error creating notification:", error);
+      throw error; // Lanzamos el error real
+    }
+    return true;
+  },
+
+  markNotificationAsRead: async (inboxId: string): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase
+        .from('notification_inbox')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .eq('id', inboxId);
+      return !error;
+    } catch (err) {
+      return false;
+    }
+  },
+
+  uploadNoticeImage: async (file: File): Promise<string | null> => {
+    if (!supabase) return null;
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('notices')
+        .upload(fileName, file);
+        
+      if (error) throw error;
+      
+      const { data: { publicUrl } } = supabase.storage.from('notices').getPublicUrl(fileName);
+      return publicUrl;
+    } catch (err) {
+      console.error("Error uploading image:", err);
+      return null;
+    }
   }
 };

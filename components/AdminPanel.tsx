@@ -33,6 +33,7 @@ const AdminPanel = ({ user }: any) => {
     { id: 'recorded_webinars', label: 'Webinars Grabados', icon: 'fa-play', group: 'Capacitación', show: hasRole('editor_webinars') || hasRole('editor_eventos') },
     { id: 'certifications', label: 'Certificaciones', icon: 'fa-award', group: 'Capacitación', show: hasRole('editor_certificaciones') || hasRole('editor_eventos') },
     { id: 'mentorships', label: 'Mentoría 1:1', icon: 'fa-graduation-cap', group: 'Capacitación', show: hasRole('editor_mentorias') || hasRole('editor_eventos') },
+    { id: 'notificaciones', label: 'Notificaciones', icon: 'fa-envelope-open-text', group: 'Sistema', show: hasRole('admin_notificaciones') || user?.role === 'admin' },
     { id: 'users', label: 'Usuarios', icon: 'fa-users-gear', group: 'Sistema', show: user?.role === 'admin' },
     { id: 'blog', label: 'Blogs', icon: 'fa-newspaper', group: 'Sistema', show: hasRole('editor_blogs') },
     { id: 'search_logs', label: 'Búsquedas', icon: 'fa-magnifying-glass', group: 'Sistema', show: user?.role === 'admin' },
@@ -180,6 +181,7 @@ const AdminPanel = ({ user }: any) => {
         {activeSection === 'recorded_webinars' && ((hasRole('editor_webinars') || hasRole('editor_eventos')) ? <AdminRecordedWebinars Header={SectionHeader} /> : <AccessDenied />)}
         {activeSection === 'certifications' && ((hasRole('editor_certificaciones') || hasRole('editor_eventos')) ? <AdminCertifications Header={SectionHeader} /> : <AccessDenied />)}
         {activeSection === 'mentorships' && ((hasRole('editor_mentorias') || hasRole('editor_eventos')) ? <AdminMentorships Header={SectionHeader} /> : <AccessDenied />)}
+        {activeSection === 'notificaciones' && ((hasRole('admin_notificaciones') || user?.role === 'admin') ? <AdminNotifications Header={SectionHeader} user={user} /> : <AccessDenied />)}
         {activeSection === 'blog' && (hasRole('editor_blogs') ? <AdminBlog Header={SectionHeader} currentUser={user} /> : <AccessDenied />)}
         {activeSection === 'audit_logs' && (user?.role === 'admin' ? (
           <AdminAuditLogs 
@@ -2296,7 +2298,6 @@ const AdminNotices = ({ Header }: any) => {
 
   useEffect(() => { 
     loadInitialData();
-    loadAssociates();
   }, []);
 
   const loadInitialData = async () => {
@@ -2307,66 +2308,6 @@ const AdminNotices = ({ Header }: any) => {
     } catch (err) {
       console.error("Admin Notices Error:", err);
     } finally { setLoading(false); }
-  };
-
-  const [systemUsers, setSystemUsers] = useState<any[]>([]);
-
-  const loadAssociates = async () => {
-    setLoadingAssociates(true);
-    try {
-      const [assocData, sellersData] = await Promise.all([
-        api.getAssociates(),
-        api.getTopSellers()
-      ]);
-      
-      // Filtrar solos los que tienen user_id (usuarios del sistema)
-      const validUsers = (assocData || []).filter(a => a.user_id).map(a => {
-        // Buscar su tier en sellers
-        const seller = sellersData.find(s => 
-          `${a.name} ${a.last_name || ''}`.trim().toLowerCase() === s.name.trim().toLowerCase()
-        );
-        return {
-          ...a,
-          tier: seller?.tier || 'ASSOCIATE' // Default tier if not found
-        };
-      });
-
-      setAssociates(assocData || []);
-      setSystemUsers(validUsers);
-    } catch (err) {
-      console.error("Error loading system users:", err);
-    } finally {
-      setLoadingAssociates(false);
-    }
-  };
-
-  const getGroupedUsers = () => {
-    const grouped: any = {};
-    systemUsers.forEach(u => {
-      const branch = u.Branch || 'HOME OFFICE';
-      const tier = u.tier || 'ASSOCIATE';
-      if (!grouped[branch]) grouped[branch] = {};
-      if (!grouped[branch][tier]) grouped[branch][tier] = [];
-      grouped[branch][tier].push(u);
-    });
-    return grouped;
-  };
-
-  const toggleMassSelection = (ids: string[], forceState?: boolean) => {
-    const currentIds = formData.recipient_ids ? formData.recipient_ids.split(',').filter(i => i) : [];
-    
-    // Si forceState no se provee, decidimos basándonos en si todos los ids ya están seleccionados
-    const allSelected = ids.every(id => currentIds.includes(id));
-    const shouldSelect = forceState !== undefined ? forceState : !allSelected;
-
-    let newIds;
-    if (shouldSelect) {
-      newIds = Array.from(new Set([...currentIds, ...ids]));
-    } else {
-      newIds = currentIds.filter(id => !ids.includes(id));
-    }
-    
-    setFormData({ ...formData, recipient_ids: newIds.join(',') });
   };
 
   const handleDelete = async (id: string) => {
@@ -2388,7 +2329,11 @@ const AdminNotices = ({ Header }: any) => {
   };
 
   const handleEdit = (notice: Notice) => {
-    setFormData({ ...notice, recipient_ids: notice.recipient_ids || '' });
+    setFormData({ 
+      ...notice, 
+      recipient_ids: notice.recipient_ids || '',
+      image_url: notice.image_url || undefined
+    });
     setEditingId(notice.id);
     setIsFormOpen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2416,6 +2361,7 @@ const AdminNotices = ({ Header }: any) => {
         setFormData({ 
           title: '', content: '', priority: 'medium', category: 'General',
           recipient_ids: '',
+          image_url: undefined,
           date: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) 
         });
         loadInitialData();
@@ -2467,6 +2413,7 @@ const AdminNotices = ({ Header }: any) => {
             setFormData({ 
               title: '', content: '', priority: 'medium', category: 'General',
               recipient_ids: '',
+              image_url: undefined,
               date: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) 
             });
             setEditingId(null);
@@ -2513,107 +2460,43 @@ const AdminNotices = ({ Header }: any) => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-3">Destinatarios (Vacio = Todos)</label>
-                <div className="border border-neutral p-4 bg-[#F9FAFB] max-h-48 overflow-y-auto space-y-2">
-                  <div className="flex items-center justify-between gap-2 pb-2 border-b border-neutral/50 mb-4 px-2">
-                    <div className="flex items-center gap-2">
-                      <input 
-                        type="checkbox" 
-                        id="all-recipients"
-                        checked={!formData.recipient_ids} 
-                        onChange={() => setFormData({...formData, recipient_ids: ''})}
-                        className="accent-brand"
-                      />
-                      <label htmlFor="all-recipients" className="text-sm font-bold text-primary cursor-pointer uppercase tracking-tight">Público General (Todos)</label>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-3">Imagen Promocional (Opcional)</label>
+                <div className="flex items-center gap-4">
+                  {formData.image_url && (
+                    <div className="w-20 h-20 border border-neutral overflow-hidden bg-gray-50">
+                      <img src={formData.image_url} alt="Vista previa" className="w-full h-full object-cover" />
                     </div>
-                    {formData.recipient_ids && (
-                      <button 
-                        type="button"
-                        onClick={() => setFormData({...formData, recipient_ids: ''})}
-                        className="text-[9px] font-bold text-brand hover:text-accent uppercase tracking-widest border border-brand/20 px-2 py-1 bg-brand/5"
-                      >
-                        Limpiar Selección
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="space-y-8 px-2 pb-4">
-                    {(() => {
-                      const groups = getGroupedUsers();
-                      return Object.keys(groups).sort().map(branch => {
-                        const tiers = groups[branch];
-                        const branchUserIds = Object.values(tiers).flat().map((u: any) => u.id.toString());
-                        const isBranchSelected = branchUserIds.every(id => formData.recipient_ids?.split(',').includes(id));
-
-                        return (
-                          <div key={branch} className="space-y-4">
-                            <div className="flex items-center justify-between border-b border-neutral pb-2">
-                                <h4 className="text-xs font-bold text-brand uppercase tracking-wider flex items-center gap-2">
-                                  <i className="fa-solid fa-location-dot text-[10px]"></i>
-                                  {branch}
-                                </h4>
-                                <button 
-                                  type="button" 
-                                  onClick={() => toggleMassSelection(branchUserIds)}
-                                  className="text-[8px] font-bold uppercase tracking-widest px-2 py-1 border border-neutral hover:bg-neutral transition-colors"
-                                >
-                                  {isBranchSelected ? 'Deseleccionar Sucursal' : 'Seleccionar Sucursal'}
-                                </button>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-6 pl-4 font-sans">
-                              {Object.keys(tiers).sort().map(tier => {
-                                const usersInTier = tiers[tier];
-                                const tierUserIds = usersInTier.map((u: any) => u.id.toString());
-                                const isTierSelected = tierUserIds.every(id => formData.recipient_ids?.split(',').includes(id));
-
-                                return (
-                                  <div key={tier} className="space-y-3">
-                                    <div className="flex items-center justify-between bg-neutral/20 px-3 py-1.5">
-                                      <span className="text-[9px] font-bold text-secondary uppercase tracking-widest">{tier}</span>
-                                      <button 
-                                        type="button" 
-                                        onClick={() => toggleMassSelection(tierUserIds)}
-                                        className="text-[7px] font-bold uppercase underline hover:text-brand"
-                                      >
-                                        {isTierSelected ? 'Quitar Rango' : 'Sumar Rango'}
-                                      </button>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 px-1">
-                                      {usersInTier.map((u: any) => {
-                                        const idStr = u.id.toString();
-                                        const isSelected = formData.recipient_ids?.split(',').includes(idStr);
-                                        return (
-                                          <div key={idStr} className="flex items-center gap-2 group">
-                                            <input 
-                                              type="checkbox" 
-                                              id={`recipient-${idStr}`}
-                                              checked={isSelected}
-                                              onChange={() => toggleRecipient(idStr)}
-                                              className="accent-brand w-3 h-3"
-                                            />
-                                            <label 
-                                              htmlFor={`recipient-${idStr}`} 
-                                              className={`text-[11px] truncate cursor-pointer transition-colors ${isSelected ? 'font-bold text-primary' : 'text-secondary group-hover:text-primary'}`}
-                                              title={`${u.name} ${u.last_name || ''}`}
-                                            >
-                                              {u.name} {u.last_name || ''}
-                                            </label>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
+                  )}
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        try {
+                          const url = await api.uploadNoticeImage(file);
+                          if (url) {
+                            setFormData({...formData, image_url: url});
+                          } else {
+                            alert("No se pudo subir la imagen. Verifica que el bucket 'notices' sea público en Supabase.");
+                          }
+                        } catch (err) {
+                          alert("Error al subir imagen. Revisa la consola.");
+                        }
+                      }
+                    }}
+                    className="text-xs text-secondary file:mr-4 file:py-2 file:px-4 file:border-0 file:text-[10px] file:font-bold file:uppercase file:tracking-widest file:bg-brand/10 file:text-brand hover:file:bg-brand/20 cursor-pointer"
+                  />
+                  {formData.image_url && (
+                    <button 
+                      type="button" 
+                      onClick={() => setFormData({...formData, image_url: undefined})}
+                      className="text-[9px] font-bold text-red-500 uppercase underline"
+                    >
+                      Quitar Imagen
+                    </button>
+                  )}
                 </div>
-                <p className="text-[10px] text-secondary mt-2 italic">Selecciona usuarios específicos o deja sin marcar para que sea un aviso general.</p>
               </div>
 
               <div className="md:col-span-2">
@@ -2653,7 +2536,7 @@ const AdminNotices = ({ Header }: any) => {
 <table className="w-full text-left">
           <thead className="bg-[#F5F6F8] border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
             <tr>
-              <th className="px-8 py-5">Prioridad / Categoría</th>
+              <th className="px-8 py-5">Visual / Cat.</th>
               <th className="px-8 py-5">Aviso</th>
               <th className="px-8 py-5 text-right">Acciones</th>
             </tr>
@@ -2662,12 +2545,23 @@ const AdminNotices = ({ Header }: any) => {
             {notices.map((notice) => (
               <tr key={notice.id} className="hover:bg-background/30 transition-colors">
                 <td className="px-8 py-8">
-                  <div className="flex items-center gap-3">
-                    <span className={`w-2 h-2 rounded-full ${
-                      notice.priority === 'high' ? 'bg-red-500' : 
-                      notice.priority === 'medium' ? 'bg-orange-400' : 'bg-blue-400'
-                    }`}></span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary">{notice.category}</span>
+                  <div className="flex items-center gap-4">
+                    {notice.image_url ? (
+                      <div className="w-12 h-12 bg-gray-100 border border-neutral overflow-hidden">
+                        <img src={notice.image_url} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 bg-gray-50 border border-neutral/50 flex items-center justify-center text-neutral">
+                        <i className="fa-solid fa-image text-xs"></i>
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-1">
+                      <span className={`w-2 h-2 rounded-full ${
+                        notice.priority === 'high' ? 'bg-red-500' : 
+                        notice.priority === 'medium' ? 'bg-orange-400' : 'bg-blue-400'
+                      }`}></span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-primary">{notice.category}</span>
+                    </div>
                   </div>
                 </td>
                 <td className="px-8 py-8">
@@ -2675,9 +2569,7 @@ const AdminNotices = ({ Header }: any) => {
                   <div className="flex items-center gap-3 mt-1">
                     <p className="text-[10px] text-secondary uppercase tracking-widest">{notice.date}</p>
                     <span className="text-[10px] text-neutral">•</span>
-                    <span className={`text-[10px] font-bold uppercase tracking-widest ${notice.recipient_ids ? 'text-brand' : 'text-secondary'}`}>
-                      {notice.recipient_ids ? `Dirigido (${notice.recipient_ids.split(',').length})` : 'General'}
-                    </span>
+                    <span className="text-[10px] text-secondary uppercase tracking-widest font-bold">Público General</span>
                   </div>
                 </td>
                 <td className="px-8 py-8 text-right">
@@ -2699,16 +2591,6 @@ const AdminNotices = ({ Header }: any) => {
                       </div>
                     ) : (
                       <>
-                        {notice.recipient_ids && (
-                          <button 
-                            onClick={() => handleSendEmail(notice)}
-                            disabled={isNotifying === notice.id}
-                            className={`p-2 transition-colors ${isNotifying === notice.id ? 'text-neutral cursor-wait' : 'text-accent hover:text-brand'}`}
-                            title="Enviar por email (individual)"
-                          >
-                            <i className={`fa-solid ${isNotifying === notice.id ? 'fa-circle-notch fa-spin' : 'fa-paper-plane'}`}></i>
-                          </button>
-                        )}
                         <button 
                           onClick={() => handleEdit(notice)}
                           className="text-secondary hover:text-brand transition-colors p-2"
@@ -3510,6 +3392,230 @@ const AdminSearchLogs: React.FC<{ Header: any }> = ({ Header }) => {
           </button>
         </div>
       )}
+    </div>
+  );
+};
+
+/* --- SUB-COMPONENT: NOTIFICATIONS MANAGEMENT --- */
+const AdminNotifications = ({ Header, user }: any) => {
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [systemUsers, setSystemUsers] = useState<any[]>([]);
+  const [formData, setFormData] = useState({
+    title: '',
+    content: '',
+    target_type: 'branch' as 'branch' | 'specific_users',
+    target_branch: '',
+    recipient_ids: [] as string[]
+  });
+
+  useEffect(() => { loadData(); }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [assocData, sellersData] = await Promise.all([
+        api.getAssociates(),
+        api.getTopSellers()
+      ]);
+      const validUsers = (assocData || []).filter(a => a.user_id).map(a => {
+        const seller = sellersData.find(s => 
+          `${a.name} ${a.last_name || ''}`.trim().toLowerCase() === s.name.trim().toLowerCase()
+        );
+        return { ...a, tier: seller?.tier || 'ASSOCIATE' };
+      });
+      setSystemUsers(validUsers);
+    } catch (err) { console.error(err); } 
+    finally { setLoading(false); }
+  };
+
+  const branches = useMemo(() => {
+    const b = new Set<string>();
+    systemUsers.forEach(u => u.Branch && b.add(u.Branch));
+    return Array.from(b).sort();
+  }, [systemUsers]);
+
+  const getGroupedUsers = () => {
+    const grouped: any = {};
+    systemUsers.forEach(u => {
+      const branch = u.Branch || 'HOME OFFICE';
+      const tier = u.tier || 'ASSOCIATE';
+      if (!grouped[branch]) grouped[branch] = {};
+      if (!grouped[branch][tier]) grouped[branch][tier] = [];
+      grouped[branch][tier].push(u);
+    });
+    return grouped;
+  };
+
+  const toggleMassSelection = (ids: string[]) => {
+    const current = formData.recipient_ids;
+    const allSelected = ids.every(id => current.includes(id));
+    let next;
+    if (allSelected) {
+      next = current.filter(id => !ids.includes(id));
+    } else {
+      next = Array.from(new Set([...current, ...ids]));
+    }
+    setFormData({ ...formData, recipient_ids: next });
+  };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!formData.title.trim() || !formData.content.trim()) return alert("Completa título y contenido del mensaje.");
+      
+      if (formData.target_type === 'branch' && !formData.target_branch) {
+        return alert("Por favor, selecciona una sucursal de destino.");
+      }
+
+      setSubmitting(true);
+      try {
+        const success = await api.createNotification({
+          title: formData.title,
+          content: formData.content,
+          sender_id: user.id, // IMPORTANTE: Quién envía
+          target_type: formData.target_type,
+          target_branch: formData.target_type === 'branch' ? formData.target_branch : null,
+          recipient_ids: formData.target_type === 'specific_users' ? formData.recipient_ids.join(',') : null
+        });
+        if (success) {
+          alert("¡Notificación despachada con éxito!");
+          setFormData({ title: '', content: '', target_type: 'branch', target_branch: '', recipient_ids: [] });
+        } else {
+          alert("Hubo un problema al procesar la notificación. Revisa la consola.");
+        }
+      } catch (err) {
+        console.error("Error al enviar notificación:", err);
+        alert("No se pudo despachar la notificación. Verifica la conexión o los permisos.");
+      } finally { 
+        setSubmitting(false); 
+      }
+    };
+
+  return (
+    <div className="animate-fade-in">
+      <Header title="Centro de Notificaciones" subtitle="Envía mensajes directos y correos electrónicos a usuarios o grupos." />
+      
+      <form onSubmit={handleSubmit} className="bg-white border border-neutral p-10 shadow-xl space-y-10 mb-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          <div className="space-y-8">
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-4">1. Tipo de Destinatario</label>
+              <div className="grid grid-cols-1 gap-3">
+                {[
+                  { id: 'branch', label: 'Por Sucursal', icon: 'fa-building' },
+                  { id: 'specific_users', label: 'Usuarios Específicos', icon: 'fa-user-tag' }
+                ].map(type => (
+                  <button 
+                    key={type.id} type="button"
+                    onClick={() => setFormData({...formData, target_type: type.id as any})}
+                    className={`flex items-center gap-4 p-4 border transition-all text-left ${formData.target_type === type.id ? 'border-brand bg-brand/5 ring-1 ring-brand' : 'border-neutral hover:border-brand/40 bg-gray-50'}`}
+                  >
+                    <i className={`fa-solid ${type.icon} ${formData.target_type === type.id ? 'text-brand' : 'text-secondary'}`}></i>
+                    <span className={`text-xs font-bold uppercase tracking-widest ${formData.target_type === type.id ? 'text-brand' : 'text-primary'}`}>{type.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {formData.target_type === 'branch' && (
+              <div className="animate-slide-down">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-3">Selecciona Sucursal</label>
+                <select 
+                  value={formData.target_branch}
+                  onChange={(e) => setFormData({...formData, target_branch: e.target.value})}
+                  className="w-full p-4 border border-neutral focus:border-brand outline-none text-sm bg-gray-50"
+                >
+                  <option value="">-- Elige una sucursal --</option>
+                  {branches.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-8">
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-3">2. Mensaje</label>
+              <input 
+                type="text" placeholder="Título de la notificación..."
+                value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})}
+                className="w-full p-4 border border-neutral focus:border-brand outline-none text-sm mb-4"
+              />
+              <textarea 
+                rows={6} placeholder="Escribe el mensaje detallado aquí..."
+                value={formData.content} onChange={(e) => setFormData({...formData, content: e.target.value})}
+                className="w-full p-4 border border-neutral focus:border-brand outline-none text-sm resize-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {formData.target_type === 'specific_users' && (
+          <div className="animate-fade-in border-t border-neutral pt-10">
+            <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary mb-6">3. Selecciona Usuarios ({formData.recipient_ids.length})</label>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 max-h-[500px] overflow-y-auto p-2">
+              {Object.entries(getGroupedUsers()).map(([branch, tiers]: [string, any]) => {
+                const branchIds = Object.values(tiers).flat().map((u: any) => u.user_id);
+                const isBranchFull = branchIds.every(id => formData.recipient_ids.includes(id));
+                return (
+                  <div key={branch} className="border border-neutral bg-gray-50/50 p-6">
+                    <div className="flex justify-between items-center mb-6 border-b border-neutral pb-3">
+                      <h4 className="text-xs font-bold text-brand uppercase tracking-widest flex items-center gap-2">
+                        <i className="fa-solid fa-location-dot"></i> {branch}
+                      </h4>
+                      <button type="button" onClick={() => toggleMassSelection(branchIds)} className="text-[9px] font-bold uppercase tracking-tighter border px-2 py-1 hover:bg-neutral">
+                        {isBranchFull ? 'Deseleccionar' : 'Todos'}
+                      </button>
+                    </div>
+                    <div className="space-y-6">
+                      {Object.entries(tiers).map(([tier, users]: [string, any]) => {
+                        const tierIds = users.map((u: any) => u.user_id);
+                        const isTierFull = tierIds.every(id => formData.recipient_ids.includes(id));
+                        return (
+                          <div key={tier} className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-[8px] font-bold text-secondary uppercase tracking-widest">{tier}</span>
+                              <button type="button" onClick={() => toggleMassSelection(tierIds)} className="text-[7px] font-bold uppercase underline">
+                                {isTierFull ? 'Quitar' : 'Sumar'}
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {users.map((u: any) => (
+                                <label key={u.user_id} className="flex items-center gap-2 cursor-pointer group">
+                                  <input 
+                                    type="checkbox" checked={formData.recipient_ids.includes(u.user_id)}
+                                    onChange={() => {
+                                      const next = formData.recipient_ids.includes(u.user_id) 
+                                        ? formData.recipient_ids.filter(id => id !== u.user_id)
+                                        : [...formData.recipient_ids, u.user_id];
+                                      setFormData({...formData, recipient_ids: next});
+                                    }}
+                                    className="accent-brand"
+                                  />
+                                  <span className="text-[11px] text-secondary group-hover:text-primary truncate">{u.name} {u.last_name || ''}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-center border-t border-neutral pt-10">
+          <button 
+            type="submit"
+            disabled={submitting || (formData.target_type === 'specific_users' && formData.recipient_ids.length === 0)}
+            className="bg-primary text-white px-20 py-5 font-bold uppercase tracking-[4px] text-[10px] hover:bg-brand transition-all shadow-2xl disabled:opacity-50"
+          >
+            {submitting ? 'Enviando...' : 'Despachar Notificaciones'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };
