@@ -1309,84 +1309,16 @@ export const api = {
 
   sendMentorshipEmail: async (request: any): Promise<boolean> => {
     try {
-      const API_ID = 'sp_id_5e63f837c042682e8eb01bebea31c5fa';
-      const API_SECRET = 'sp_sk_f34dee1efdbcf77f8b5a3230f9ee8359';
-
-      // 1. Obtener Token de Acceso
-      const authRes = await fetch('https://api.sendpulse.com/oauth/access_token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          grant_type: 'client_credentials',
-          client_id: API_ID,
-          client_secret: API_SECRET
-        })
-      });
-      const authData = await authRes.json();
-      const token = authData.access_token;
-
-      if (!token) throw new Error("No se pudo obtener el token de SendPulse");
-
-      // 2. Enviar Email
-      const emailRes = await fetch('https://api.sendpulse.com/smtp/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          email: {
-            html: `
-              <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 40px; color: #333;">
-                <div style="text-align: center; margin-bottom: 30px;">
-                  <h1 style="font-family: serif; color: #1a1a1a; margin: 0; font-size: 28px;">Nueva Solicitud de Mentoría</h1>
-                  <p style="text-transform: uppercase; letter-spacing: 2px; font-size: 10px; color: #999; margin-top: 10px;">Traveliz Compass Academy</p>
-                </div>
-                
-                <div style="background: #fbfbfb; padding: 25px; border-left: 4px solid #c5a059; margin-bottom: 30px;">
-                  <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>Solicitante:</strong> ${request.name}</p>
-                  <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>Email:</strong> ${request.email}</p>
-                  <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>Tema:</strong> ${request.topic}</p>
-                  <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>Fecha Tentativa:</strong> ${request.date}</p>
-                </div>
-
-                <div style="margin-bottom: 30px;">
-                  <h3 style="font-size: 12px; text-transform: uppercase; color: #c5a059; border-bottom: 1px solid #eee; padding-bottom: 10px;">Comentarios Adicionales</h3>
-                  <p style="font-size: 14px; line-height: 1.6; color: #555; font-style: italic;">
-                    "${request.comments || 'Sin comentarios adicionales.'}"
-                  </p>
-                </div>
-
-                <div style="text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; pt: 30px; margin-top: 40px; padding-top: 20px;">
-                  <p>Este es un mensaje automático generado por el sistema Traveliz Compass.</p>
-                  <p>© 2026 Traveliz Luxury Travel</p>
-                </div>
-              </div>
-            `,
-            subject: `Solicitud de Mentoría: ${request.name} - ${request.topic}`,
-            from: {
-              name: "Traveliz Compass",
-              email: "connect@traveliz.com"
-            },
-            to: [
-              {
-                name: "Lucía",
-                email: "lucia@traveliz.com"
-              }
-            ],
-            bcc: [
-              {
-                name: "Ymedina",
-                email: "ymedina@staffit.mx"
-              }
-            ]
-          }
-        })
+      // Ahora llamamos a nuestra propia Edge Function en Supabase
+      // Esto evita errores de CORS y mantiene las llaves seguras en el servidor
+      const { data, error } = await supabase.functions.invoke('send-mentorship-email', {
+        body: request
       });
 
-      return emailRes.ok;
+      if (error) throw error;
+      return true;
     } catch (err) {
-      console.error("Error en el flujo de SendPulse:", err);
+      console.error("Error llamando a la Edge Function de Supabase:", err);
       return false;
     }
   },
