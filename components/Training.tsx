@@ -86,6 +86,12 @@ const Training: React.FC<TrainingProps> = ({ user }) => {
       });
 
       if (result.success) {
+        // Enviar notificación a Lucía
+        api.sendMentorshipEmail({
+          ...mentorshipData,
+          request_id: (result as any).id
+        });
+
         setSubmitted(true);
         setTimeout(() => {
           setSubmitted(false);
