@@ -669,7 +669,16 @@ const AdminMentorships = ({ Header }: any) => {
                   <span className="text-xs text-primary capitalize">{r.topic}</span>
                 </td>
                 <td className="px-8 py-6">
-                  <span className="text-xs text-primary">{new Date(r.tentative_date).toLocaleString('es-ES')}</span>
+                  <span className="text-xs text-primary">
+                    {new Date(r.tentative_date).toLocaleString('es-ES', { 
+                      day: '2-digit', 
+                      month: '2-digit', 
+                      year: 'numeric', 
+                      hour: '2-digit', 
+                      minute: '2-digit', 
+                      hour12: true 
+                    })}
+                  </span>
                 </td>
                 <td className="px-8 py-6">
                   <select 
