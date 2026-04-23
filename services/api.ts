@@ -1366,7 +1366,7 @@ export const api = {
             subject: `Solicitud de Mentoría: ${request.name} - ${request.topic}`,
             from: {
               name: "Traveliz Compass",
-              email: "soporte@traveliz.com"
+              email: "connect@traveliz.com"
             },
             to: [
               {
