@@ -1396,6 +1396,25 @@ export const api = {
     }
   },
 
+  uploadAssociateImage: async (file: File): Promise<string | null> => {
+    if (!supabase) return null;
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `asociadas/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('travel_advisors')
+        .upload(fileName, file);
+        
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage.from('travel_advisors').getPublicUrl(fileName);
+      return publicUrl;
+    } catch (err) {
+      console.error("Error uploading associate image:", err);
+      return null;
+    }
+  },
+
   createMentorshipRequest: async (request: Partial<MentorshipRequest>): Promise<{ success: boolean; error?: string }> => {
     if (!supabase) return { success: false, error: "Supabase not configured" };
     try {
