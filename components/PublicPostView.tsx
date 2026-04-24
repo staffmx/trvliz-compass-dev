@@ -62,7 +62,7 @@ const PublicPostView: React.FC<PublicPostViewProps> = ({ postId }) => {
   return (
     <div className="min-h-screen bg-white text-primary">
       <Helmet>
-        <title>{post.title} | Traveliz Inspiration</title>
+        <title>{post.title} | Traveliz Connect</title>
         <meta name="description" content={post.excerpt} />
         <meta property="og:title" content={post.title} />
         <meta property="og:description" content={post.excerpt} />
