@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import JoditEditor from 'jodit-react';
 import { api, EventRegistration, Seller, RecordedWebinar, WEBINAR_CATEGORIES, MentorshipRequest, BlogPost } from '../services/api';
 import { Notice, UserProfile, Role, DocumentCategory, Document as DocType, Associate, Certification, Event, SearchLog } from '../types';
+import packageJson from '../package.json';
 
 type AdminSection = 'overview' | 'directory' | 'notices' | 'events' | 'blog' | 'sellers' | 'users' | 'documents' | 'recorded_webinars' | 'mentorships' | 'certifications' | 'search_logs' | 'audit_logs';
 
@@ -147,6 +148,10 @@ const AdminPanel = ({ user }: any) => {
               <span className="text-[10px] text-white font-bold uppercase">
                 {dbStatus === 'connected' ? 'SUPABASE CONECTADO' : 'ERROR DE CONEXIÓN'}
               </span>
+            </div>
+            <div className="mt-3 pt-3 border-t border-white/10">
+              <p className="text-[8px] text-gray-500 uppercase tracking-[2px]">Versión del Sistema</p>
+              <p className="text-[10px] text-accent font-medium mt-1">v{packageJson.version}</p>
             </div>
           </div>
         </div>
