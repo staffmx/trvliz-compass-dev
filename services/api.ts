@@ -1015,9 +1015,11 @@ export const api = {
      if (!supabase) return false;
      try {
        if (currentlyLiked) {
-         await supabase.from('blog_likes').delete().match({ post_id: postId, user_id: userId });
+         const { error } = await supabase.from('blog_likes').delete().eq('post_id', postId).eq('user_id', userId);
+         if (error) throw error;
        } else {
-         await supabase.from('blog_likes').insert({ post_id: postId, user_id: userId });
+         const { error } = await supabase.from('blog_likes').insert({ post_id: postId, user_id: userId });
+         if (error) throw error;
        }
        return true;
      } catch (err) {
@@ -1030,9 +1032,11 @@ export const api = {
      if (!supabase) return false;
      try {
        if (currentlySaved) {
-         await supabase.from('blog_saves').delete().match({ post_id: postId, user_id: userId });
+         const { error } = await supabase.from('blog_saves').delete().eq('post_id', postId).eq('user_id', userId);
+         if (error) throw error;
        } else {
-         await supabase.from('blog_saves').insert({ post_id: postId, user_id: userId });
+         const { error } = await supabase.from('blog_saves').insert({ post_id: postId, user_id: userId });
+         if (error) throw error;
        }
        return true;
      } catch (err) {
