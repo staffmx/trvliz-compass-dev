@@ -143,6 +143,8 @@ export interface Associate {
   linkedIn?: string;       // DB column: linkedIn
   especialidades?: string; // DB column: especialidades
   Branch?: string;         // DB column: Branch
+  birth_day?: number;      // New: Birthday day
+  birth_month?: number;    // New: Birthday month
   created_at?: string;
 }
 

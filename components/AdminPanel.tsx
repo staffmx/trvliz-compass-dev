@@ -1962,7 +1962,9 @@ const AdminDirectory = ({ Header, preselectedId, onClearSelection }: any) => {
     tik_tok: '',
     linkedIn: '',
     especialidades: '',
-    user_id: ''
+    user_id: '',
+    birth_day: undefined,
+    birth_month: undefined
   };
   
   const [formData, setFormData] = useState<Associate>(emptyForm);
@@ -2124,6 +2126,37 @@ const AdminDirectory = ({ Header, preselectedId, onClearSelection }: any) => {
                   ))}
                 </select>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Día de Cumpleaños</label>
+                  <select 
+                    value={formData.birth_day || ''} 
+                    onChange={e => setFormData({...formData, birth_day: e.target.value ? parseInt(e.target.value) : undefined})} 
+                    className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent"
+                  >
+                    <option value="">Día</option>
+                    {Array.from({ length: 31 }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>{i + 1}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Mes de Cumpleaños</label>
+                  <select 
+                    value={formData.birth_month || ''} 
+                    onChange={e => setFormData({...formData, birth_month: e.target.value ? parseInt(e.target.value) : undefined})} 
+                    className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent"
+                  >
+                    <option value="">Mes</option>
+                    {[
+                      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+                    ].map((month, index) => (
+                      <option key={index + 1} value={index + 1}>{month}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               <div className="md:col-span-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Imagen de Perfil</label>
                 <div className="flex items-center gap-6">
@@ -2222,6 +2255,7 @@ const AdminDirectory = ({ Header, preselectedId, onClearSelection }: any) => {
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary">Sucursal</th>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary">Posición / Cargo</th>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary">Nivel</th>
+              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary">Cumpleaños</th>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary text-right">Acciones</th>
             </tr>
           </thead>
@@ -2246,6 +2280,11 @@ const AdminDirectory = ({ Header, preselectedId, onClearSelection }: any) => {
                   <td className="px-6 py-6 text-xs font-bold text-brand uppercase tracking-widest">{assoc.Branch || '-'}</td>
                   <td className="px-6 py-6 text-xs text-secondary italic font-serif">{assoc.position}</td>
                   <td className="px-6 py-6 text-[10px] font-bold text-secondary uppercase tracking-widest">{assoc.tipo || '-'}</td>
+                  <td className="px-6 py-6 text-[10px] font-bold text-brand uppercase tracking-widest">
+                    {assoc.birth_day && assoc.birth_month ? (
+                      `${assoc.birth_day} / ${['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][assoc.birth_month - 1]}`
+                    ) : '-'}
+                  </td>
                   <td className="px-6 py-6 text-right whitespace-nowrap">
                      <div className="flex items-center justify-end">
                        <button onClick={() => handleEdit(assoc)} className="w-9 h-9 flex items-center justify-center text-secondary hover:bg-background hover:text-brand transition-all" title="Editar Perfil"><i className="fa-solid fa-pen text-sm"></i></button>
