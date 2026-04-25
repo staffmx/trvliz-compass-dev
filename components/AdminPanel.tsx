@@ -1940,7 +1940,27 @@ const AdminDirectory = ({ Header, preselectedId, onClearSelection }: any) => {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   
-  const editorConfig = React.useMemo(() => ({
+  // Filters state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterMonth, setFilterMonth] = useState<string>('');
+  const [filterBranch, setFilterBranch] = useState<string>('');
+  const [filterTier, setFilterTier] = useState<string>('');
+
+  const filteredAssociates = useMemo(() => {
+    return associates.filter(a => {
+      const matchSearch = searchTerm === '' || 
+        `${a.name} ${a.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        a.email.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchMonth = filterMonth === '' || a.birth_month === parseInt(filterMonth);
+      const matchBranch = filterBranch === '' || a.Branch === filterBranch;
+      const matchTier = filterTier === '' || a.tipo === filterTier;
+      
+      return matchSearch && matchMonth && matchBranch && matchTier;
+    });
+  }, [associates, searchTerm, filterMonth, filterBranch, filterTier]);
+
+  const editorConfig = useMemo(() => ({
     readonly: false,
     toolbarAdaptive: false,
     placeholder: 'Escribe la biografía o trayectoria profesional aquí...',
@@ -2246,6 +2266,69 @@ const AdminDirectory = ({ Header, preselectedId, onClearSelection }: any) => {
         </div>
       )}
 
+      {/* Filters Bar */}
+      <div className="mb-6 bg-white border border-neutral p-6 shadow-sm flex flex-wrap items-end gap-4">
+        <div className="flex-1 min-w-[200px]">
+          <label className="text-[9px] font-bold uppercase tracking-widest text-secondary mb-2 block">Buscar por Nombre o Email</label>
+          <div className="relative">
+            <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <input 
+              type="text" 
+              value={searchTerm} 
+              onChange={e => setSearchTerm(e.target.value)} 
+              placeholder="Ej: Juan Perez..." 
+              className="w-full pl-10 pr-4 py-3 border border-neutral text-sm bg-background outline-none focus:border-accent"
+            />
+          </div>
+        </div>
+        <div className="w-full md:w-auto">
+          <label className="text-[9px] font-bold uppercase tracking-widest text-secondary mb-2 block">Mes de Cumpleaños</label>
+          <select 
+            value={filterMonth} 
+            onChange={e => setFilterMonth(e.target.value)} 
+            className="w-full p-3 border border-neutral text-sm bg-background outline-none focus:border-accent"
+          >
+            <option value="">Todos los meses</option>
+            {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((m, i) => (
+              <option key={i+1} value={i+1}>{m}</option>
+            ))}
+          </select>
+        </div>
+        <div className="w-full md:w-auto">
+          <label className="text-[9px] font-bold uppercase tracking-widest text-secondary mb-2 block">Sucursal</label>
+          <select 
+            value={filterBranch} 
+            onChange={e => setFilterBranch(e.target.value)} 
+            className="w-full p-3 border border-neutral text-sm bg-background outline-none focus:border-accent"
+          >
+            <option value="">Todas las sucursales</option>
+            {['ROBLE', 'CDMX', 'SALTILLO', 'BAJA', 'IC', 'ASSOCIATE'].map(b => (
+              <option key={b} value={b}>{b}</option>
+            ))}
+          </select>
+        </div>
+        <div className="w-full md:w-auto">
+          <label className="text-[9px] font-bold uppercase tracking-widest text-secondary mb-2 block">Nivel (Tier)</label>
+          <select 
+            value={filterTier} 
+            onChange={e => setFilterTier(e.target.value)} 
+            className="w-full p-3 border border-neutral text-sm bg-background outline-none focus:border-accent"
+          >
+            <option value="">Todos los niveles</option>
+            {['SENIOR PARTNER', 'JUNIOR PARTNER', 'ASSOCIATE', 'NO APLICA'].map(t => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </div>
+        <button 
+          onClick={() => { setSearchTerm(''); setFilterMonth(''); setFilterBranch(''); setFilterTier(''); }} 
+          className="p-3 text-secondary hover:text-accent transition-colors text-xs font-bold uppercase tracking-widest"
+          title="Limpiar Filtros"
+        >
+          Limpiar
+        </button>
+      </div>
+
       <div className="bg-surface border border-neutral overflow-hidden shadow-sm">
         <div className="overflow-x-auto w-full max-w-full block">
 <table className="w-full text-left">
@@ -2262,7 +2345,7 @@ const AdminDirectory = ({ Header, preselectedId, onClearSelection }: any) => {
           <tbody className="divide-y divide-neutral">
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => <tr key={i} className="animate-pulse h-20 bg-gray-50/50"></tr>)
-            ) : associates.map((assoc) => (
+            ) : filteredAssociates.map((assoc) => (
                 <tr key={assoc.id} className="hover:bg-background/50 transition-colors">
                   <td className="px-6 py-6">
                     <div className="flex items-center gap-4">
