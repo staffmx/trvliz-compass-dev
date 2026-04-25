@@ -615,7 +615,9 @@ export const api = {
       tik_tok: associate.tik_tok,
       linkedIn: associate.linkedIn,
       especialidades: associate.especialidades,
-      Branch: associate.Branch
+      Branch: associate.Branch,
+      birth_day: associate.birth_day,
+      birth_month: associate.birth_month
     };
 
     // Remove undefined values
