@@ -161,7 +161,7 @@ const ProvidersList: React.FC<ProvidersListProps> = ({
           <span className="text-brand text-xs font-bold uppercase tracking-[4px] mb-4 block">Socios Comerciales</span>
           <h1 className="text-4xl md:text-5xl font-serif font-medium text-primary">Directorio de Proveedores</h1>
           
-          {(user?.role === 'admin' || user?.isSuperAdmin) && (
+          {(user?.role === 'admin' || user?.isSuperAdmin || user?.roles?.some(r => r.name === 'EDITOR_PROVEEDORES')) && (
             <div className="mt-8 animate-fade-in">
               <button 
                 onClick={handleSync}
