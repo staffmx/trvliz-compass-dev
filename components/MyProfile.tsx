@@ -87,7 +87,11 @@ const MyProfile: React.FC<MyProfileProps> = ({ user, onBack, onUserUpdate }) => 
   const handleAssociateChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (associate) {
-      setAssociate({ ...associate, [name]: value });
+      let finalValue: any = value;
+      if (name === 'birth_day' || name === 'birth_month') {
+        finalValue = value ? parseInt(value) : undefined;
+      }
+      setAssociate({ ...associate, [name]: finalValue });
     }
   };
 
@@ -478,6 +482,39 @@ const MyProfile: React.FC<MyProfileProps> = ({ user, onBack, onUserUpdate }) => 
                                       placeholder="521..."
                                       className="w-full pl-4 py-2 border-b-2 border-neutral focus:border-brand bg-transparent outline-none transition-all text-sm font-medium text-primary"
                                   />
+                              </div>
+                          </div>
+                          <div className="md:col-span-2 grid grid-cols-2 gap-10">
+                              <div className="space-y-2">
+                                  <label className="text-[10px] font-bold uppercase tracking-[2px] text-secondary/60">Día de Cumpleaños</label>
+                                  <select 
+                                      name="birth_day"
+                                      value={associate?.birth_day || ''}
+                                      onChange={handleAssociateChange}
+                                      className="w-full py-2 border-b-2 border-neutral focus:border-brand bg-transparent outline-none transition-all text-sm font-medium text-primary cursor-pointer"
+                                  >
+                                      <option value="" className="text-secondary">Día</option>
+                                      {Array.from({ length: 31 }, (_, i) => (
+                                          <option key={i + 1} value={i + 1}>{i + 1}</option>
+                                      ))}
+                                  </select>
+                              </div>
+                              <div className="space-y-2">
+                                  <label className="text-[10px] font-bold uppercase tracking-[2px] text-secondary/60">Mes de Cumpleaños</label>
+                                  <select 
+                                      name="birth_month"
+                                      value={associate?.birth_month || ''}
+                                      onChange={handleAssociateChange}
+                                      className="w-full py-2 border-b-2 border-neutral focus:border-brand bg-transparent outline-none transition-all text-sm font-medium text-primary cursor-pointer"
+                                  >
+                                      <option value="" className="text-secondary">Mes</option>
+                                      {[
+                                          'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                                          'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+                                      ].map((month, index) => (
+                                          <option key={index + 1} value={index + 1}>{month}</option>
+                                      ))}
+                                  </select>
                               </div>
                           </div>
                       </div>
