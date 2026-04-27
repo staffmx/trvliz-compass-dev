@@ -272,6 +272,7 @@ const App: React.FC = () => {
           />
         ) : (
           <ProvidersList 
+            user={user!}
             onSelectProvider={setSelectedProvider}
             searchTerm={providerSearchTerm}
             setSearchTerm={setProviderSearchTerm}

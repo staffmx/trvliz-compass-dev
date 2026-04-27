@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Provider } from '../types';
+import { Provider, User } from '../types';
 import { providersService } from '../services/providers';
+import { api } from '../services/api';
 
 interface ProvidersListProps {
+  user: User;
   onSelectProvider: (provider: Provider) => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
@@ -17,6 +19,7 @@ interface ProvidersListProps {
 }
 
 const ProvidersList: React.FC<ProvidersListProps> = ({ 
+  user,
   onSelectProvider,
   searchTerm,
   setSearchTerm,
@@ -32,6 +35,31 @@ const ProvidersList: React.FC<ProvidersListProps> = ({
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSync = async () => {
+    if (!window.confirm('¿Estás seguro de que deseas actualizar el catálogo desde Zoho? Esto puede tardar unos segundos.')) return;
+    
+    setIsSyncing(true);
+    try {
+      const result = await api.syncZohoCatalog();
+      if (result.success) {
+        alert('Catálogo actualizado exitosamente.');
+        // Recargar proveedores para ver los cambios
+        const response = await providersService.fetchProviders();
+        if (response && Array.isArray(response.data)) {
+          setProviders(response.data);
+        }
+      } else {
+        alert('Error al actualizar catálogo: ' + result.error);
+      }
+    } catch (err) {
+      console.error("Sync error:", err);
+      alert('Error inesperado al sincronizar.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   useEffect(() => {
     const loadProviders = async () => {
@@ -132,6 +160,29 @@ const ProvidersList: React.FC<ProvidersListProps> = ({
         <div className="text-center mb-16 border-b border-neutral pb-12">
           <span className="text-brand text-xs font-bold uppercase tracking-[4px] mb-4 block">Socios Comerciales</span>
           <h1 className="text-4xl md:text-5xl font-serif font-medium text-primary">Directorio de Proveedores</h1>
+          
+          {(user?.role === 'admin' || user?.isSuperAdmin) && (
+            <div className="mt-8 animate-fade-in">
+              <button 
+                onClick={handleSync}
+                disabled={isSyncing}
+                className={`inline-flex items-center gap-3 px-6 py-3 bg-brand text-white text-[10px] font-bold uppercase tracking-widest hover:bg-accent transition-all shadow-lg active:scale-95 ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isSyncing ? (
+                  <>
+                    <i className="fa-solid fa-circle-notch fa-spin"></i>
+                    Sincronizando...
+                  </>
+                ) : (
+                  <>
+                    <i className="fa-solid fa-rotate"></i>
+                    Actualizar Catálogo
+                  </>
+                )}
+              </button>
+              <p className="text-[9px] text-secondary mt-3 uppercase tracking-tighter italic">Sincronización manual Zoho -&gt; Supabase</p>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col lg:flex-row gap-12 items-start">

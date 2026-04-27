@@ -32,3 +32,6 @@ dist-ssr
 .env.production
 .env.development
 *.local
+
+# Scratch
+scratch/

@@ -1600,4 +1600,19 @@ export const api = {
       return null;
     }
   },
+  
+  syncZohoCatalog: async () => {
+    if (!supabase) return { error: "No connection" };
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-zoho-catalog');
+      if (error) throw error;
+      
+      await api.logAction('ZOHO_CATALOG_SYNC', 'Sincronización manual del catálogo de proveedores desde Zoho.');
+      
+      return { success: true, data };
+    } catch (err: any) {
+      console.error("Sync Zoho error:", err);
+      return { error: err.message };
+    }
+  },
 };
