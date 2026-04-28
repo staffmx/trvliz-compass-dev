@@ -21,11 +21,11 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   onBlogClick
 }) => {
   const totalResults = 
-    results.notices.length + 
-    results.events.length + 
-    results.certifications.length + 
-    results.associates.length + 
-    results.documents.length +
+    (results.notices?.length || 0) + 
+    (results.events?.length || 0) + 
+    (results.certifications?.length || 0) + 
+    (results.associates?.length || 0) + 
+    (results.documents?.length || 0) +
     (results.blogs?.length || 0) +
     (results.recorded_webinars?.length || 0);
 
@@ -62,7 +62,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
       ) : (
         <div className="space-y-24">
           {/* Notices */}
-          {results.notices.length > 0 && (
+          {results.notices && results.notices.length > 0 && (
             <section className="animate-slide-up">
               <div className="flex items-center gap-6 mb-10">
                 <h3 className="text-xs font-bold uppercase tracking-[3px] text-brand whitespace-nowrap">Avisos y Comunicados</h3>
@@ -167,7 +167,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           )}
 
           {/* Certifications */}
-          {results.certifications.length > 0 && (
+          {results.certifications && results.certifications.length > 0 && (
             <section className="animate-slide-up">
               <div className="flex items-center gap-6 mb-10">
                 <h3 className="text-xs font-bold uppercase tracking-[3px] text-brand whitespace-nowrap">Certificaciones Academy</h3>
@@ -202,7 +202,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           )}
 
           {/* Events */}
-          {results.events.length > 0 && (
+          {results.events && results.events.length > 0 && (
             <section className="animate-slide-up">
               <div className="flex items-center gap-6 mb-10">
                 <h3 className="text-xs font-bold uppercase tracking-[3px] text-brand whitespace-nowrap">Calendario de Eventos</h3>
@@ -240,7 +240,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           )}
 
           {/* Associates */}
-          {results.associates.length > 0 && (
+          {results.associates && results.associates.length > 0 && (
             <section className="animate-slide-up">
               <div className="flex items-center gap-6 mb-10">
                 <h3 className="text-xs font-bold uppercase tracking-[3px] text-brand whitespace-nowrap">Colegas y Expertos (Directorio)</h3>
@@ -277,7 +277,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           )}
 
           {/* Documents */}
-          {results.documents.length > 0 && (
+          {results.documents && results.documents.length > 0 && (
             <section className="animate-slide-up">
               <div className="flex items-center gap-6 mb-10">
                 <h3 className="text-xs font-bold uppercase tracking-[3px] text-brand whitespace-nowrap">Documentación Oficial</h3>
