@@ -33,6 +33,7 @@ const ProvidersList: React.FC<ProvidersListProps> = ({
   setSelectedRegions
 }) => {
   const [providers, setProviders] = useState<Provider[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -49,6 +50,7 @@ const ProvidersList: React.FC<ProvidersListProps> = ({
         const response = await providersService.fetchProviders();
         if (response && Array.isArray(response.data)) {
           setProviders(response.data);
+          if (response.lastUpdated) setLastUpdated(response.lastUpdated);
         }
       } else {
         alert('Error al actualizar catálogo: ' + result.error);
@@ -68,6 +70,7 @@ const ProvidersList: React.FC<ProvidersListProps> = ({
         const response = await providersService.fetchProviders();
         if (response && Array.isArray(response.data)) {
           setProviders(response.data);
+          if (response.lastUpdated) setLastUpdated(response.lastUpdated);
         } else {
           setError('El formato de los datos es inválido.');
         }
@@ -163,6 +166,11 @@ const ProvidersList: React.FC<ProvidersListProps> = ({
           
           {(user?.role === 'admin' || user?.isSuperAdmin || user?.roles?.some(r => r.name === 'EDITOR_PROVEEDORES')) && (
             <div className="mt-8 animate-fade-in">
+              {lastUpdated && (
+                <p className="text-[10px] text-secondary mb-3 uppercase tracking-widest font-bold">
+                  Última actualización: <span className="text-brand">{lastUpdated}</span>
+                </p>
+              )}
               <button 
                 onClick={handleSync}
                 disabled={isSyncing}

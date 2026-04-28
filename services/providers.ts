@@ -71,18 +71,26 @@ const UBICACION_FIELDS = ['Continente', 'Pais', 'Ciudad', 'Categoria', 'Serendip
 const CONTACTO_FIELDS = ['Nombre', 'Correo', 'CorreoSec', 'Telefono'];
 
 export const providersService = {
-  async fetchProviders(): Promise<{ code: number, data: Provider[] }> {
+  async fetchProviders(): Promise<{ code: number, data: Provider[], lastUpdated?: string }> {
     let data;
+    let lastUpdated: string | undefined;
 
     try {
       // 1. Intentar cargar el archivo desde Supabase Storage (Cero tokens de Zoho)
-      // El archivo es actualizado diario por una Edge Function
-      const STORAGE_URL = 'https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/catalogos/providers.json';
+      // Usamos cache-busting (?t=...) para evitar que el navegador devuelva una versión en caché
+      const STORAGE_URL = `https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/catalogos/providers.json?t=${new Date().getTime()}`;
       
-      const storageResponse = await fetch(STORAGE_URL);
+      const storageResponse = await fetch(STORAGE_URL, { cache: 'no-store' });
 
       if (storageResponse.ok) {
         data = await storageResponse.json();
+        const lastModifiedHeader = storageResponse.headers.get('last-modified');
+        if (lastModifiedHeader) {
+          lastUpdated = new Date(lastModifiedHeader).toLocaleString('es-MX', { 
+            day: '2-digit', month: 'short', year: 'numeric', 
+            hour: '2-digit', minute: '2-digit' 
+          });
+        }
       } else {
         throw new Error('Archivo en Storage no encontrado');
       }
@@ -125,6 +133,6 @@ export const providersService = {
     }));
 
     // Returning simulated code and mapped data backward compatible to how the frontend uses it (expecting a data array)
-    return { code: 3000, data: proveedores };
+    return { code: 3000, data: proveedores, lastUpdated };
   }
 };
