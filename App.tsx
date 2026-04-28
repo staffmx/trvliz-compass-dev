@@ -18,6 +18,7 @@ import NoticesList from './components/NoticesList';
 import MyProfile from './components/MyProfile';
 import PublicPostView from './components/PublicPostView';
 import NotificationsList from './components/NotificationsList';
+import SearchResults from './components/SearchResults';
 import { User, NavigationItem, SearchResults as SearchResultsType } from './types';
 import { api } from './services/api';
 

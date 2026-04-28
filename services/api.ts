@@ -1489,7 +1489,7 @@ export const api = {
         supabase.from('events').select('*').or(`title.ilike.${term},description.ilike.${term}`),
         supabase.from('certifications').select('*').or(`name.ilike.${term},description.ilike.${term}`),
         supabase.from('associates').select('*').or(`name.ilike.${term},last_name.ilike.${term},position.ilike.${term},email.ilike.${term}`),
-        supabase.from('documents').select('*').or(`name.ilike.${term},description.ilike.${term}`),
+        supabase.from('documents').select('*').or(`name.ilike.${term},descripcion.ilike.${term}`),
         supabase.from('blog_posts').select('*').or(`title.ilike.${term},content.ilike.${term},author.ilike.${term},category.ilike.${term}`),
         supabase.from('recorded_webinars').select('*').or(`name.ilike.${term},category.ilike.${term}`)
       ]);
