@@ -245,24 +245,20 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
       {/* Welcome Video Section - 3 Columns */}
       <div className="mb-12 max-w-site mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
          {[
-           { type: 'mp4', url: 'https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/images/videos/bienvenida-marcelo.mp4', title: 'Bienvenida a Traveliz Connect' },
-           { type: 'youtube', url: "https://www.youtube.com/embed/ggET4j3Gdxg?rel=0&showinfo=0&autoplay=0", title: "Video 2" },
-           { type: 'youtube', url: "https://www.youtube.com/embed/UlORnWguPqk?rel=0&showinfo=0&autoplay=0", title: "Video 3" }
+           { type: 'mp4', url: 'https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/images/videos/bienvenida-marcelo.mp4', title: 'Bienvenida a Traveliz Connect', poster: 'https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/images/videos/portada-bienvenida-marcelo.jpg' },
+           { type: 'youtube', url: "https://www.youtube.com/embed/ggET4j3Gdxg?rel=0&showinfo=0&autoplay=0", title: "Video 2", poster: undefined },
+           { type: 'youtube', url: "https://www.youtube.com/embed/UlORnWguPqk?rel=0&showinfo=0&autoplay=0", title: "Video 3", poster: undefined }
          ].map((video, idx) => (
            <div key={idx} className="shadow-xl overflow-hidden rounded-none border border-neutral bg-black aspect-video relative group hover:border-accent transition-all duration-500">
               {video.type === 'mp4' ? (
-                 <>
-                   <video 
-                      src={video.url} 
-                      title={video.title} 
-                      controls 
-                      controlsList="nodownload"
-                      className="absolute top-0 left-0 w-full h-full object-cover"
-                   />
-                   <div className="absolute top-0 left-0 w-full bg-gradient-to-b from-black/80 to-transparent p-4 transition-opacity duration-300 pointer-events-none">
-                     <h3 className="text-white text-sm font-serif font-medium tracking-wide drop-shadow-md">{video.title}</h3>
-                   </div>
-                 </>
+                 <video 
+                    src={video.url} 
+                    title={video.title} 
+                    poster={video.poster}
+                    controls 
+                    controlsList="nodownload"
+                    className="absolute top-0 left-0 w-full h-full object-cover"
+                 />
               ) : (
                  <iframe 
                      src={video.url} 
