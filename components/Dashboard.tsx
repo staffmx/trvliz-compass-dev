@@ -28,7 +28,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
     { main: "The Associates: ", accent: "Eleva tu pasión." },
     { main: "Tu respaldo en el ", accent: "mundo" }
   ];
+
+  const heroImages = [
+    "https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/images/fondo-hero/1.jpg",
+    "https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/images/fondo-hero/2.jpg",
+    "https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/images/fondo-hero/3.jpg",
+    "https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/images/fondo-hero/4.jpg",
+    "https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/images/fondo-hero/5.jpg"
+  ];
+
   const [randomPhrase] = useState(() => welcomePhrases[Math.floor(Math.random() * welcomePhrases.length)]);
+  const [randomHeroImage] = useState(() => heroImages[Math.floor(Math.random() * heroImages.length)]);
 
   useEffect(() => {
     const loadAllData = async () => {
@@ -203,8 +213,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
 
   return (
     <div className="max-w-site mx-auto px-mobile-x pt-[50px] pb-section-y animate-fade-in">
-      <div className="mb-12 relative overflow-hidden rounded-none bg-brand text-white shadow-2xl">
-        <div className="relative p-10 md:p-16 flex flex-col md:flex-row items-center justify-between gap-10">
+      <div className="mb-12 relative overflow-hidden rounded-none bg-brand text-white shadow-2xl min-h-[300px]">
+        {/* Background Image Layer */}
+        <div className="absolute inset-0 z-0">
+            <img 
+                src={randomHeroImage} 
+                alt="Traveliz Connect Background" 
+                className="w-full h-full object-cover opacity-40 mix-blend-overlay"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-brand via-brand/60 to-transparent"></div>
+        </div>
+
+        <div className="relative z-10 p-10 md:p-16 flex flex-col md:flex-row items-center justify-between gap-10">
           <div className="flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
             {/* User Avatar from Profile */}
             <div className="relative">
