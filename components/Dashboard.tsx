@@ -9,9 +9,10 @@ interface DashboardProps {
   onEventClick?: (eventId: number) => void; 
   onNoticeClick?: (noticeId: string) => void; 
   onBlogClick?: (postId: number) => void; 
+  onViewProfile?: (associateId: number) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, onNoticeClick, onBlogClick }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, onNoticeClick, onBlogClick, onViewProfile }) => {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
@@ -411,7 +412,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
                             .sort((a,b) => a.ranking - b.ranking)
                             .slice(0, 5)
                             .map((seller, index) => (
-                            <div key={index} className="flex flex-col items-center text-center gap-3 relative group">
+                            <div 
+                                key={index} 
+                                className="flex flex-col items-center text-center gap-3 relative group cursor-pointer"
+                                onClick={() => seller.id && onViewProfile && onViewProfile(seller.id)}
+                            >
                                 <div className="relative">
                                     <img src={seller.avatar} alt={seller.name} className={`w-16 h-16 rounded-full object-cover ring-4 ${index === 0 ? 'ring-accent' : 'ring-white/10 group-hover:ring-white/30'} transition-all bg-white`} />
                                     <span className={`absolute -bottom-2 -right-2 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold shadow-md ${index === 0 ? 'bg-accent text-white' : 'bg-white text-brand'}`}>

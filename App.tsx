@@ -248,6 +248,7 @@ const App: React.FC = () => {
             onEventClick={handleNavigateToEvent}
             onNoticeClick={handleNavigateToNotice}
             onBlogClick={handleNavigateToBlog}
+            onViewProfile={handleViewAssociate}
         />;
       case NavigationItem.AVISOS:
         return <NoticesList 
