@@ -18,6 +18,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [teamMembers, setTeamMembers] = useState<Associate[]>([]);
+  const [allAssociates, setAllAssociates] = useState<Associate[]>([]);
   const [currentUserAssociate, setCurrentUserAssociate] = useState<Associate | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSellerTier, setActiveSellerTier] = useState<string>('SENIOR PARTNER');
@@ -74,6 +75,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
         setEvents(eventsData);
         setSellers(sellersData);
         setBlogPosts(enhancedBlogData);
+        setAllAssociates(associatesData);
         setTeamMembers([...associatesData].sort(() => 0.5 - Math.random()).slice(0, 5));
         setCurrentUserAssociate(myAssociateData);
       } catch (error) {
@@ -411,21 +413,31 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
                             .filter(s => (s.tier || 'SENIOR PARTNER') === activeSellerTier)
                             .sort((a,b) => a.ranking - b.ranking)
                             .slice(0, 5)
-                            .map((seller, index) => (
-                            <div 
-                                key={index} 
-                                className="flex flex-col items-center text-center gap-3 relative group cursor-pointer"
-                                onClick={() => seller.id && onViewProfile && onViewProfile(seller.id)}
-                            >
-                                <div className="relative">
-                                    <img src={seller.avatar} alt={seller.name} className={`w-16 h-16 rounded-full object-cover ring-4 ${index === 0 ? 'ring-accent' : 'ring-white/10 group-hover:ring-white/30'} transition-all bg-white`} />
-                                    <span className={`absolute -bottom-2 -right-2 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold shadow-md ${index === 0 ? 'bg-accent text-white' : 'bg-white text-brand'}`}>
-                                        {seller.ranking}
-                                    </span>
+                            .map((seller, index) => {
+                                const matchedAssociate = allAssociates.find(
+                                    a => `${a.name} ${a.last_name || ''}`.trim().toLowerCase() === seller.name.trim().toLowerCase()
+                                );
+                                
+                                return (
+                                <div 
+                                    key={index} 
+                                    className="flex flex-col items-center text-center gap-3 relative group cursor-pointer"
+                                    onClick={() => {
+                                        if (matchedAssociate && onViewProfile) {
+                                            onViewProfile(matchedAssociate.id);
+                                        }
+                                    }}
+                                >
+                                    <div className="relative">
+                                        <img src={seller.avatar} alt={seller.name} className={`w-16 h-16 rounded-full object-cover ring-4 ${index === 0 ? 'ring-accent' : 'ring-white/10 group-hover:ring-white/30'} transition-all bg-white`} />
+                                        <span className={`absolute -bottom-2 -right-2 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold shadow-md ${index === 0 ? 'bg-accent text-white' : 'bg-white text-brand'}`}>
+                                            {seller.ranking}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm font-medium text-gray-200 tracking-wide leading-tight line-clamp-2">{seller.name}</p>
                                 </div>
-                                <p className="text-sm font-medium text-gray-200 tracking-wide leading-tight line-clamp-2">{seller.name}</p>
-                            </div>
-                        ))
+                                );
+                            })
                     )}
                  </div>
              </div>
