@@ -109,17 +109,39 @@ const MyProfile: React.FC<MyProfileProps> = ({ user, onBack, onUserUpdate }) => 
     try {
       const publicUrl = await api.uploadAvatar(file, user.id);
       if (publicUrl) {
-        setAssociate({ ...associate, image: publicUrl });
+        // 1. Actualizar estado local
+        const updatedAssociate = { ...associate, image: publicUrl };
+        setAssociate(updatedAssociate);
+        
+        let updatedProfile = profile;
         if (profile) {
-          setProfile({ ...profile, avatar_url: publicUrl });
+          updatedProfile = { ...profile, avatar_url: publicUrl };
+          setProfile(updatedProfile);
         }
-        setMessage({ type: 'success', text: 'Imagen subida correctamente' });
+
+        // 2. GUARDAR INMEDIATAMENTE en la base de datos
+        // Actualizamos tabla de perfiles
+        if (updatedProfile) {
+          await api.updateProfile(updatedProfile);
+        }
+        // Actualizamos tabla de asociadas
+        await api.upsertAssociate(updatedAssociate);
+
+        // 3. Sincronizar con el estado global (Header) y localStorage
+        const updatedUser = {
+          ...user,
+          avatar: publicUrl
+        };
+        localStorage.setItem('traveliz_user', JSON.stringify(updatedUser));
+        onUserUpdate(updatedUser);
+
+        setMessage({ type: 'success', text: 'Imagen actualizada correctamente en todo el sistema' });
       } else {
         throw new Error("Error al subir la imagen");
       }
     } catch (err: any) {
       console.error("Error completo en la subida:", err);
-      setMessage({ type: 'error', text: `Error: ${err.message || 'No se pudo subir la imagen. Verifica tu conexión o el formato del archivo.'}` });
+      setMessage({ type: 'error', text: `Error: ${err.message || 'No se pudo subir la imagen.'}` });
     } finally {
       setUploading(false);
       setTimeout(() => setMessage(null), 3000);

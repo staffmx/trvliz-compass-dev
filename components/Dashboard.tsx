@@ -322,7 +322,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
                                         <i className="fa-solid fa-compass"></i>
                                     </div>
                                     <div>
-                                        <p className="text-sm font-bold text-primary tracking-wide">{post.author || 'Traveliz Team'}</p>
+                                        <p className="text-sm font-bold text-primary">{post.profiles?.full_name || post.author || 'Traveliz Team'}</p>
                                         <p className="text-[10px] text-secondary font-medium uppercase tracking-wider">{post.publish_date || 'Novedades'}</p>
                                     </div>
                                 </div>

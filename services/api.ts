@@ -977,10 +977,36 @@ export const api = {
 
   getBlogPosts: async (limit?: number): Promise<BlogPost[]> => {
     if (supabase) {
-      let query = supabase.from('blog_posts').select('*').order('created_at', { ascending: false });
-      if (limit) query = query.limit(limit);
-      const { data, error } = await query;
-      if (!error && data) return data;
+      // Intentar traer los datos con el join. Si falla por falta de FK, regresará error.
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*, profiles:user_id(full_name)')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.warn("Error with profiles join, fetching manually:", error);
+        const { data: fallbackData } = await supabase.from('blog_posts').select('*').order('created_at', { ascending: false });
+        
+        if (!fallbackData) return [];
+
+        // Buscar perfiles manualmente para los IDs encontrados
+        const userIds = Array.from(new Set(fallbackData.map(p => p.user_id).filter(Boolean)));
+        if (userIds.length > 0) {
+          const { data: profilesData } = await supabase.from('profiles').select('id, full_name').in('id', userIds);
+          if (profilesData) {
+            const profilesMap = profilesData.reduce((acc: any, p: any) => {
+              acc[p.id] = p;
+              return acc;
+            }, {});
+            return fallbackData.map(p => ({
+              ...p,
+              profiles: p.user_id ? profilesMap[p.user_id] : null
+            }));
+          }
+        }
+        return fallbackData;
+      }
+      return data || [];
     }
     return [];
   },
@@ -988,8 +1014,20 @@ export const api = {
   getBlogPostById: async (id: number): Promise<BlogPost | null> => {
     if (!supabase) return null;
     try {
-      const { data, error } = await supabase.from('blog_posts').select('*').eq('id', id).maybeSingle();
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*, profiles:user_id(full_name)')
+        .eq('id', id)
+        .maybeSingle();
+      
+      if (error) {
+        const { data: fallback } = await supabase.from('blog_posts').select('*').eq('id', id).maybeSingle();
+        if (fallback && fallback.user_id) {
+          const { data: prof } = await supabase.from('profiles').select('full_name').eq('id', fallback.user_id).maybeSingle();
+          return { ...fallback, profiles: prof };
+        }
+        return fallback;
+      }
       return data;
     } catch (err) {
       console.error("Error in getBlogPostById:", err);
@@ -1129,6 +1167,19 @@ export const api = {
     } catch (err) {
       console.error("Error upserting blog post:", err);
       return null;
+    }
+  },
+
+  incrementBlogPostViews: async (id: number): Promise<void> => {
+    if (!supabase) return;
+    try {
+      // Usar rpc si existe una función de incremento en Supabase, 
+      // o un update simple si no. Por ahora update.
+      const { data } = await supabase.from('blog_posts').select('vistas').eq('id', id).maybeSingle();
+      const currentViews = (data?.vistas || 0) + 1;
+      await supabase.from('blog_posts').update({ vistas: currentViews }).eq('id', id);
+    } catch (err) {
+      console.error("Error incrementing views:", err);
     }
   },
 

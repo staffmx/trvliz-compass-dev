@@ -45,6 +45,7 @@ const App: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
   const [renderPublicPostId, setRenderPublicPostId] = useState<number | null>(null);
+  const [adminSection, setAdminSection] = useState<string | null>(null);
   
   // Provider Filter States (Elevated for persistence)
   const [providerSearchTerm, setProviderSearchTerm] = useState('');
@@ -202,6 +203,11 @@ const App: React.FC = () => {
     setCurrentNav(NavigationItem.DASHBOARD);
   };
 
+  const handleNavigateToAdminSection = (section: string) => {
+    setAdminSection(section);
+    setCurrentNav(NavigationItem.ADMIN);
+  };
+
   const handleSearch = async (term: string) => {
     if (!term.trim()) return;
     
@@ -292,6 +298,7 @@ const App: React.FC = () => {
         return <Inspiration 
             user={user!} 
             onNavigate={setCurrentNav} 
+            onNavigateToAdmin={handleNavigateToAdminSection}
             initialPostId={selectedBlogId}
             onClearInitialPost={() => setSelectedBlogId(null)}
         />;
@@ -316,7 +323,7 @@ const App: React.FC = () => {
           <EventsCalendar onEventClick={handleNavigateToEvent} />
         );
       case NavigationItem.ADMIN:
-        return <AdminPanel user={user!} />;
+        return <AdminPanel user={user!} initialSection={adminSection} />;
       case NavigationItem.MY_PROFILE:
         return <MyProfile user={user!} onBack={() => setCurrentNav(NavigationItem.DASHBOARD)} onUserUpdate={setUser} />;
       case NavigationItem.NOTIFICATIONS:

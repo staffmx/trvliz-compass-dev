@@ -22,6 +22,7 @@ const PublicPostView: React.FC<PublicPostViewProps> = ({ postId }) => {
         
         if (postData) {
           setPost(postData);
+          api.incrementBlogPostViews(postId);
         }
         
         // Filtrar el post actual de los populares
@@ -97,7 +98,7 @@ const PublicPostView: React.FC<PublicPostViewProps> = ({ postId }) => {
                     <i className="fa-solid fa-compass text-lg"></i>
                 </div>
                 <div>
-                    <p className="text-sm font-bold text-primary">{post.author}</p>
+                    <p className="text-sm font-bold text-primary">{post.profiles?.full_name || post.author}</p>
                     <p className="text-[10px] text-brand uppercase tracking-widest font-bold">Expert Content Creator</p>
                 </div>
             </div>

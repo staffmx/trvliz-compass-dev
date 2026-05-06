@@ -7,11 +7,12 @@ import { BLOG_CATEGORIES } from './AdminPanel';
 interface InspirationProps {
     user: User;
     onNavigate: (nav: NavigationItem) => void;
+    onNavigateToAdmin?: (section: string) => void;
     initialPostId?: number | null;
     onClearInitialPost?: () => void;
 }
 
-const Inspiration: React.FC<InspirationProps> = ({ user, onNavigate, initialPostId, onClearInitialPost }) => {
+const Inspiration: React.FC<InspirationProps> = ({ user, onNavigate, onNavigateToAdmin, initialPostId, onClearInitialPost }) => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +34,9 @@ const Inspiration: React.FC<InspirationProps> = ({ user, onNavigate, initialPost
 
   useEffect(() => {
     if (selectedPostId) {
+      // Incrementar vistas
+      api.incrementBlogPostViews(selectedPostId);
+      
       setCommentsLoading(true);
       setVisibleCommentsCount(10);
       api.getPostComments(selectedPostId).then(data => {
@@ -186,7 +190,7 @@ const Inspiration: React.FC<InspirationProps> = ({ user, onNavigate, initialPost
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-brand text-white flex items-center justify-center text-secondary shadow-inner"><i className="fa-solid fa-compass"></i></div>
                                 <div>
-                                    <p className="text-sm font-bold text-primary">{selectedPost.author}</p>
+                                    <p className="text-sm font-bold text-primary">{selectedPost.profiles?.full_name || selectedPost.author}</p>
                                     <p className="text-[10px] text-secondary uppercase tracking-widest font-bold font-primary text-brand">Traveliz Editor</p>
                                 </div>
                             </div>
@@ -450,6 +454,17 @@ const Inspiration: React.FC<InspirationProps> = ({ user, onNavigate, initialPost
         <span className="text-brand text-xs font-bold uppercase tracking-[4px] mb-4 block">Blog & Novedades</span>
         <h1 className="text-4xl md:text-5xl font-serif font-medium text-primary mb-6">Inspiración para tus Clientes</h1>
         <p className="text-secondary text-lg font-light leading-relaxed">Descubre las últimas tendencias, destinos emergentes y estrategias de mercado.</p>
+        
+        {onNavigateToAdmin && (user.role === 'admin' || (user.roles || []).some(r => r.name.toLowerCase().trim().replace(/ /g, '_') === 'editor_blogs')) && (
+          <div className="mt-8 flex justify-center">
+            <button 
+              onClick={() => onNavigateToAdmin('blog')}
+              className="bg-brand text-white px-10 py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-accent transition-all duration-300 shadow-xl flex items-center gap-3 group"
+            >
+              <i className="fa-solid fa-plus group-hover:rotate-90 transition-transform"></i> Agregar Blog
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex overflow-x-auto gap-4 py-4 mb-12 no-scrollbar border-b border-neutral justify-start md:justify-center">
@@ -513,7 +528,7 @@ const Inspiration: React.FC<InspirationProps> = ({ user, onNavigate, initialPost
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <div className="w-6 h-6 rounded-full bg-neutral flex items-center justify-center text-[10px] text-brand shadow-inner"><i className="fa-solid fa-compass"></i></div>
-                            <span className="text-xs text-primary font-medium tracking-wide">{post.author}</span>
+                            <span className="text-xs text-primary font-medium tracking-wide">{post.profiles?.full_name || post.author}</span>
                         </div>
                         <span className="text-brand group-hover:text-accent text-[10px] font-bold uppercase tracking-widest group-hover:translate-x-1 transition-all flex items-center gap-2">Continuar leyendo <i className="fa-solid fa-arrow-right"></i></span>
                     </div>

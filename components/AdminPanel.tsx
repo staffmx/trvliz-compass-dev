@@ -9,8 +9,8 @@ type AdminSection = 'overview' | 'directory' | 'notices' | 'events' | 'blog' | '
 
 export const BLOG_CATEGORIES = ['Destinos', 'Tendencias', 'Tips de Viaje', 'Noticias', 'Gastronomía', 'Luxury Travel', 'Wellness', 'Itinerarios'];
 
-const AdminPanel = ({ user }: any) => {
-  const [activeSection, setActiveSection] = useState<AdminSection>('overview');
+const AdminPanel = ({ user, initialSection }: any) => {
+  const [activeSection, setActiveSection] = useState<AdminSection>(initialSection || 'overview');
   const [dbStatus, setDbStatus] = useState<'connected' | 'error' | 'disconnected'>('disconnected');
   const [preselectedAssociateId, setPreselectedAssociateId] = useState<number | null>(null);
 
@@ -21,7 +21,10 @@ const AdminPanel = ({ user }: any) => {
   const hasRole = (roleName: string) => {
     if (user?.role === 'admin') return true;
     const roles = (user?.roles || []) as Role[];
-    return roles.some(r => r.name.toLowerCase() === roleName.toLowerCase());
+    // Normalizar nombres para comparar: minúsculas y cambiar espacios por guiones bajos
+    const normalize = (name: string) => (name || '').toLowerCase().trim().replace(/ /g, '_');
+    const target = normalize(roleName);
+    return roles.some(r => normalize(r.name) === target);
   };
 
   const sections = useMemo(() => [
@@ -272,6 +275,7 @@ const AdminBlog = ({ Header, currentUser }: any) => {
         postData.publish_date = today.toISOString().split('T')[0];
         const fullName = [currentUser?.name, currentUser?.last_name].filter(Boolean).join(' ');
         postData.author = fullName || 'Admin';
+        postData.user_id = currentUser?.id;
       }
 
       await api.upsertBlogPost(postData);
@@ -396,9 +400,19 @@ const AdminBlog = ({ Header, currentUser }: any) => {
           <tbody className="divide-y divide-neutral">
              {loading ? (
                 <tr><td colSpan={5} className="py-12 text-center text-secondary"><i className="fa-solid fa-spinner fa-spin mr-2"></i> Cargando artículos...</td></tr>
-             ) : posts.length === 0 ? (
-                <tr><td colSpan={5} className="py-12 text-center text-secondary italic">No hay artículos publicados.</td></tr>
-             ) : posts.map(post => (
+             ) : posts.filter(post => {
+                const userRole = (currentUser?.role || '').toLowerCase();
+                const isSystemAdmin = userRole === 'admin' || userRole === 'super_admin' || currentUser?.isSuperAdmin;
+                if (isSystemAdmin) return true;
+                return post.user_id === currentUser?.id;
+             }).length === 0 ? (
+                <tr><td colSpan={5} className="py-12 text-center text-secondary italic">No tienes artículos publicados.</td></tr>
+             ) : posts.filter(post => {
+                const userRole = (currentUser?.role || '').toLowerCase();
+                const isSystemAdmin = userRole === 'admin' || userRole === 'super_admin' || currentUser?.isSuperAdmin;
+                if (isSystemAdmin) return true;
+                return post.user_id === currentUser?.id;
+             }).map(post => (
               <tr key={post.id} className="hover:bg-background/30">
                 <td className="px-8 py-6">
                   <div className="flex items-center gap-4">
@@ -409,7 +423,7 @@ const AdminBlog = ({ Header, currentUser }: any) => {
                     </div>
                   </div>
                 </td>
-                <td className="px-8 py-6 text-sm text-secondary">{post.author}</td>
+                <td className="px-8 py-6 text-sm text-secondary">{post.profiles?.full_name || post.author}</td>
                 <td className="px-8 py-6 text-xs font-bold text-accent">
                    <div className="flex items-center gap-2">
                        <i className="fa-regular fa-eye text-secondary"></i>
@@ -1062,6 +1076,46 @@ const AdminUsers = ({ Header }: any) => {
     name: '', last_name: '', email: '', position: '', avatar_url: ''
   });
   const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>([]);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortedUsers = () => {
+    if (!sortConfig) return users;
+    return [...users].sort((a, b) => {
+      let aValue: string = '';
+      let bValue: string = '';
+      
+      const linkedAssocA = associates.find(assoc => assoc.user_id === a.id);
+      const linkedAssocB = associates.find(assoc => assoc.user_id === b.id);
+
+      if (sortConfig.key === 'usuario') {
+        aValue = linkedAssocA ? `${linkedAssocA.name} ${linkedAssocA.last_name || ''}` : (a.name || a.email.split('@')[0]);
+        bValue = linkedAssocB ? `${linkedAssocB.name} ${linkedAssocB.last_name || ''}` : (b.name || b.email.split('@')[0]);
+      } else if (sortConfig.key === 'roles') {
+        aValue = a.roles?.map(r => r.name).join(', ') || '';
+        bValue = b.roles?.map(r => r.name).join(', ') || '';
+      } else if (sortConfig.key === 'perfil') {
+        aValue = linkedAssocA ? `${linkedAssocA.name} ${linkedAssocA.last_name || ''}` : '';
+        bValue = linkedAssocB ? `${linkedAssocB.name} ${linkedAssocB.last_name || ''}` : '';
+      }
+
+      aValue = aValue.toLowerCase();
+      bValue = bValue.toLowerCase();
+
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  const sortedUsers = getSortedUsers();
 
   useEffect(() => { loadData(); }, []);
 
@@ -1119,6 +1173,13 @@ const AdminUsers = ({ Header }: any) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validar duplicados si es un nuevo registro
+    if (!editingId && users.some(u => u.email.toLowerCase() === formData.email?.toLowerCase())) {
+        alert("Este correo electrónico ya está registrado. Por favor utiliza uno diferente o edita el perfil existente.");
+        return;
+    }
+
     setSaving(true);
     try {
       const result = await api.createUserProfile(formData, selectedRoleIds);
@@ -1214,17 +1275,31 @@ const AdminUsers = ({ Header }: any) => {
 <table className="w-full text-left">
           <thead className="bg-background border-b border-neutral text-[10px] font-bold uppercase tracking-widest text-secondary">
             <tr>
-              <th className="px-8 py-5">Usuario</th>
-              <th className="px-8 py-5">Roles Asignados</th>
-              <th className="px-8 py-5">Perfil Vinculado</th>
-              <th className="px-8 py-5">Cargo</th>
+              <th className="px-8 py-5 cursor-pointer hover:bg-neutral/10 select-none group" onClick={() => handleSort('usuario')}>
+                <div className="flex items-center gap-2">
+                  Usuario 
+                  <i className={`fa-solid fa-sort${sortConfig?.key === 'usuario' ? (sortConfig.direction === 'asc' ? '-up text-brand' : '-down text-brand') : ' text-neutral/50 group-hover:text-secondary'}`}></i>
+                </div>
+              </th>
+              <th className="px-8 py-5 cursor-pointer hover:bg-neutral/10 select-none group" onClick={() => handleSort('roles')}>
+                <div className="flex items-center gap-2">
+                  Roles Asignados 
+                  <i className={`fa-solid fa-sort${sortConfig?.key === 'roles' ? (sortConfig.direction === 'asc' ? '-up text-brand' : '-down text-brand') : ' text-neutral/50 group-hover:text-secondary'}`}></i>
+                </div>
+              </th>
+              <th className="px-8 py-5 cursor-pointer hover:bg-neutral/10 select-none group" onClick={() => handleSort('perfil')}>
+                <div className="flex items-center gap-2">
+                  Perfil Vinculado 
+                  <i className={`fa-solid fa-sort${sortConfig?.key === 'perfil' ? (sortConfig.direction === 'asc' ? '-up text-brand' : '-down text-brand') : ' text-neutral/50 group-hover:text-secondary'}`}></i>
+                </div>
+              </th>
               <th className="px-8 py-5 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral">
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => <tr key={i} className="animate-pulse h-20 bg-gray-50/50"></tr>)
-            ) : users.map((u) => {
+            ) : sortedUsers.map((u) => {
               const linkedAssoc = associates.find(a => a.user_id === u.id);
               return (
               <tr key={u.id} className="hover:bg-background/30 transition-colors">
@@ -1263,7 +1338,6 @@ const AdminUsers = ({ Header }: any) => {
                     </div>
                   )}
                 </td>
-                <td className="px-8 py-6 text-xs text-secondary font-serif italic">{u.position}</td>
                 <td className="px-8 py-6 text-right">
                    <button onClick={() => handleEdit(u)} className="text-secondary hover:text-brand px-3 transition-colors"><i className="fa-solid fa-user-pen"></i></button>
                    <button onClick={() => handleDelete(u.id)} className="text-secondary hover:text-red-600 px-3 transition-colors"><i className="fa-solid fa-trash"></i></button>
@@ -1945,6 +2019,8 @@ const AdminDirectory = ({ Header, preselectedId, onClearSelection }: any) => {
   const [filterMonth, setFilterMonth] = useState<string>('');
   const [filterBranch, setFilterBranch] = useState<string>('');
   const [filterTier, setFilterTier] = useState<string>('');
+  const [filterLinked, setFilterLinked] = useState<string>(''); // '', 'linked', 'unlinked'
+  const [userSearchTerm, setUserSearchTerm] = useState('');
 
   const filteredAssociates = useMemo(() => {
     return associates.filter(a => {
@@ -1955,10 +2031,11 @@ const AdminDirectory = ({ Header, preselectedId, onClearSelection }: any) => {
       const matchMonth = filterMonth === '' || a.birth_month === parseInt(filterMonth);
       const matchBranch = filterBranch === '' || a.Branch === filterBranch;
       const matchTier = filterTier === '' || a.tipo === filterTier;
+      const matchLinked = filterLinked === '' || (filterLinked === 'linked' ? !!a.user_id : !a.user_id);
       
-      return matchSearch && matchMonth && matchBranch && matchTier;
+      return matchSearch && matchMonth && matchBranch && matchTier && matchLinked;
     });
-  }, [associates, searchTerm, filterMonth, filterBranch, filterTier]);
+  }, [associates, searchTerm, filterMonth, filterBranch, filterTier, filterLinked]);
 
   const editorConfig = useMemo(() => ({
     readonly: false,
@@ -1989,6 +2066,40 @@ const AdminDirectory = ({ Header, preselectedId, onClearSelection }: any) => {
   
   const [formData, setFormData] = useState<Associate>(emptyForm);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+
+  const availableUsers = useMemo(() => {
+    // 1. Obtener IDs de usuarios que ya están vinculados a OTROS perfiles
+    const otherLinkedIds = associates
+      .filter(a => a.id !== editingId)
+      .map(a => a.user_id)
+      .filter(Boolean);
+    
+    // 2. Filtrar: mostrar si no está vinculado a otro O si es el que ya tiene este perfil
+    let filtered = (users || []).filter(u => 
+      !otherLinkedIds.includes(u.id) || 
+      u.id === formData.user_id
+    );
+    
+    if (userSearchTerm) {
+      filtered = filtered.filter(u => 
+        (u.email?.toLowerCase() || '').includes(userSearchTerm.toLowerCase()) ||
+        (u.name?.toLowerCase() || '').includes(userSearchTerm.toLowerCase())
+      );
+    }
+
+    return filtered.sort((a, b) => {
+        const domainOrder = ['traveliz.com', 'internationalcruises.mx', 'staffit.mx'];
+        const getRank = (email: string) => {
+          const domain = (email || '').split('@')[1]?.toLowerCase();
+          const index = domainOrder.indexOf(domain);
+          return index === -1 ? 99 : index;
+        };
+        const rankA = getRank(a.email);
+        const rankB = getRank(b.email);
+        if (rankA !== rankB) return rankA - rankB;
+        return (a.email || '').toLowerCase().localeCompare((b.email || '').toLowerCase());
+    });
+  }, [users, associates, editingId, userSearchTerm, formData.user_id]);
 
   useEffect(() => {
     loadData();
@@ -2025,6 +2136,7 @@ const AdminDirectory = ({ Header, preselectedId, onClearSelection }: any) => {
   const handleEdit = (assoc: Associate) => {
     setEditingId(assoc.id || null);
     setFormData({ ...assoc });
+    setUserSearchTerm(''); // Reset search when opening form
     setIsFormOpen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -2134,17 +2246,29 @@ const AdminDirectory = ({ Header, preselectedId, onClearSelection }: any) => {
                 <input type="text" value={formData.whatsapp || ''} onChange={e => setFormData({...formData, whatsapp: e.target.value})} className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent" />
               </div>
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block">Vincular a Usuario (Opcional)</label>
-                <select 
-                  value={formData.user_id || ''} 
-                  onChange={e => setFormData({...formData, user_id: e.target.value})} 
-                  className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent"
-                >
-                  <option value="">No vincular</option>
-                  {users.map(u => (
-                    <option key={u.id} value={u.id}>{u.name} {u.last_name} ({u.email})</option>
-                  ))}
-                </select>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-3 block flex justify-between">
+                  <span>Vincular a Usuario (Solo disponibles)</span>
+                  {userSearchTerm && <button onClick={() => setUserSearchTerm('')} className="text-accent hover:text-brand">Limpiar filtro</button>}
+                </label>
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    placeholder="Filtrar emails..." 
+                    value={userSearchTerm}
+                    onChange={e => setUserSearchTerm(e.target.value)}
+                    className="w-full p-2 mb-2 border-b border-neutral text-[10px] outline-none focus:border-accent bg-background/30 italic"
+                  />
+                  <select 
+                    value={formData.user_id || ''} 
+                    onChange={e => setFormData({...formData, user_id: e.target.value})} 
+                    className="w-full p-4 border border-neutral text-sm bg-background outline-none focus:border-accent"
+                  >
+                    <option value="">No vincular / Sin cuenta</option>
+                    {availableUsers.map(u => (
+                      <option key={u.id} value={u.id}>{u.email}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -2320,8 +2444,20 @@ const AdminDirectory = ({ Header, preselectedId, onClearSelection }: any) => {
             ))}
           </select>
         </div>
+        <div className="w-full md:w-auto">
+          <label className="text-[9px] font-bold uppercase tracking-widest text-secondary mb-2 block">Vínculo</label>
+          <select 
+            value={filterLinked} 
+            onChange={e => setFilterLinked(e.target.value)} 
+            className="w-full p-3 border border-neutral text-sm bg-background outline-none focus:border-accent"
+          >
+            <option value="">Todos</option>
+            <option value="linked">Vinculados</option>
+            <option value="unlinked">Sin Vincular</option>
+          </select>
+        </div>
         <button 
-          onClick={() => { setSearchTerm(''); setFilterMonth(''); setFilterBranch(''); setFilterTier(''); }} 
+          onClick={() => { setSearchTerm(''); setFilterMonth(''); setFilterBranch(''); setFilterTier(''); setFilterLinked(''); }} 
           className="p-3 text-secondary hover:text-accent transition-colors text-xs font-bold uppercase tracking-widest"
           title="Limpiar Filtros"
         >
@@ -2334,6 +2470,7 @@ const AdminDirectory = ({ Header, preselectedId, onClearSelection }: any) => {
 <table className="w-full text-left">
           <thead className="bg-background border-b border-neutral">
             <tr>
+              <th className="px-6 py-4 w-10"></th>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary">Nombre y Perfil</th>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary">Sucursal</th>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-secondary">Posición / Cargo</th>
@@ -2347,6 +2484,11 @@ const AdminDirectory = ({ Header, preselectedId, onClearSelection }: any) => {
               Array.from({ length: 5 }).map((_, i) => <tr key={i} className="animate-pulse h-20 bg-gray-50/50"></tr>)
             ) : filteredAssociates.map((assoc) => (
                 <tr key={assoc.id} className="hover:bg-background/50 transition-colors">
+                  <td className="px-6 py-6 text-center">
+                    {assoc.user_id ? (
+                      <i className="fa-solid fa-circle-check text-green-500" title="Perfil Vinculado a Usuario"></i>
+                    ) : null}
+                  </td>
                   <td className="px-6 py-6">
                     <div className="flex items-center gap-4">
                       <img 
@@ -2850,12 +2992,13 @@ const AdminEvents: React.FC<{ Header: any }> = ({ Header }) => {
         setEditingEventId(null);
         setFormData(emptyForm);
         loadEvents(); 
+        alert("Evento guardado correctamente.");
       } else {
-        throw new Error("No se recibió respuesta del servidor");
+        alert("No se pudo guardar el evento. Verifica tus permisos de edición.");
       }
     } catch (err: any) { 
       console.error("Error submitting event:", err);
-      alert("Error al guardar el evento: " + (err.message || "Error desconocido"));
+      alert("Error crítico al guardar el evento: " + (err.message || "Error desconocido"));
     } finally { 
       setSaving(false); 
     }

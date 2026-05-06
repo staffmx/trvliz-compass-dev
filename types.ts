@@ -90,11 +90,13 @@ export interface BlogPost {
   read_time: string;   
   author: string;
   publish_date: string;
+  user_id?: string;
   vistas?: number;
   likes_count?: number;
   comments_count?: number;
   has_liked?: boolean;
   has_saved?: boolean;
+  profiles?: { full_name: string };
 }
 
 export interface BlogComment {
