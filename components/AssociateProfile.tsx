@@ -12,6 +12,20 @@ const toTitleCase = (str: string) => {
   return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
 
+const formatSocialLink = (url: string, platform: 'instagram' | 'facebook' | 'tiktok' | 'linkedin') => {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+  const cleanUrl = trimmed.replace(/^@/, '').replace(/^\//, '');
+  switch (platform) {
+    case 'instagram': return `https://instagram.com/${cleanUrl}`;
+    case 'facebook': return `https://facebook.com/${cleanUrl}`;
+    case 'tiktok': return `https://tiktok.com/@${cleanUrl}`;
+    case 'linkedin': return `https://linkedin.com/in/${cleanUrl}`;
+    default: return `https://${cleanUrl}`;
+  }
+};
+
 const BLANK_USER = 'https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/travel_advisors/blank-user.png';
 
 const AssociateProfile: React.FC<AssociateProfileProps> = ({ associateId, onBack }) => {
@@ -90,22 +104,22 @@ const AssociateProfile: React.FC<AssociateProfileProps> = ({ associateId, onBack
                 <span className="text-[10px] font-bold uppercase tracking-widest text-secondary block mb-6 text-center">Social Connect</span>
                 <div className="flex justify-center gap-8">
                     {associate.instagram && (
-                        <a href={associate.instagram} target="_blank" rel="noopener noreferrer" className="text-xl text-primary hover:text-accent transition-all transform hover:-translate-y-1">
+                        <a href={formatSocialLink(associate.instagram, 'instagram')} target="_blank" rel="noopener noreferrer" className="text-xl text-primary hover:text-accent transition-all transform hover:-translate-y-1">
                             <i className="fa-brands fa-instagram"></i>
                         </a>
                     )}
                     {associate.linkedIn && (
-                        <a href={associate.linkedIn} target="_blank" rel="noopener noreferrer" className="text-xl text-primary hover:text-accent transition-all transform hover:-translate-y-1">
+                        <a href={formatSocialLink(associate.linkedIn, 'linkedin')} target="_blank" rel="noopener noreferrer" className="text-xl text-primary hover:text-accent transition-all transform hover:-translate-y-1">
                             <i className="fa-brands fa-linkedin"></i>
                         </a>
                     )}
                     {associate.facebook && (
-                        <a href={associate.facebook} target="_blank" rel="noopener noreferrer" className="text-xl text-primary hover:text-accent transition-all transform hover:-translate-y-1">
+                        <a href={formatSocialLink(associate.facebook, 'facebook')} target="_blank" rel="noopener noreferrer" className="text-xl text-primary hover:text-accent transition-all transform hover:-translate-y-1">
                             <i className="fa-brands fa-facebook-f"></i>
                         </a>
                     )}
                     {associate.tik_tok && (
-                        <a href={associate.tik_tok} target="_blank" rel="noopener noreferrer" className="text-xl text-primary hover:text-accent transition-all transform hover:-translate-y-1">
+                        <a href={formatSocialLink(associate.tik_tok, 'tiktok')} target="_blank" rel="noopener noreferrer" className="text-xl text-primary hover:text-accent transition-all transform hover:-translate-y-1">
                             <i className="fa-brands fa-tiktok"></i>
                         </a>
                     )}
