@@ -25,7 +25,16 @@ jobs:
       run: npm install
       
     - name: Type Verification (TypeScript)
-      run: npm run lint
+      run: npm run lint > lint.log 2>&1 || (cat lint.log && exit 1)
       
     - name: Build Verification
-      run: npm run build
+      run: npm run build > build.log 2>&1 || (cat build.log && exit 1)
+
+    - name: Upload Logs on Failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: error-logs
+        path: |
+          lint.log
+          build.log
