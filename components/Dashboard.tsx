@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { User, Notice, NavigationItem, Associate, Event } from '../types';
-import { api, BlogPost, Seller } from '../services/api';
+import { User, Notice, NavigationItem, Associate, Event, BlogPost } from '../types';
+import { api, Seller } from '../services/api';
 
 interface DashboardProps {
   user: User;

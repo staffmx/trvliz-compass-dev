@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { api, BlogPost } from '../services/api';
-
+import { api } from '../services/api';
+import { BlogPost } from '../types';
 interface PublicPostViewProps {
   postId: number;
 }

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { NavigationItem, Event, User } from '../types';
-import { api, BlogPost, BlogComment } from '../services/api';
+import { NavigationItem, Event, User, BlogPost, BlogComment } from '../types';
+import { api } from '../services/api';
 import { BLOG_CATEGORIES } from './AdminPanel';
 
 interface InspirationProps {

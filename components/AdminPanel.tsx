@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import JoditEditor from 'jodit-react';
-import { api, EventRegistration, Seller, RecordedWebinar, WEBINAR_CATEGORIES, MentorshipRequest, BlogPost } from '../services/api';
-import { Notice, UserProfile, Role, DocumentCategory, Document as DocType, Associate, Certification, Event, SearchLog } from '../types';
+import { api, Seller, WEBINAR_CATEGORIES, MentorshipRequest } from '../services/api';
+import { Notice, UserProfile, Role, DocumentCategory, Document as DocType, Associate, Certification, Event, SearchLog, EventRegistration, RecordedWebinar, BlogPost } from '../types';
 import packageJson from '../package.json';
 
 type AdminSection = 'overview' | 'directory' | 'notices' | 'events' | 'blog' | 'sellers' | 'users' | 'documents' | 'recorded_webinars' | 'mentorships' | 'certifications' | 'search_logs' | 'audit_logs';

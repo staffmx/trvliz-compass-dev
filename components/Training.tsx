@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { api, RecordedWebinar, WEBINAR_CATEGORIES } from '../services/api';
-import { User, Certification } from '../types';
+import { api, WEBINAR_CATEGORIES } from '../services/api';
+import { User, Certification, RecordedWebinar } from '../types';
 
 const ITEMS_PER_PAGE = 12;
 
