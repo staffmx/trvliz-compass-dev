@@ -51,6 +51,62 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventId, user, onBack }) => {
     }
   };
 
+  const formatDateForCalendar = (dateStr: string, timeStr: string, durationHours: number = 0) => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const date = new Date(year, month - 1, day, hours, minutes);
+    if (durationHours > 0) {
+      date.setHours(date.getHours() + durationHours);
+    }
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
+  };
+
+  const generateGoogleCalendarUrl = () => {
+    if (!event) return '';
+    const start = formatDateForCalendar(event.event_date, event.time);
+    const end = formatDateForCalendar(event.event_date, event.time, 1);
+    const details = encodeURIComponent(event.description || '');
+    const location = encodeURIComponent(event.type === 'Webinar' ? 'Virtual (Zoom)' : (event.link || 'Oficinas Traveliz'));
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${start}/${end}&details=${details}&location=${location}`;
+  };
+
+  const generateOutlookCalendarUrl = () => {
+    if (!event) return '';
+    const start = formatDateForCalendar(event.event_date, event.time);
+    const end = formatDateForCalendar(event.event_date, event.time, 1);
+    const details = encodeURIComponent(event.description || '');
+    const location = encodeURIComponent(event.type === 'Webinar' ? 'Virtual (Zoom)' : (event.link || 'Oficinas Traveliz'));
+    return `https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&subject=${encodeURIComponent(event.title)}&startdt=${start}&enddt=${end}&body=${details}&location=${location}`;
+  };
+
+  const downloadIcsFile = () => {
+    if (!event) return;
+    const start = formatDateForCalendar(event.event_date, event.time);
+    const end = formatDateForCalendar(event.event_date, event.time, 1);
+    const location = event.type === 'Webinar' ? 'Virtual (Zoom)' : (event.link || 'Oficinas Traveliz');
+    const icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'BEGIN:VEVENT',
+      `DTSTART:${start}`,
+      `DTEND:${end}`,
+      `SUMMARY:${event.title}`,
+      `DESCRIPTION:${event.description || ''}`,
+      `LOCATION:${location}`,
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].join('\n');
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${event.title.replace(/\s+/g, '_')}.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (loading) {
     return (
       <div className="max-w-site mx-auto px-mobile-x py-section-y flex flex-col items-center justify-center animate-fade-in">
@@ -186,6 +242,59 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventId, user, onBack }) => {
                 )}
 
 
+              </div>
+            </div>
+
+            {/* Calendar Integration Section */}
+            <div className="bg-surface border border-neutral p-10 shadow-sm">
+              <h3 className="text-xl font-serif mb-6 text-brand flex items-center gap-3">
+                <i className="fa-solid fa-calendar-plus"></i> Guardar Evento
+              </h3>
+              <p className="text-secondary text-[10px] mb-8 uppercase tracking-widest">Sincroniza con tu agenda personal</p>
+              
+              <div className="space-y-3">
+                <a 
+                  href={generateGoogleCalendarUrl()} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between w-full p-4 bg-background border border-neutral hover:border-accent hover:bg-white transition-all group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-8 h-8 bg-[#EA4335]/10 flex items-center justify-center text-[#EA4335] group-hover:bg-[#EA4335] group-hover:text-white transition-colors">
+                      <i className="fa-brands fa-google text-xs"></i>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Google Calendar</span>
+                  </div>
+                  <i className="fa-solid fa-chevron-right text-secondary text-[9px] group-hover:translate-x-1 transition-transform"></i>
+                </a>
+
+                <a 
+                  href={generateOutlookCalendarUrl()} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between w-full p-4 bg-background border border-neutral hover:border-accent hover:bg-white transition-all group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-8 h-8 bg-[#0078D4]/10 flex items-center justify-center text-[#0078D4] group-hover:bg-[#0078D4] group-hover:text-white transition-colors">
+                      <i className="fa-brands fa-microsoft text-xs"></i>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Outlook</span>
+                  </div>
+                  <i className="fa-solid fa-chevron-right text-secondary text-[9px] group-hover:translate-x-1 transition-transform"></i>
+                </a>
+
+                <button 
+                  onClick={downloadIcsFile}
+                  className="flex items-center justify-between w-full p-4 bg-background border border-neutral hover:border-accent hover:bg-white transition-all group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-8 h-8 bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                      <i className="fa-solid fa-calendar-check text-xs"></i>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Apple / iCal</span>
+                  </div>
+                  <i className="fa-solid fa-download text-secondary text-[9px] group-hover:translate-y-0.5 transition-transform"></i>
+                </button>
               </div>
             </div>
 
