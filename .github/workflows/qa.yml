@@ -22,7 +22,7 @@ jobs:
         cache: 'npm'
         
     - name: Install Dependencies
-      run: npm install
+      run: npm install --legacy-peer-deps
       
     - name: Type Verification (TypeScript)
       run: npm run lint > lint.log 2>&1 || (cat lint.log && exit 1)
