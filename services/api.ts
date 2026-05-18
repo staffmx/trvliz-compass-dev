@@ -1361,22 +1361,38 @@ export const api = {
   },
 
   uploadDocument: async (file: File, catId: number, description?: string): Promise<DocType | null> => {
-    if (!supabase) return null;
+    if (!supabase) throw new Error("No hay conexión con la base de datos de Supabase.");
     try {
       const fileName = `${Date.now()}_${file.name.replace(/\s/g, '_')}`;
       const filePath = `uploads/${fileName}`;
       const { error: uploadError } = await supabase.storage.from('documentation').upload(filePath, file);
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Storage upload error:", uploadError);
+        throw new Error(`Error al subir archivo al almacenamiento: ${uploadError.message}`);
+      }
+      
       const sizeStr = file.size > 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : `${(file.size / 1024).toFixed(0)} KB`;
-      const { data: docs, error } = await supabase.from('documents').insert({ name: file.name, type: file.name.split('.').pop() || 'other', size: sizeStr, cat_id: catId, storage_path: filePath, descripcion: description || '' }).select();
-      if (error) throw error;
-      if (!docs || docs.length === 0) throw new Error("No se pudo guardar el documento.");
+      const { data: docs, error } = await supabase.from('documents').insert({ 
+        name: file.name, 
+        type: file.name.split('.').pop() || 'other', 
+        size: sizeStr, 
+        cat_id: catId, 
+        storage_path: filePath, 
+        descripcion: description || '' 
+      }).select();
+      
+      if (error) {
+        console.error("Database insert error in uploadDocument:", error);
+        throw new Error(`Error en base de datos: ${error.message || 'Permiso denegado por política de seguridad (RLS)'}`);
+      }
+      if (!docs || docs.length === 0) throw new Error("No se pudo guardar el registro del documento en la base de datos.");
       const data = docs[0];
       api.logAction('DOCUMENT_UPLOADED', `Se subió un nuevo documento: ${file.name}`, { document_id: data.id, size: sizeStr });
       const { data: { publicUrl } } = supabase.storage.from('documentation').getPublicUrl(filePath);
       return { ...data, id: parseInt(data.id, 10), name: data.nombre || data.name, url: publicUrl, created_at: new Date(data.created_at).toLocaleDateString('es-ES') };
-    } catch (err) {
-      return null;
+    } catch (err: any) {
+      console.error("Error catch in uploadDocument:", err);
+      throw err;
     }
   },
 

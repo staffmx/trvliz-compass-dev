@@ -17,7 +17,9 @@ const Documentation: React.FC<DocumentationProps> = ({ user }) => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isAdmin = user.role === 'admin';
+  const isAdmin = user.role === 'admin' || (user.roles || []).some(r => 
+    ['admin', 'super_admin', 'editor_documentos'].includes(r.name.toLowerCase().trim())
+  );
 
   // Initial Fetch
   useEffect(() => {
@@ -107,14 +109,24 @@ const Documentation: React.FC<DocumentationProps> = ({ user }) => {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isAdmin || !currentCategory) return;
     if (e.target.files && e.target.files[0]) {
-        setIsUploading(true);
         const file = e.target.files[0];
         const description = prompt("Descripción del archivo (opcional):") || "";
-        await api.uploadDocument(file, currentCategory.id, description);
-        setIsUploading(false);
-        loadDocuments(currentCategory.id);
-        // Clear input
-        if (fileInputRef.current) fileInputRef.current.value = '';
+        setIsUploading(true);
+        try {
+            const newDoc = await api.uploadDocument(file, currentCategory.id, description);
+            if (newDoc) {
+                loadDocuments(currentCategory.id);
+            } else {
+                alert("Error: No se pudo guardar el archivo. Por favor, verifica tus permisos de red o el tamaño del archivo.");
+            }
+        } catch (error: any) {
+            console.error("Error subiendo archivo:", error);
+            alert(`Error al subir el archivo: ${error.message || error.toString()}`);
+        } finally {
+            setIsUploading(false);
+            // Clear input
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
     }
   };
 
