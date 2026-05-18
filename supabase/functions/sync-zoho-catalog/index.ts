@@ -24,6 +24,9 @@ serve(async (req) => {
     }
     const data = await zohoResponse.json();
 
+    // Inyectar marca de tiempo de sincronización directamente en el JSON para evitar problemas de caché
+    data.lastUpdated = new Date().toISOString();
+
     // 2. Inicializar cliente de Supabase (Admin)
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -32,12 +35,14 @@ serve(async (req) => {
 
     // 3. Subir al Storage (Bucket: 'catalogos', Archivo: 'providers.json')
     // Usamos upsert: true para sobreescribir el archivo existente
+    // Usamos cacheControl: '0' para que el CDN de Supabase/Cloudflare y los navegadores no almacenen en caché el archivo
     const { error: uploadError } = await supabaseAdmin
       .storage
       .from('catalogos')
       .upload('providers.json', JSON.stringify(data), {
         contentType: 'application/json',
-        upsert: true
+        upsert: true,
+        cacheControl: '0'
       });
 
     if (uploadError) throw uploadError;

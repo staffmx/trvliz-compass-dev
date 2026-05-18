@@ -84,12 +84,22 @@ export const providersService = {
 
       if (storageResponse.ok) {
         data = await storageResponse.json();
-        const lastModifiedHeader = storageResponse.headers.get('last-modified');
-        if (lastModifiedHeader) {
-          lastUpdated = new Date(lastModifiedHeader).toLocaleString('es-MX', { 
+        
+        // Intentar leer la marca de tiempo de sincronización inyectada directamente en el JSON (100% confiable)
+        if (data && data.lastUpdated) {
+          lastUpdated = new Date(data.lastUpdated).toLocaleString('es-MX', { 
             day: '2-digit', month: 'short', year: 'numeric', 
             hour: '2-digit', minute: '2-digit' 
           });
+        } else {
+          // Fallback al header HTTP por si acaso (para retrocompatibilidad)
+          const lastModifiedHeader = storageResponse.headers.get('last-modified');
+          if (lastModifiedHeader) {
+            lastUpdated = new Date(lastModifiedHeader).toLocaleString('es-MX', { 
+              day: '2-digit', month: 'short', year: 'numeric', 
+              hour: '2-digit', minute: '2-digit' 
+            });
+          }
         }
       } else {
         throw new Error('Archivo en Storage no encontrado');
