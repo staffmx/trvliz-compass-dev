@@ -126,6 +126,31 @@ const Documentation: React.FC<DocumentationProps> = ({ user }) => {
     }
   };
 
+  const handleDownload = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      // Fallback: abrir en nueva ventana con atributo download
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   const handleDeleteCategory = async (e: React.MouseEvent, cat: DocumentCategory) => {
     e.stopPropagation();
     if (!isAdmin) return;
@@ -307,6 +332,13 @@ const Documentation: React.FC<DocumentationProps> = ({ user }) => {
                                             >
                                                 <i className="fa-solid fa-external-link"></i> Ver
                                             </a>
+                                            <button 
+                                                onClick={() => handleDownload(doc.url, doc.name)}
+                                                className="text-white bg-brand hover:bg-accent transition-colors px-3 py-2 rounded-sm flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest shadow-sm hover:shadow" 
+                                                title="Descargar archivo"
+                                            >
+                                                <i className="fa-solid fa-download"></i> Descargar
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
