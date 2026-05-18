@@ -691,8 +691,8 @@ export const api = {
       }
 
       if (!result || result.length === 0) {
-        console.warn("La operación se completó pero la base de datos no devolvió el registro (posible RLS). Retornando objeto local.");
-        return associate;
+        console.error("Error RLS: La base de datos no retornó ningún registro en upsertAssociate (permisos de escritura insuficientes).");
+        return null;
       }
 
       const savedAssociate = result[0];

@@ -122,10 +122,16 @@ const MyProfile: React.FC<MyProfileProps> = ({ user, onBack, onUserUpdate }) => 
         // 2. GUARDAR INMEDIATAMENTE en la base de datos
         // Actualizamos tabla de perfiles
         if (updatedProfile) {
-          await api.updateProfile(updatedProfile);
+          const profileSuccess = await api.updateProfile(updatedProfile);
+          if (!profileSuccess) {
+            throw new Error("No se pudieron actualizar los datos básicos de tu perfil (profiles).");
+          }
         }
         // Actualizamos tabla de asociadas
-        await api.upsertAssociate(updatedAssociate);
+        const savedAssoc = await api.upsertAssociate(updatedAssociate);
+        if (!savedAssoc) {
+          throw new Error("No tienes permisos suficientes para actualizar tu perfil de asociada en el directorio (RLS). Por favor ejecuta el script de actualización de base de datos.");
+        }
 
         // 3. Sincronizar con el estado global (Header) y localStorage
         const updatedUser = {
@@ -163,7 +169,9 @@ const MyProfile: React.FC<MyProfileProps> = ({ user, onBack, onUserUpdate }) => 
       // 2. Update Associate
       if (associate) {
         const updatedAssociate = await api.upsertAssociate(associate);
-        if (!updatedAssociate) throw new Error("Error al actualizar la información de asociada");
+        if (!updatedAssociate) {
+          throw new Error("No tienes permisos suficientes para guardar tus cambios de asociada en el directorio (RLS). Por favor ejecuta el script de actualización de base de datos.");
+        }
         setAssociate(updatedAssociate);
       }
 
