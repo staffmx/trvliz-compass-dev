@@ -1363,7 +1363,12 @@ export const api = {
   uploadDocument: async (file: File, catId: number, description?: string): Promise<DocType | null> => {
     if (!supabase) throw new Error("No hay conexión con la base de datos de Supabase.");
     try {
-      const fileName = `${Date.now()}_${file.name.replace(/\s/g, '_')}`;
+      const cleanFileName = file.name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9.-]/g, "_")
+        .replace(/_+/g, "_");
+      const fileName = `${Date.now()}_${cleanFileName}`;
       const filePath = `uploads/${fileName}`;
       const { error: uploadError } = await supabase.storage.from('documentation').upload(filePath, file);
       if (uploadError) {
