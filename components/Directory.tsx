@@ -22,6 +22,7 @@ const Directory: React.FC<DirectoryProps> = ({ onViewProfile }) => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('TODOS');
+  const [selectedTier, setSelectedTier] = useState('TODOS');
   const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch data on mount
@@ -51,6 +52,12 @@ const Directory: React.FC<DirectoryProps> = ({ onViewProfile }) => {
         return false;
     }
 
+    // Tier filter
+    const assocTipo = (associate.tipo || "").toUpperCase();
+    if (selectedTier !== 'TODOS' && assocTipo !== selectedTier) {
+        return false;
+    }
+
     const name = (associate.name || "").toLowerCase();
     const lastName = (associate.last_name || "").toLowerCase();
     const email = (associate.email || "").toLowerCase();
@@ -65,10 +72,10 @@ const Directory: React.FC<DirectoryProps> = ({ onViewProfile }) => {
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const currentAssociates = filteredAssociates.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
-  // Reset to page 1 when search or branch changes
+  // Reset to page 1 when search, branch, or tier changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedBranch]);
+  }, [searchTerm, selectedBranch, selectedTier]);
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -86,8 +93,9 @@ const Directory: React.FC<DirectoryProps> = ({ onViewProfile }) => {
             Directorio de Asociadas
           </h1>
 
-          <div className="flex justify-center">
-            <div className="relative w-full max-w-[600px]">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center w-full max-w-[850px] mx-auto px-4">
+            {/* Search Input */}
+            <div className="relative w-full sm:flex-1">
                 <input
                     type="text"
                     value={searchTerm}
@@ -97,6 +105,24 @@ const Directory: React.FC<DirectoryProps> = ({ onViewProfile }) => {
                 />
                 <span className="absolute right-6 top-[22px] text-primary/30 pointer-events-none">
                     <i className="fa-solid fa-search"></i>
+                </span>
+            </div>
+
+            {/* Tier Select Filter */}
+            <div className="relative w-full sm:w-[240px]">
+                <select
+                    value={selectedTier}
+                    onChange={(e) => setSelectedTier(e.target.value)}
+                    className="w-full p-[18px] pl-[25px] pr-[50px] border border-black/10 rounded-none font-sans text-base bg-[#F5F1E8] focus:bg-white focus:border-accent focus:shadow-xl outline-none transition-all duration-300 text-primary cursor-pointer appearance-none"
+                >
+                    <option value="TODOS">TODOS LOS TIERS</option>
+                    <option value="SENIOR PARTNER">SENIOR PARTNER</option>
+                    <option value="JUNIOR PARTNER">JUNIOR PARTNER</option>
+                    <option value="ASSOCIATE">ASSOCIATE</option>
+                    <option value="NO APLICA">NO APLICA</option>
+                </select>
+                <span className="absolute right-6 top-[22px] text-primary/30 pointer-events-none">
+                    <i className="fa-solid fa-chevron-down"></i>
                 </span>
             </div>
           </div>
@@ -222,7 +248,7 @@ const Directory: React.FC<DirectoryProps> = ({ onViewProfile }) => {
                         <i className="fa-regular fa-face-frown text-4xl mb-4 opacity-50"></i>
                         <p className="font-serif italic text-lg">No se encontraron asociadas en el sistema.</p>
                         <p className="text-xs mt-2">Prueba con otros términos de búsqueda o verifica la conexión.</p>
-                        <button onClick={() => setSearchTerm('')} className="mt-4 text-brand font-bold uppercase tracking-widest text-[10px] border-b border-brand">Limpiar filtros</button>
+                        <button onClick={() => { setSearchTerm(''); setSelectedTier('TODOS'); setSelectedBranch('TODOS'); }} className="mt-4 text-brand font-bold uppercase tracking-widest text-[10px] border-b border-brand">Limpiar filtros</button>
                     </div>
                 )}
             </div>
