@@ -22,6 +22,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
   const [currentUserAssociate, setCurrentUserAssociate] = useState<Associate | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSellerTier, setActiveSellerTier] = useState<string>('SENIOR PARTNER');
+  const [activeVideo, setActiveVideo] = useState<{ type: string; url: string; title: string } | null>(null);
 
   const welcomePhrases = [
     { main: "Your World, ", accent: "Tailored." },
@@ -265,34 +266,42 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
         </div>
       </div>
       
-      {/* Welcome Video Section - 3 Columns */}
+      {/* Welcome Video Section - 3 Columns with modal play to avoid Supabase/network bandwidth overuse */}
       <div className="mb-12 max-w-site mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
          {[
            { type: 'mp4', url: 'https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/images/videos/bienvenida-marcelo.mp4', title: 'Bienvenida a Traveliz Connect', poster: 'https://klknrbnipvgwywjbzafh.supabase.co/storage/v1/object/public/images/videos/portada-bienvenida-marcelo.jpg' },
-           { type: 'youtube', url: "https://www.youtube.com/embed/ggET4j3Gdxg?rel=0&showinfo=0&autoplay=0", title: "Video 2", poster: undefined },
-           { type: 'youtube', url: "https://www.youtube.com/embed/UlORnWguPqk?rel=0&showinfo=0&autoplay=0", title: "Video 3", poster: undefined }
+           { type: 'youtube', url: "https://www.youtube.com/embed/ggET4j3Gdxg?rel=0&showinfo=0&autoplay=0", title: "Capacitación de Ventas", poster: "https://img.youtube.com/vi/ggET4j3Gdxg/maxresdefault.jpg" },
+           { type: 'youtube', url: "https://www.youtube.com/embed/UlORnWguPqk?rel=0&showinfo=0&autoplay=0", title: "Traveliz Playbook", poster: "https://img.youtube.com/vi/UlORnWguPqk/maxresdefault.jpg" }
          ].map((video, idx) => (
-           <div key={idx} className="shadow-xl overflow-hidden rounded-none border border-neutral bg-black aspect-video relative group hover:border-accent transition-all duration-500">
-              {video.type === 'mp4' ? (
-                 <video 
-                    src={video.url} 
-                    title={video.title} 
-                    poster={video.poster}
-                    controls 
-                    controlsList="nodownload"
-                    className="absolute top-0 left-0 w-full h-full object-cover"
+           <div 
+             key={idx} 
+             onClick={() => video.url && setActiveVideo(video)}
+             className="shadow-xl overflow-hidden rounded-none border border-neutral bg-black aspect-video relative group hover:border-accent hover:-translate-y-1 transition-all duration-[400ms] cursor-pointer"
+           >
+              {/* Cover Image */}
+              {video.poster ? (
+                 <img 
+                    src={video.poster} 
+                    alt={video.title} 
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                  />
               ) : (
-                 <iframe 
-                     src={video.url} 
-                     title={video.title} 
-                     frameBorder="0" 
-                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                     referrerPolicy="strict-origin-when-cross-origin" 
-                     allowFullScreen
-                     className="absolute top-0 left-0 w-full h-full"
-                 ></iframe>
+                 <div className="absolute inset-0 bg-neutral flex items-center justify-center text-primary/40 font-serif italic">
+                    {video.title}
+                 </div>
               )}
+              
+              {/* Glassmorphic Play Overlay */}
+              <div className="absolute inset-0 bg-black/20 group-hover:bg-black/45 transition-colors duration-300 flex items-center justify-center">
+                 <div className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white text-xl group-hover:bg-white group-hover:text-brand group-hover:scale-110 shadow-2xl transition-all duration-[300ms] ease-out">
+                    <i className="fa-solid fa-play ml-1"></i>
+                 </div>
+              </div>
+
+              {/* Title tag */}
+              <div className="absolute bottom-4 left-4 right-4 text-white font-sans text-[10px] uppercase tracking-[2px] font-bold drop-shadow-md truncate">
+                 {video.title}
+              </div>
            </div>
          ))}
       </div>
@@ -489,6 +498,44 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate, onEventClick, o
         </div>
       </div>
 
+
+      {/* Fullscreen Video Modal for premium load experience & minimized Supabase bandwidth usage */}
+      {activeVideo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm transition-all duration-300">
+          {/* Backdrop close click */}
+          <div className="absolute inset-0 cursor-pointer" onClick={() => setActiveVideo(null)}></div>
+          
+          <div className="relative w-full max-w-4xl aspect-video mx-4 z-10 border border-white/10 shadow-2xl bg-black">
+            {/* Close button */}
+            <button 
+              onClick={() => setActiveVideo(null)} 
+              className="absolute -top-12 right-0 text-white hover:text-accent text-3xl font-light outline-none transition-colors"
+              title="Cerrar video"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+            
+            {activeVideo.type === 'mp4' ? (
+              <video 
+                src={activeVideo.url} 
+                controls 
+                autoPlay 
+                controlsList="nodownload"
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <iframe 
+                src={activeVideo.url.includes('?') ? `${activeVideo.url}&autoplay=1` : `${activeVideo.url}?autoplay=1`} 
+                title={activeVideo.title} 
+                frameBorder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                allowFullScreen
+                className="w-full h-full"
+              ></iframe>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );
